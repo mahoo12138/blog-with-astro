@@ -5,9 +5,11 @@ import type { CollectionEntry } from 'astro:content';
 import ArtalkComments from '../components/ArtalkComments.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import KatexStyles from '../components/KatexStyles.astro';
+import StellarIcon from '../components/StellarIcon.astro';
 import type { SiteTreeKey } from '../config/stellar';
 import { SITE_AUTHOR, columnUrl, postCommentKey } from '../consts';
-import { postHref } from '../utils/content';
+import { postHref, slugifySegment, type ResolvedPostCover } from '../utils/content';
+import { bannerTint } from '../utils/banner';
 import StellarShell from './StellarShell.astro';
 import * as chapterStyles from '../styles/columnChapters.css';
 import * as styles from './BlogPost.css';
@@ -35,7 +37,10 @@ interface Props {
 	description: string;
 	pubDate: Date;
 	updatedDate?: Date;
-	image?: ImageMetadata | string;
+	/** 页头封面 + OG 图的同一个来源（字段已收敛为单一 cover） */
+	cover?: ResolvedPostCover | null;
+	categories?: string[];
+	tags?: string[];
 	siteTree?: SiteTreeKey;
 	headings?: { depth: number; slug: string; text: string }[];
 	mathjax?: boolean;
@@ -51,7 +56,9 @@ const {
 	description,
 	pubDate,
 	updatedDate,
-	image,
+	cover,
+	categories = [],
+	tags = [],
 	siteTree,
 	headings = [],
 	mathjax = false,
@@ -75,10 +82,16 @@ const nextChapter =
 		: undefined;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-// 文章 OG / JSON-LD 用的图片 URL：由路由通过 resolvePostCover 解析后传入
-const articleImageUrl = image
-	? new URL(typeof image === 'string' ? image : image.src, Astro.site).toString()
+// 文章 OG / JSON-LD 用的图片 URL：与页头封面同源（单一 cover 字段）
+const coverSrc = cover?.src;
+const articleImageUrl = coverSrc
+	? new URL(typeof coverSrc === 'string' ? coverSrc : coverSrc.src, Astro.site).toString()
 	: undefined;
+
+// 页头在无封面时的兜底色相：由文章身份确定性派生，同一篇永远是同一个色
+const tint = bannerTint(postId ?? title);
+const primaryCategory = categories.find(Boolean);
+const tagList = tags.filter(Boolean).slice(0, 3);
 const blogPostingJsonLd = {
 	'@context': 'https://schema.org',
 	'@type': 'BlogPosting',
@@ -100,7 +113,7 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 	siteTree={resolvedSiteTree}
 	tocHeadings={headings}
 	type="article"
-	image={image}
+	image={coverSrc}
 	publishedTime={pubDate}
 	modifiedTime={updatedDate}
 	noindex={noindex}
@@ -117,40 +130,85 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 	{mathjax && <KatexStyles />}
 	<script is:inline type="application/ld+json" set:html={blogPostingJsonLdSafe} />
 	<article class={styles.article} data-pagefind-body={noindex ? undefined : true}>
-		<header class:list={[styles.banner, 'article', 'banner', 'top']}>
-			<div class:list={[styles.bannerContent, 'content']}>
-				<div class:list={[styles.bannerMeta, 'top', 'bread-nav', 'footnote']}>
-					<div class="left">
-						<div class="flex-row" id="breadcrumb">
-							<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/">Home</a>
-							<span class="sep">/</span>
-							{
-								columnContext ? (
-									<>
-										<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/columns">
-											专栏
-										</a>
-										<span class="sep">/</span>
-										<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href={columnUrl(columnContext.slug)}>
-											{columnContext.title}
-										</a>
-									</>
-								) : (
-									<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/posts">
-										Blog
-									</a>
-								)
-							}
-						</div>
-						<div id="post-meta">
-							<span>发布于：<FormattedDate date={pubDate} /></span>
-							{updatedDate && <><span class="sep"></span><span class="updated">更新于：<FormattedDate date={updatedDate} /></span></>}
-						</div>
+		<header
+			class:list={[styles.postBanner, 'article', 'banner', 'top']}
+			data-cover={cover ? 'true' : 'false'}
+			style={tint.style}
+		>
+			{
+				cover && (
+					<div class={styles.bannerMedia} aria-hidden="true">
+						{cover.isLocal ? (
+							<Image class={styles.bannerImage} src={cover.src as ImageMetadata} alt="" loading="eager" decoding="async" />
+						) : (
+							<img class={styles.bannerImage} src={cover.src as string} alt="" loading="eager" decoding="async" fetchpriority="high" />
+						)}
 					</div>
+				)
+			}
+			<div class={styles.bannerScrim} aria-hidden="true"></div>
+			<div class={styles.bannerGrain} aria-hidden="true"></div>
+			<div class={styles.bannerBody}>
+				<div class={styles.bannerTop}>
+					<div class={styles.crumbRow}>
+						<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/">Home</a>
+						<span class="sep">/</span>
+						{
+							columnContext ? (
+								<>
+									<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/columns">
+										专栏
+									</a>
+									<span class="sep">/</span>
+									<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href={columnUrl(columnContext.slug)}>
+										{columnContext.title}
+									</a>
+								</>
+							) : (
+								<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/posts">
+									Blog
+								</a>
+							)
+						}
+					</div>
+					{
+						columnContext && (
+							<a
+								class:list={[styles.chip, styles.chipAccent]}
+								href={columnUrl(columnContext.slug)}
+							>
+								<StellarIcon name="stellar:menu-columns" class={styles.chipIcon} />
+								<span>第 {columnContext.index + 1} / {chapterPosts.length} 章</span>
+							</a>
+						)
+					}
 				</div>
-				<div class:list={[styles.bannerBottom, 'bottom', 'only-title']}>
-					<div class="text-area">
-						<h1 class:list={[styles.title, 'text', 'title']}><span>{title}</span></h1>
+				<div class={styles.bannerFoot}>
+					<div class={styles.kickerRow}>
+						{
+							primaryCategory && (
+								<a class:list={[styles.chip, styles.chipAccent]} href={`/categories/${slugifySegment(primaryCategory)}/`}>
+									<StellarIcon name="default:category" class={styles.chipIcon} />
+									<span>{primaryCategory}</span>
+								</a>
+							)
+						}
+						{tagList.map((tag) => (
+							<a class={styles.chip} href={`/tags/${slugifySegment(tag)}/`}>#{tag}</a>
+						))}
+					</div>
+					<div class={styles.accentRule} aria-hidden="true"></div>
+					<h1 class={styles.postTitle}>{title}</h1>
+					<div class={styles.postMeta}>
+						<span><FormattedDate date={pubDate} /></span>
+						{
+							updatedDate && (
+								<>
+									<span class="sep">·</span>
+									<span>更新于 <FormattedDate date={updatedDate} /></span>
+								</>
+							)
+						}
 					</div>
 				</div>
 			</div>

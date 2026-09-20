@@ -51,18 +51,244 @@ export const banner = style({
 	},
 });
 
-export const bannerImage = style({
+/* ── 文章页头（沉浸式封面 + 渐变压暗）──
+ *
+ * 与上面的 `banner` / `bannerContent` / `bannerMeta` / `bannerBottom` 刻意分开：
+ * 后者是专栏页仍在用的中性壳（浅底深字），文章页头恒为**暗底白字**——
+ * 有封面时压在照片上，无封面时压在由文章身份派生出的光晕上。
+ * 两套文字色与 hover 反馈完全不同，共用必然一边看不见、一边看不清。
+ */
+
+const ink = '#fff';
+const inkSoft = 'rgba(255, 255, 255, 0.82)';
+const shade = 'rgba(8, 12, 20,';
+
+/** 极细颗粒：让压暗后的渐变像印刷品，而不是一块屏幕色 */
+const grainUrl =
+	"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E\")";
+
+export const postBanner = style({
+	position: 'relative',
+	isolation: 'isolate',
+	display: 'flex',
+	flexDirection: 'column',
+	justifyContent: 'flex-end',
+	alignItems: 'stretch',
+	minHeight: 'clamp(248px, 32vw, 344px)',
+	margin: 0,
+	overflow: 'hidden',
+	borderRadius: borderCardLarge,
+	boxShadow: '0 18px 44px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06)',
+	color: ink,
+	/* 无封面时的兜底底图：色相由 --banner-hue-a / --banner-hue-b 注入（见 utils/banner.ts） */
+	background: [
+		'radial-gradient(130% 120% at 14% 4%, hsl(var(--banner-hue-a, 214) 84% 58% / 0.92), transparent 58%)',
+		'radial-gradient(110% 110% at 86% 96%, hsl(var(--banner-hue-b, 268) 72% 46% / 0.9), transparent 62%)',
+		'linear-gradient(148deg, hsl(var(--banner-hue-a, 214) 62% 24%), hsl(var(--banner-hue-b, 268) 58% 14%))',
+	].join(', '),
+	vars: {
+		'--text-banner': ink,
+		'--button-hover-bg': 'rgba(255, 255, 255, 0.22)',
+	},
+	selectors: {
+		"&[data-cover='false']": {
+			minHeight: 'clamp(212px, 26vw, 288px)',
+		},
+	},
+	'@media': {
+		[`screen and (max-width: ${breakpoints.mobile})`]: {
+			borderRadius: '20px',
+		},
+	},
+});
+
+export const bannerMedia = style({
 	position: 'absolute',
 	inset: 0,
 	zIndex: 0,
+	overflow: 'hidden',
+});
+
+export const bannerImage = style({
+	display: 'block',
 	width: '100%',
 	height: '100%',
 	objectFit: 'cover',
-	borderRadius: 0,
 	margin: 0,
 	userSelect: 'none',
-	transition: 'transform 2s ease',
+	transform: 'scale(1.015)',
+	transition: 'transform 1.4s cubic-bezier(0.2, 0.7, 0.3, 1)',
+	'@media': {
+		'(prefers-reduced-motion: reduce)': {
+			transition: 'none',
+		},
+	},
 });
+
+export const bannerScrim = style({
+	position: 'absolute',
+	inset: 0,
+	zIndex: 1,
+	pointerEvents: 'none',
+	backgroundImage: [
+		`linear-gradient(180deg, ${shade} 0.44) 0%, ${shade} 0.12) 30%, ${shade} 0.32) 62%, ${shade} 0.82) 100%)`,
+		`linear-gradient(102deg, ${shade} 0.42) 0%, ${shade} 0) 62%)`,
+	].join(', '),
+});
+
+export const bannerGrain = style({
+	position: 'absolute',
+	inset: 0,
+	zIndex: 2,
+	pointerEvents: 'none',
+	backgroundImage: grainUrl,
+	backgroundSize: '140px 140px',
+	opacity: 0.07,
+	mixBlendMode: 'overlay',
+});
+
+export const bannerBody = style({
+	position: 'relative',
+	zIndex: 3,
+	display: 'flex',
+	flexDirection: 'column',
+	justifyContent: 'space-between',
+	gap: '1.1rem',
+	width: '100%',
+	padding: '1.15rem 1.35rem 1.35rem',
+	color: ink,
+	'@media': {
+		[`screen and (max-width: ${breakpoints.mobile})`]: {
+			gap: '0.85rem',
+			padding: '0.9rem 1rem 1.1rem',
+		},
+	},
+});
+
+export const bannerTop = style({
+	display: 'flex',
+	alignItems: 'flex-start',
+	justifyContent: 'space-between',
+	gap: '0.75rem',
+	minWidth: 0,
+	fontSize: '13px',
+	fontWeight: 500,
+	lineHeight: 1,
+	color: inkSoft,
+});
+
+export const crumbRow = style({
+	display: 'flex',
+	alignItems: 'baseline',
+	flexWrap: 'wrap',
+	minWidth: 0,
+	rowGap: '4px',
+});
+
+export const bannerFoot = style({
+	display: 'flex',
+	flexDirection: 'column',
+	alignItems: 'flex-start',
+	gap: '0.6rem',
+	minWidth: 0,
+});
+
+export const kickerRow = style({
+	display: 'flex',
+	flexWrap: 'wrap',
+	alignItems: 'center',
+	gap: '0.4rem',
+	minWidth: 0,
+});
+
+export const chip = style({
+	display: 'inline-flex',
+	alignItems: 'center',
+	gap: '0.35rem',
+	height: '26px',
+	padding: '0 0.65rem',
+	borderRadius: '999px',
+	border: '1px solid rgba(255, 255, 255, 0.22)',
+	background: 'rgba(255, 255, 255, 0.14)',
+	backdropFilter: 'blur(10px) saturate(150%)',
+	WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+	color: ink,
+	fontSize: '12.5px',
+	fontWeight: 600,
+	lineHeight: 1,
+	letterSpacing: '0.02em',
+	whiteSpace: 'nowrap',
+	textDecoration: 'none',
+	textShadow: 'none',
+	transition: 'background 180ms ease, border-color 180ms ease, transform 180ms ease',
+	selectors: {
+		'&:hover': {
+			background: 'rgba(255, 255, 255, 0.26)',
+			borderColor: 'rgba(255, 255, 255, 0.36)',
+			color: ink,
+			transform: 'translateY(-1px)',
+		},
+	},
+});
+
+export const chipAccent = style({
+	borderColor: 'rgba(146, 208, 255, 0.42)',
+	background: 'rgba(33, 150, 243, 0.32)',
+	selectors: {
+		'&:hover': {
+			background: 'rgba(33, 150, 243, 0.46)',
+			borderColor: 'rgba(146, 208, 255, 0.6)',
+		},
+	},
+});
+
+export const chipIcon = style({
+	width: '0.875rem',
+	height: '0.875rem',
+	flexShrink: 0,
+	opacity: 0.92,
+});
+
+/** 标题上方那道 2px 微光：整套语言里唯一的「亮线」 */
+export const accentRule = style({
+	width: '44px',
+	height: '2px',
+	borderRadius: '2px',
+	background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.12))',
+});
+
+export const postTitle = style({
+	margin: 0,
+	maxWidth: '42rem',
+	color: ink,
+	fontFamily: vars.font.heading,
+	fontSize: 'clamp(1.5rem, 3.4vw, 2.2rem)',
+	fontWeight: 700,
+	lineHeight: 1.18,
+	letterSpacing: '-0.02em',
+	textShadow: '0 2px 20px rgba(6, 10, 18, 0.45)',
+});
+
+export const postMeta = style({
+	display: 'flex',
+	flexWrap: 'wrap',
+	alignItems: 'baseline',
+	gap: '0.5rem',
+	fontSize: '13px',
+	lineHeight: 1,
+	color: inkSoft,
+	textShadow: '0 1px 10px rgba(6, 10, 18, 0.35)',
+});
+
+export const metaDot = style({
+	opacity: 0.45,
+});
+
+globalStyle(`${postBanner}:hover ${bannerImage}`, { transform: 'scale(1.06)' });
+globalStyle(`${bannerTop} span.sep`, { opacity: 0.5, padding: '0 2px' });
+globalStyle(`${postMeta} span.sep`, { opacity: 0.45 });
+
+/* ── 以下仍由专栏页复用（columns/[slug].astro），勿随意改动 ── */
 
 export const bannerContent = style({
 	position: 'relative',
@@ -73,62 +299,6 @@ export const bannerContent = style({
 	width: '100%',
 	height: '100%',
 	color: 'var(--text-banner)',
-});
-
-export const bannerContentWithImage = style({
-	minHeight: '200px',
-	aspectRatio: '2.5 / 1',
-	vars: {
-		'--text-banner': '#fff',
-		'--button-hover-bg': 'rgba(255, 255, 255, 0.25)',
-		'--blur-bg': 'rgba(0, 0, 0, 0)',
-		'--blur-px': '1em',
-		'--blur-sat': '100%',
-		'--blur-height-top': '6rem',
-		'--blur-height-bottom': '7rem',
-		'--blur-opacity': '0',
-	},
-	background: 'var(--blur-bg)',
-	transition: 'all 0.2s ease-out',
-	'::before': {
-		content: '',
-		position: 'absolute',
-		zIndex: 0,
-		left: 0,
-		right: 0,
-		top: 0,
-		height: 'var(--blur-height-top)',
-		backdropFilter: 'saturate(var(--blur-sat)) blur(var(--blur-px))',
-		WebkitBackdropFilter: 'saturate(var(--blur-sat)) blur(var(--blur-px))',
-		mask: 'linear-gradient(black, rgba(0, 0, 0, 0.75), transparent)',
-		WebkitMask: 'linear-gradient(black, rgba(0, 0, 0, 0.75), transparent)',
-		opacity: 'var(--blur-opacity)',
-		transition: 'all 0.2s ease-out',
-	},
-	'::after': {
-		content: '',
-		position: 'absolute',
-		zIndex: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		height: 'var(--blur-height-bottom)',
-		backdropFilter: 'saturate(var(--blur-sat)) blur(var(--blur-px))',
-		WebkitBackdropFilter: 'saturate(var(--blur-sat)) blur(var(--blur-px))',
-		mask: 'linear-gradient(transparent, rgba(0, 0, 0, 0.75), black)',
-		WebkitMask: 'linear-gradient(transparent, rgba(0, 0, 0, 0.75), black)',
-		opacity: 'var(--blur-opacity)',
-		transition: 'all 0.2s ease-out',
-	},
-	selectors: {
-		[`${banner}:hover &`]: {
-			vars: {
-				'--blur-bg': 'rgba(0, 0, 0, 0.1)',
-				'--blur-sat': '150%',
-				'--blur-opacity': '1',
-			},
-		},
-	},
 });
 
 export const bannerMeta = style({
@@ -155,26 +325,12 @@ export const breadcrumb = style({
 	},
 });
 
-export const metaDot = style({
-	opacity: 0.55,
-});
-
 export const bannerBottom = style({
 	display: 'flex',
 	width: '100%',
 	boxSizing: 'border-box',
 	padding: '1rem',
 	zIndex: 1,
-	selectors: {
-		[`${bannerContentWithImage} &`]: {
-			backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2))',
-			textShadow: '0 0 1px rgba(0, 0, 0, 0.12)',
-		},
-	},
-});
-
-export const titleArea = style({
-	minWidth: 0,
 });
 
 export const title = style({
@@ -193,19 +349,6 @@ export const updated = style({
 	lineHeight: 1.2,
 	opacity: 0.72,
 });
-
-globalStyle(`${banner}:hover ${bannerImage}`, { transform: 'scale(1.01)' });
-globalStyle(`${bannerMeta} .left`, { minWidth: 0 });
-globalStyle(`${bannerMeta} .flex-row`, { display: 'flex', alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap' });
-globalStyle(`${bannerMeta} span`, { color: 'var(--text-banner)' });
-globalStyle(`${bannerMeta} span.sep`, { opacity: 0.5, margin: 0, padding: '4px' });
-globalStyle(`${bannerMeta} #post-meta`, { marginTop: '4px' });
-globalStyle(`${bannerMeta} #post-meta span`, { display: 'inline-block', padding: '4px' });
-globalStyle(`${bannerMeta} #post-meta span.sep`, { padding: 0 });
-globalStyle(`${bannerMeta} #post-meta span.sep::before`, { content: '|' });
-globalStyle(`${bannerMeta} #post-meta span.updated`, { visibility: 'hidden' });
-globalStyle(`${bannerMeta}:hover #post-meta span.updated`, { visibility: 'visible' });
-globalStyle(`${bannerContentWithImage} .top, ${bannerContentWithImage} .bottom`, { zIndex: 1 });
 
 export const prose = style({
 	position: 'relative',
