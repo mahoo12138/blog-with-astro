@@ -57,7 +57,7 @@ export function sortBlogPosts(posts: BlogPost[]) {
 /**
  * 判断一篇文章是否属于某个专栏。
  *
- * 专栏章节与独立文章存在**同一个 posts 集合**里，靠可选字段 columnId 关联。
+ * 文件夹内的章节与独立文章保留同一个 posts 查询集合；columnId 由加载器根据目录注入。
  * 全站所有「要不要分流」的判断都必须走这两个函数，避免各处各写一遍
  * `post.data.columnId` 判断而出现一半分、一半不分的情况。
  */
@@ -284,6 +284,7 @@ export function buildColumnBuckets(posts: BlogPost[], columns: ColumnEntry[]) {
 	}
 
 	const buckets: ColumnBucket[] = columns
+		.filter((column) => !column.data.draft)
 		.map((column) => {
 			const columnId = column.data.columnId ?? column.id;
 			// 章节顺序在此处一次性定好，下游（目录 / 侧栏 / 前后章导航）直接消费，
@@ -305,7 +306,7 @@ export function buildColumnBuckets(posts: BlogPost[], columns: ColumnEntry[]) {
 				updatedAt: dates.length ? new Date(dates[dates.length - 1]) : undefined,
 			};
 		})
-		// 空专栏不渲染：实测 6 个专栏里有 3 个（content-system / lab-notes / stellar-remake）
+		// 空专栏不渲染：入口可以先建，补上公开章节后自动出现；当前有 3 个空入口
 		// 一篇文章都没有，此前仍会在列表页渲染出空卡片。
 		// 补上内容后会自动重新出现，无需改代码。
 		.filter((bucket) => bucket.posts.length > 0);

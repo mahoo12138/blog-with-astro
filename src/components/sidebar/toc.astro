@@ -1,69 +1,33 @@
 ---
 import type { WidgetProps } from './types';
-import StellarIcon from '../StellarIcon.astro';
-import * as styles from '../StellarRightSidebar.css';
+import * as styles from './toc.css';
 
 const { widget, context } = Astro.props as WidgetProps;
-const tocHeadings = (context.headings ?? []).filter((h) => h.depth >= 1 && h.depth <= 6);
-const baseDepth = tocHeadings.length > 0 ? Math.min(...tocHeadings.map((h) => h.depth), 2) : 2;
+const tocHeadings = (context.headings ?? []).filter((heading) => heading.depth >= 1 && heading.depth <= 6);
+const baseDepth = tocHeadings.length ? Math.min(...tocHeadings.map((heading) => heading.depth)) : 2;
+const title = widget.title || '本文目录';
 ---
 
 {tocHeadings.length > 0 && (
-	<section class:list={[styles.widget, styles.tocWidget]} id="data-toc" data-toc-widget data-toc-collapse="false">
-		<div class={styles.widgetHeader}>
-			<span>{widget.title}</span>
-			<button class={styles.capAction} type="button" aria-label="Collapse table of contents" aria-pressed="false" data-toc-toggle>
-				<StellarIcon name="default:rightbar" />
-			</button>
-		</div>
-		<div class={styles.tocBody}>
-			<ol class={styles.tocList}>
+	<details class={styles.widget} id="data-toc" data-toc-widget open>
+		<summary class={styles.header} data-toc-toggle aria-controls="article-toc-body">
+			<span class={styles.title}>{title}</span>
+			<svg class={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+		</summary>
+		<nav id="article-toc-body" class={styles.viewport} aria-label={title} data-toc-scroll>
+			<ol class={styles.list} role="list" data-toc-list>
 				{tocHeadings.map((heading) => (
-					<li class={styles.tocItem} style={`--toc-padding:${8 + Math.max(0, heading.depth - baseDepth) * 16}px;`}>
-						<a class={styles.tocLink} href={`#${heading.slug}`}>
-							<span class={styles.tocText}>{heading.text}</span>
+					<li class={styles.item} data-toc-level={heading.depth - baseDepth} style={`--toc-level:${heading.depth - baseDepth};`}>
+						<a class={styles.link} href={`#${encodeURIComponent(heading.slug)}`} data-toc-link>
+							<span class={styles.text}>{heading.text}</span>
 						</a>
 					</li>
 				))}
 			</ol>
-		</div>
-	</section>
+		</nav>
+	</details>
 )}
 
-<script is:inline>
-	(() => {
-		const widget = document.querySelector('[data-toc-widget]');
-		if (!widget) return;
-
-		const list = widget.querySelector('ol');
-		const links = Array.from(widget.querySelectorAll('a[href^="#"]'));
-		const headings = links
-			.map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
-			.filter(Boolean);
-
-		const setActiveLink = () => {
-			let activeIndex = 0;
-			headings.forEach((heading, index) => {
-				if (heading.getBoundingClientRect().top <= 96) activeIndex = index;
-			});
-
-			links.forEach((link, index) => link.classList.toggle('active', index === activeIndex));
-
-			const activeLink = links[activeIndex];
-			if (list && activeLink) {
-				const listTop = list.getBoundingClientRect().top;
-				const linkTop = activeLink.getBoundingClientRect().top;
-				list.scrollTo({ top: list.scrollTop + linkTop - listTop - list.clientHeight / 2, behavior: 'smooth' });
-			}
-		};
-
-		const toggle = widget.querySelector('[data-toc-toggle]');
-		toggle?.addEventListener('click', () => {
-			const collapsed = widget.classList.toggle('collapse');
-			toggle.setAttribute('aria-pressed', String(collapsed));
-		});
-
-		setActiveLink();
-		window.addEventListener('scroll', setActiveLink, { passive: true });
-	})();
+<script>
+	import '../../scripts/toc';
 </script>

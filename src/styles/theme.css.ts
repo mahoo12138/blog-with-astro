@@ -9,20 +9,20 @@ export const breakpoints = {
 
 export const vars = createGlobalTheme(':root', {
 	color: {
-		accent: '#2196f3',
-		accentStrong: '#3367d6',
-		accentSoft: 'rgba(33, 150, 243, 0.12)',
-		background: '#f4f7fb',
-		backgroundElevated: '#edf3fb',
-		surface: 'rgba(255, 255, 255, 0.82)',
+		accent: '#476b92',
+		accentStrong: '#365b81',
+		accentSoft: 'rgba(71, 107, 146, 0.08)',
+		background: '#fafafa',
+		backgroundElevated: '#f4f4f5',
+		surface: '#ffffff',
 		surfaceStrong: '#ffffff',
-		surfaceMuted: 'rgba(255, 255, 255, 0.62)',
-		textStrong: 'rgba(18, 25, 38, 0.96)',
-		text: 'rgba(18, 25, 38, 0.82)',
-		textMuted: 'rgba(18, 25, 38, 0.58)',
-		textMeta: 'rgba(18, 25, 38, 0.32)',
-		border: 'rgba(18, 25, 38, 0.10)',
-		borderStrong: 'rgba(18, 25, 38, 0.16)',
+		surfaceMuted: '#fafafa',
+		textStrong: '#202327',
+		text: '#373b41',
+		textMuted: '#606770',
+		textMeta: '#69717b',
+		border: '#e8e9eb',
+		borderStrong: '#d7dadd',
 		codeBackground: 'rgba(33, 150, 243, 0.10)',
 		codeText: 'rgba(13, 35, 64, 0.92)',
 	},
@@ -38,15 +38,15 @@ export const vars = createGlobalTheme(':root', {
 		section: '6rem',
 	},
 	radius: {
-		sm: '10px',
-		md: '16px',
-		lg: '24px',
-		xl: '32px',
+		sm: '6px',
+		md: '10px',
+		lg: '14px',
+		xl: '20px',
 		pill: '999px',
 	},
 	shadow: {
-		head: '0 16px 40px rgba(15, 23, 42, 0.08)',
-		card: '0 22px 48px rgba(15, 23, 42, 0.10)',
+		head: '0 2px 12px rgba(0, 0, 0, 0.035)',
+		card: '0 1px 3px rgba(0, 0, 0, 0.025)',
 		focus: '0 0 0 4px rgba(33, 150, 243, 0.18)',
 	},
 	layout: {
@@ -63,46 +63,46 @@ export const vars = createGlobalTheme(':root', {
 });
 
 const lightThemeVars = {
-	[vars.color.accent]: '#2196f3',
-	[vars.color.accentStrong]: '#3367d6',
-	[vars.color.accentSoft]: 'rgba(33, 150, 243, 0.12)',
-	[vars.color.background]: '#f4f7fb',
-	[vars.color.backgroundElevated]: '#edf3fb',
-	[vars.color.surface]: 'rgba(255, 255, 255, 0.82)',
+	[vars.color.accent]: '#476b92',
+	[vars.color.accentStrong]: '#365b81',
+	[vars.color.accentSoft]: 'rgba(71, 107, 146, 0.08)',
+	[vars.color.background]: '#fafafa',
+	[vars.color.backgroundElevated]: '#f4f4f5',
+	[vars.color.surface]: '#ffffff',
 	[vars.color.surfaceStrong]: '#ffffff',
-	[vars.color.surfaceMuted]: 'rgba(255, 255, 255, 0.62)',
-	[vars.color.textStrong]: 'rgba(18, 25, 38, 0.96)',
-	[vars.color.text]: 'rgba(18, 25, 38, 0.82)',
-	[vars.color.textMuted]: 'rgba(18, 25, 38, 0.62)',
-	[vars.color.textMeta]: 'rgba(18, 25, 38, 0.34)',
-	[vars.color.border]: 'rgba(18, 25, 38, 0.10)',
-	[vars.color.borderStrong]: 'rgba(18, 25, 38, 0.16)',
+	[vars.color.surfaceMuted]: '#fafafa',
+	[vars.color.textStrong]: '#202327',
+	[vars.color.text]: '#373b41',
+	[vars.color.textMuted]: '#606770',
+	[vars.color.textMeta]: '#69717b',
+	[vars.color.border]: '#e8e9eb',
+	[vars.color.borderStrong]: '#d7dadd',
 	[vars.color.codeBackground]: 'rgba(33, 150, 243, 0.10)',
 	[vars.color.codeText]: 'rgba(13, 35, 64, 0.92)',
-	[vars.shadow.head]: '0 16px 40px rgba(15, 23, 42, 0.08)',
-	[vars.shadow.card]: '0 22px 48px rgba(15, 23, 42, 0.10)',
+	[vars.shadow.head]: '0 2px 12px rgba(0, 0, 0, 0.035)',
+	[vars.shadow.card]: '0 1px 3px rgba(0, 0, 0, 0.025)',
 	[vars.shadow.focus]: '0 0 0 4px rgba(33, 150, 243, 0.18)',
 };
 
 const darkThemeVars = {
-	[vars.color.accent]: '#7ecbff',
-	[vars.color.accentStrong]: '#a8ddff',
-	[vars.color.accentSoft]: 'rgba(126, 203, 255, 0.16)',
-	[vars.color.background]: '#0b1118',
-	[vars.color.backgroundElevated]: '#111925',
-	[vars.color.surface]: 'rgba(18, 27, 40, 0.86)',
-	[vars.color.surfaceStrong]: '#151e2b',
-	[vars.color.surfaceMuted]: 'rgba(18, 27, 40, 0.72)',
+	[vars.color.accent]: '#9ab5d3',
+	[vars.color.accentStrong]: '#b7cde6',
+	[vars.color.accentSoft]: 'rgba(154, 181, 211, 0.12)',
+	[vars.color.background]: '#151719',
+	[vars.color.backgroundElevated]: '#202326',
+	[vars.color.surface]: '#1c1f22',
+	[vars.color.surfaceStrong]: '#1c1f22',
+	[vars.color.surfaceMuted]: '#202326',
 	[vars.color.textStrong]: 'rgba(241, 245, 249, 0.96)',
 	[vars.color.text]: 'rgba(241, 245, 249, 0.82)',
-	[vars.color.textMuted]: 'rgba(241, 245, 249, 0.62)',
-	[vars.color.textMeta]: 'rgba(241, 245, 249, 0.34)',
+	[vars.color.textMuted]: '#b0b6be',
+	[vars.color.textMeta]: '#a1a8b2',
 	[vars.color.border]: 'rgba(148, 163, 184, 0.16)',
 	[vars.color.borderStrong]: 'rgba(148, 163, 184, 0.24)',
 	[vars.color.codeBackground]: 'rgba(126, 203, 255, 0.12)',
 	[vars.color.codeText]: 'rgba(224, 242, 254, 0.96)',
-	[vars.shadow.head]: '0 18px 48px rgba(2, 6, 23, 0.42)',
-	[vars.shadow.card]: '0 26px 56px rgba(2, 6, 23, 0.48)',
+	[vars.shadow.head]: '0 2px 12px rgba(0, 0, 0, 0.12)',
+	[vars.shadow.card]: '0 1px 3px rgba(0, 0, 0, 0.10)',
 	[vars.shadow.focus]: '0 0 0 4px rgba(126, 203, 255, 0.22)',
 };
 
@@ -125,11 +125,32 @@ globalStyle(':root[data-theme="dark"]', {
 	vars: darkThemeVars,
 });
 
-const lightBodyBackground =
-	'radial-gradient(circle at top left, rgba(33, 150, 243, 0.18), transparent 24rem), radial-gradient(circle at top right, rgba(70, 136, 241, 0.10), transparent 18rem), linear-gradient(180deg, #fbfdff 0%, #f4f7fb 42%, #eef3f9 100%)';
+// 非博客默认主题：把原始 TinyShip 变量映射到现有的语义 token。
+// 保留原始 OKLCH 色值、字体与布局；仅派生阅读链接/弱文字的对比色，
+// 避免把原主题中用于按钮填充的亮色直接用于小号正文链接。
+globalStyle(':root[data-color-scheme]', {
+	vars: {
+		[vars.color.background]: 'var(--background)',
+		[vars.color.backgroundElevated]: 'var(--muted)',
+		[vars.color.surface]: 'var(--card)',
+		[vars.color.surfaceStrong]: 'var(--card)',
+		[vars.color.surfaceMuted]: 'var(--muted)',
+		[vars.color.textStrong]: 'var(--foreground)',
+		[vars.color.text]: 'var(--foreground)',
+		[vars.color.textMuted]: 'color-mix(in srgb, var(--muted-foreground) 40%, var(--foreground))',
+		[vars.color.textMeta]: 'color-mix(in srgb, var(--muted-foreground) 40%, var(--foreground))',
+		[vars.color.accent]: 'color-mix(in srgb, var(--primary) 40%, var(--foreground))',
+		[vars.color.accentStrong]: 'color-mix(in srgb, var(--primary) 40%, var(--foreground))',
+		[vars.color.accentSoft]: 'var(--accent)',
+		[vars.color.border]: 'var(--border)',
+		[vars.color.borderStrong]: 'color-mix(in srgb, var(--border) 70%, var(--foreground))',
+		[vars.color.codeBackground]: 'var(--muted)',
+		[vars.color.codeText]: 'var(--foreground)',
+		[vars.shadow.focus]: '0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent)',
+	},
+});
 
-const darkBodyBackground =
-	'radial-gradient(circle at top left, rgba(126, 203, 255, 0.12), transparent 22rem), radial-gradient(circle at top right, rgba(51, 103, 214, 0.12), transparent 18rem), linear-gradient(180deg, #0b1118 0%, #0f1722 46%, #111b29 100%)';
+// 背景统一引用主题 token，显式主题与系统主题不再产生两套底色。
 
 globalStyle('*', {
 	boxSizing: 'border-box',
@@ -154,10 +175,10 @@ globalStyle('body', {
 	textRendering: 'optimizeLegibility',
 	wordBreak: 'normal',
 	overflowWrap: 'break-word',
-	background: lightBodyBackground,
+	background: vars.color.background,
 	'@media': {
 		'(prefers-color-scheme: dark)': {
-			background: darkBodyBackground,
+			background: vars.color.background,
 		},
 		[`screen and (max-width: ${breakpoints.tablet})`]: {
 			fontSize: '17px',
@@ -166,11 +187,11 @@ globalStyle('body', {
 });
 
 globalStyle(':root[data-theme="light"] body', {
-	background: lightBodyBackground,
+	background: vars.color.background,
 });
 
 globalStyle(':root[data-theme="dark"] body', {
-	background: darkBodyBackground,
+	background: vars.color.background,
 });
 
 
@@ -216,6 +237,24 @@ globalStyle('a', {
 
 globalStyle('a:hover', {
 	color: vars.color.accent,
+});
+
+globalStyle(':where(a, button, input, textarea, select, summary, [tabindex]):focus-visible', {
+	outline: `2px solid ${vars.color.accentStrong}`,
+	outlineOffset: '3px',
+});
+globalStyle(':where(h1, h2, h3, h4, h5, h6, [id])', { scrollMarginTop: '80px' });
+globalStyle('html', { '@media': { '(prefers-reduced-motion: reduce)': { scrollBehavior: 'auto' } } });
+globalStyle('*, *::before, *::after', {
+	'@media': { '(prefers-reduced-motion: reduce)': {
+		animationDuration: '0.01ms !important', animationIterationCount: '1 !important',
+		// 直接禁用过渡；极小的非零时长仍会延迟子元素继承 visibility，影响立即聚焦。
+		transitionDuration: '0s !important', transitionDelay: '0s !important', scrollBehavior: 'auto',
+	} },
+});
+
+globalStyle('::view-transition-old(root), ::view-transition-new(root)', {
+	'@media': { '(prefers-reduced-motion: reduce)': { animation: 'none' } },
 });
 
 globalStyle('p, ul, ol, blockquote, pre, table', {

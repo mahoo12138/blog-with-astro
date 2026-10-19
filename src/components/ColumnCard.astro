@@ -1,5 +1,6 @@
 ---
-import type { ColumnBucket } from '../utils/content';
+import { postHref, type ColumnBucket } from '../utils/content';
+import * as catalog from '../styles/columnsIndex.css';
 import * as styles from '../styles/taxonomy.css';
 
 interface Props {
@@ -10,12 +11,42 @@ interface Props {
 	 * 用章节数正好能说明这个专栏有多长。
 	 */
 	countLabel?: string;
+	/** 专栏首页使用完整目录卡片；分类/标签页保留现有紧凑呈现。 */
+	variant?: 'default' | 'catalog';
+	index?: number;
 }
 
-const { column, countLabel } = Astro.props;
+const { column, countLabel, variant = 'default', index = 1 } = Astro.props;
 const count = countLabel ?? `${column.posts.length} 篇`;
+const href = `/columns/${column.slug}/`;
+const firstPost = column.posts[0];
+const titleId = `column-title-${column.slug}`;
 ---
 
+{variant === 'catalog' ? (
+	<article class={catalog.card} data-column-card={column.slug}>
+		<div class={catalog.cardMeta}>
+			<span class={catalog.number} aria-hidden="true">{String(index).padStart(2, '0')}</span>
+			<span class={catalog.count}>{count}</span>
+		</div>
+		{column.icon && <img class={catalog.icon} src={column.icon} alt="" width="40" height="40" loading="lazy" decoding="async" />}
+		<h2 class={catalog.cardTitle} id={titleId}>
+			<a class={catalog.overviewLink} href={href} aria-describedby={column.description ? `${titleId}-description` : undefined}>
+				{column.title}
+			</a>
+		</h2>
+		{column.description && <p class={catalog.cardDescription} id={`${titleId}-description`}>{column.description}</p>}
+		<div class={catalog.cardFooter}>
+			<span class={catalog.overviewHint} aria-hidden="true">查看目录</span>
+			{firstPost && (
+				<a class={catalog.readLink} href={postHref(firstPost)} aria-label={`开始阅读${column.title}：${firstPost.data.title}`} title={firstPost.data.title}>
+					<span>开始阅读</span>
+					<svg class={catalog.arrow} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
+				</a>
+			)}
+		</div>
+	</article>
+) : (
 <div class={styles.topicCardWrap}>
 	<a class={styles.topicCard} href={`/columns/${column.slug}/`}>
 		<article class={styles.topicArticle}>
@@ -38,3 +69,4 @@ const count = countLabel ?? `${column.posts.length} 篇`;
 		</article>
 	</a>
 </div>
+)}

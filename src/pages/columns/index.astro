@@ -4,28 +4,42 @@ import ColumnCard from '../../components/ColumnCard.astro';
 import StellarNavTabs from '../../components/StellarNavTabs.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 import StellarShell from '../../layouts/StellarShell.astro';
-import * as styles from '../../styles/taxonomy.css';
+import * as styles from '../../styles/columnsIndex.css';
 import { buildColumnBuckets, sortBlogPosts } from '../../utils/content';
 
 const posts = sortBlogPosts(await getCollection('posts'));
 const columns = await getCollection('columns');
 const buckets = buildColumnBuckets(posts, columns);
+const totalChapters = buckets.reduce((total, column) => total + column.posts.length, 0);
 ---
 
 <StellarShell title={`Columns · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.pageMain} siteTree="index_topic">
-	<header class={styles.header}>
+	<div class={styles.navigation}>
 		<StellarNavTabs active="columns" />
-	</header>
-	<h1 class={styles.srOnly}>专栏</h1>
-	{
-		buckets.length ? (
-			<div class={styles.topicList}>
-				{buckets.map((column) => (
-					<ColumnCard column={column} />
-				))}
+	</div>
+	<section class={styles.catalog} aria-labelledby="columns-title">
+		<header class={styles.header}>
+			<div>
+				<h1 id="columns-title" class={styles.title}>专栏</h1>
+				<p class={styles.description}>按主题整理的系列笔记与教程，沿着一个主题读下去。</p>
 			</div>
-		) : (
-			<section class={styles.empty}>暂无专栏</section>
-		)
-	}
+			<p class={styles.summary}>
+				<span><strong>{buckets.length}</strong> 个专栏</span>
+				<span><strong>{totalChapters}</strong> 篇文章</span>
+			</p>
+		</header>
+		{
+			buckets.length ? (
+				<ol class={styles.grid} aria-label="专栏目录">
+					{buckets.map((column, index) => (
+						<li class={styles.item}>
+							<ColumnCard column={column} variant="catalog" index={index + 1} />
+						</li>
+					))}
+				</ol>
+			) : (
+				<p class={styles.empty}>暂无专栏</p>
+			)
+		}
+	</section>
 </StellarShell>

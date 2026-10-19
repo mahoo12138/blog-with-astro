@@ -1,5 +1,6 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
+import AppearanceButton from '../components/AppearanceButton.astro';
 import type { ImageMetadata } from 'astro';
 import StellarLeftSidebar from '../components/StellarLeftSidebar.astro';
 import StellarIcon from '../components/StellarIcon.astro';
@@ -7,6 +8,7 @@ import StellarPageFooter from '../components/StellarPageFooter.astro';
 import StellarRightSidebar from '../components/StellarRightSidebar.astro';
 import TopProgressBar from '../components/TopProgressBar.astro';
 import SkipLink from '../components/SkipLink.astro';
+import { SITE_TITLE } from '../consts';
 import { resolveShellConfig, type MenuId, type SidebarValue, type SiteTreeKey } from '../config/stellar';
 import type { ColumnSidebarContext } from '../components/sidebar/types';
 import * as styles from './StellarShell.css';
@@ -46,13 +48,19 @@ const hasRightbarContent = shellConfig.rightbar.length > 0 || hasRightbar;
 	<body class={styles.body}>
 		<TopProgressBar />
 		<SkipLink />
-		<div class={styles.background} aria-hidden="true">
-			<div class={styles.glowLeft}></div>
-			<div class={styles.glowRight}></div>
-		</div>
 		{hasHero && <slot name="hero" />}
+		<header class={styles.mobileHeader} data-mobile-header data-pagefind-ignore>
+			<a class={styles.mobileTitle} href="/">{SITE_TITLE}</a>
+			<div class={styles.mobileTools}>
+				<AppearanceButton compact />
+				<button class={styles.floatButton} type="button" data-sidebar-toggle="leftbar" aria-controls="site-leftbar" aria-expanded="false" aria-label="打开站点导航">
+					<StellarIcon name="default:leftbar" class={styles.floatIcon} />
+				</button>
+			</div>
+		</header>
 		<div class={styles.shell} data-stellar-shell>
-			<aside class={styles.left} data-pagefind-ignore>
+			<aside id="site-leftbar" class={styles.left} aria-label="站点导航" data-pagefind-ignore>
+				<button class:list={[styles.sidebarClose, styles.leftClose]} type="button" data-sidebar-close>关闭导航</button>
 				<StellarLeftSidebar menuId={shellConfig.menuId} widgets={shellConfig.leftbar} column={column} />
 				{hasLeftbar && <slot name="leftbar" />}
 			</aside>
@@ -64,51 +72,25 @@ const hasRightbarContent = shellConfig.rightbar.length > 0 || hasRightbar;
 				</div>
 			</main>
 			{hasRightbarContent && (
-				<aside class={styles.right} data-pagefind-ignore>
+				<aside id="site-rightbar" class:list={[styles.right, siteTree === 'home' && styles.homeRight]} aria-label="页面侧栏" data-pagefind-ignore>
+					<button class:list={[styles.sidebarClose, styles.rightClose]} type="button" data-sidebar-close>关闭侧栏</button>
 					<StellarRightSidebar widgets={shellConfig.rightbar} headings={tocHeadings} column={column} />
 					{hasRightbar && <slot name="rightbar" />}
 				</aside>
 			)}
-			<button class={styles.mainMask} type="button" data-sidebar-dismiss aria-label="Close sidebar" data-pagefind-ignore></button>
+			<button class={styles.mainMask} type="button" data-sidebar-dismiss tabindex="-1" aria-hidden="true" aria-label="关闭侧栏" data-pagefind-ignore></button>
 			<div class={styles.floatPanel} data-pagefind-ignore>
 				{hasRightbarContent && (
-					<button class:list={[styles.floatButton, styles.rightbarToggle]} type="button" data-sidebar-toggle="rightbar" aria-label="Toggle right sidebar">
+					<button class:list={[styles.floatButton, styles.rightbarToggle]} type="button" data-sidebar-toggle="rightbar" aria-controls="site-rightbar" aria-expanded="false" aria-label="打开页面侧栏">
 						<StellarIcon name="default:rightbar" class={styles.floatIcon} />
 					</button>
 				)}
-				<button class:list={[styles.floatButton, styles.leftbarToggle]} type="button" data-sidebar-toggle="leftbar" aria-label="Toggle left sidebar">
+				<button class:list={[styles.floatButton, styles.leftbarToggle]} type="button" data-sidebar-toggle="leftbar" aria-controls="site-leftbar" aria-expanded="false" aria-label="打开站点导航">
 					<StellarIcon name="default:leftbar" class={styles.floatIcon} />
 				</button>
 			</div>
 		</div>
-		<script is:inline>
-			(() => {
-				const shell = document.querySelector('[data-stellar-shell]');
-				if (!shell) return;
-
-				const dismiss = () => {
-					shell.removeAttribute('data-leftbar-open');
-					shell.removeAttribute('data-rightbar-open');
-				};
-
-				document.querySelectorAll('[data-sidebar-toggle]').forEach((button) => {
-					button.addEventListener('click', () => {
-						const target = button.getAttribute('data-sidebar-toggle');
-						if (target === 'leftbar') {
-							const isOpen = shell.hasAttribute('data-leftbar-open');
-							dismiss();
-							if (!isOpen) shell.setAttribute('data-leftbar-open', '');
-						}
-						if (target === 'rightbar') {
-							const isOpen = shell.hasAttribute('data-rightbar-open');
-							dismiss();
-							if (!isOpen) shell.setAttribute('data-rightbar-open', '');
-						}
-					});
-				});
-
-				document.querySelector('[data-sidebar-dismiss]')?.addEventListener('click', dismiss);
-			})();
-		</script>
-	</body>
+		<script>
+			import '../scripts/sidebar';
+		</script>	</body>
 </html>

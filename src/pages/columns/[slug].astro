@@ -27,7 +27,9 @@ interface Props {
 
 const { bucket, column } = Astro.props as Props;
 const { Content, headings } = await render(column);
-const initial = bucket.title.slice(0, 1);
+const firstPost = bucket.posts[0];
+// 已有导读正文时不在标题下重复摘要；只有空入口才展示 frontmatter 简介。
+const showDescription = !column.body?.trim() && Boolean(bucket.description);
 const formatDate = (date: Date) =>
 	`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 ---
@@ -46,28 +48,30 @@ const formatDate = (date: Date) =>
 		posts: bucket.posts,
 	}}
 >
-	<article class={columnStyles.article}>
-		{/* 专栏头图：仅保留 cover 兜底（banner 字段已随 Schema 收敛删除，实测 0 篇使用） */}
-		<header class:list={[styles.banner, columnStyles.noBanner, 'article', 'banner', 'top']}>
-			<div class={columnStyles.bannerFallback} aria-hidden="true">
-				<span class={columnStyles.bannerFallbackInitial}>{initial}</span>
-			</div>
-			<div class:list={[styles.bannerContent, 'content']}>
-				<div class:list={[styles.bannerMeta, 'top', 'bread-nav', 'footnote']}>
-					<div class="left">
-						<div class="flex-row" id="breadcrumb">
-							<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/">Home</a>
-							<span class="sep">/</span>
-							<a class:list={[styles.breadcrumb, 'cap', 'breadcrumb']} href="/columns">专栏</a>
-							<span class="sep">/</span>
-							<span class:list={[styles.breadcrumb, 'cap', 'breadcrumb']}>{bucket.title}</span>
-						</div>
-					</div>
-				</div>
-				<div class:list={[styles.bannerBottom, 'bottom', 'only-title']}>
-					<div class="text-area">
-						<h1 class:list={[styles.title, 'text', 'title']}><span>{bucket.title}</span></h1>
-					</div>
+	<article class={columnStyles.article} aria-labelledby="column-title">
+		<header class={columnStyles.header} data-column-header>
+			<nav class={columnStyles.breadcrumbs} aria-label="面包屑导航">
+				<ol class={columnStyles.breadcrumbList}>
+					<li><a class={columnStyles.breadcrumbLink} href="/">首页</a></li>
+					<li class={columnStyles.breadcrumbSeparator} aria-hidden="true">/</li>
+					<li><a class={columnStyles.breadcrumbLink} href="/columns">专栏</a></li>
+				</ol>
+			</nav>
+			<h1 class={columnStyles.title} id="column-title">{bucket.title}</h1>
+			{showDescription && <p class={columnStyles.description}>{bucket.description}</p>}
+			<div class={columnStyles.headerBottom}>
+				<p class={columnStyles.chapterCount}>共 <span class={columnStyles.countNumber}>{bucket.posts.length}</span> 篇文章</p>
+				<div class={columnStyles.actions}>
+					<a class={columnStyles.directoryLink} href="#column-chapters" data-column-directory>
+						浏览目录
+						<svg class={columnStyles.actionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m-5-5 5 5 5-5" /></svg>
+					</a>
+					{firstPost && (
+						<a class={columnStyles.readLink} href={postHref(firstPost)} title={firstPost.data.title} aria-label={`开始阅读${bucket.title}：${firstPost.data.title}`} data-column-start>
+							开始阅读
+							<svg class={columnStyles.actionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
+						</a>
+					)}
 				</div>
 			</div>
 		</header>

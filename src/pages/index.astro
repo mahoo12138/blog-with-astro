@@ -2,7 +2,6 @@
 import BlogFeedList from '../components/BlogFeedList.astro';
 import Pagination from '../components/Pagination.astro';
 import StellarNavTabs from '../components/StellarNavTabs.astro';
-import PinnedScrollSection from '../components/hero/PinnedScrollSection.astro';
 import { POSTS_PER_PAGE, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import StellarShell from '../layouts/StellarShell.astro';
 import * as styles from '../styles/homeFeed.css';
@@ -24,8 +23,8 @@ const pageDescription = `${SITE_DESCRIPTION} 这里是最新发布的文章，�
 ---
 
 <StellarShell title={pageTitle} description={pageDescription} mainClass={styles.main} siteTree="home">
-	<PinnedScrollSection slot="hero" />
-	<header class={styles.header}>
+	<h1 class="sr-only">{SITE_TITLE} · 最新文章</h1>
+	<header class={styles.header} id="latest-posts">
 		<StellarNavTabs active="home" />
 	</header>
 	<BlogFeedList items={pageItems} />

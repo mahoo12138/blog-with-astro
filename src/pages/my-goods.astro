@@ -33,16 +33,6 @@ const categoryCounts = CATEGORIES.reduce(
 	{} as Record<FilterCategory, number>,
 );
 
-// 用于每个商品卡片的渐变色（按 id 循环）
-const cardGradients = [
-	'linear-gradient(135deg, #e8f4fd 0%, #d0e8f8 100%)',
-	'linear-gradient(135deg, #f0f4ff 0%, #dde5fc 100%)',
-	'linear-gradient(135deg, #f5f0ff 0%, #e8dff8 100%)',
-	'linear-gradient(135deg, #fff0f5 0%, #faddec 100%)',
-	'linear-gradient(135deg, #f0faf5 0%, #d8f0e5 100%)',
-	'linear-gradient(135deg, #fffbf0 0%, #faefd5 100%)',
-];
-
 const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 	仍在使用: { label: '仍在使用', cls: 'status-active' },
 	已废置: { label: '已废置', cls: 'status-retired' },
@@ -101,8 +91,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		<!-- Goods grid -->
 		<div class="goods-grid" id="goodsGrid">
 			{
-				goods.map((g, idx) => {
-					const grad = cardGradients[idx % cardGradients.length];
+				goods.map((g) => {
 					const sc = statusConfig[g.status];
 					return (
 						<article
@@ -111,7 +100,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 							data-name={g.name}
 							data-desc={g.description}
 						>
-							<div class="card-image" style={`background: ${grad};`}>
+							<div class="card-image" style="background: var(--explore-preview);">
 								<span class={`status-badge ${sc.cls}`}>{sc.label}</span>
 							</div>
 							<div class="card-body">
@@ -161,26 +150,20 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		gap: 0.5rem;
 		margin-bottom: 1.25rem;
 		font-size: 13px;
-		color: rgba(18, 25, 38, 0.5);
-	}
-	:global([data-theme='dark']) .breadcrumb {
-		color: rgba(241, 245, 249, 0.45);
+		color: var(--explore-text-muted);
 	}
 	.bc-link {
 		color: inherit;
 		text-decoration: none;
 	}
 	.bc-link:hover {
-		color: var(--color-accent, #2196f3);
+		color: var(--explore-accent-strong);
 	}
 	.bc-sep {
 		opacity: 0.5;
 	}
 	.bc-current {
-		color: rgba(18, 25, 38, 0.72);
-	}
-	:global([data-theme='dark']) .bc-current {
-		color: rgba(241, 245, 249, 0.72);
+		color: var(--explore-text);
 	}
 
 	/* ---- Page header ---- */
@@ -195,10 +178,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		font-size: 28px;
 		font-weight: 800;
 		line-height: 1.2;
-		color: rgba(18, 25, 38, 0.96);
-	}
-	:global([data-theme='dark']) .page-title {
-		color: rgba(241, 245, 249, 0.96);
+		color: var(--explore-text-strong);
 	}
 	.title-icon {
 		font-size: 24px;
@@ -207,10 +187,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		margin: 0;
 		font-size: 14px;
 		line-height: 1.6;
-		color: rgba(18, 25, 38, 0.58);
-	}
-	:global([data-theme='dark']) .page-desc {
-		color: rgba(241, 245, 249, 0.55);
+		color: var(--explore-text-muted);
 	}
 
 	/* ---- Filter bar ---- */
@@ -233,12 +210,12 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		align-items: center;
 		gap: 0.3rem;
 		padding: 0.375rem 0.875rem;
-		border: 1.5px solid rgba(18, 25, 38, 0.12);
+		border: 1.5px solid var(--explore-border);
 		border-radius: 999px;
 		background: transparent;
 		font-size: 13.5px;
 		font-weight: 500;
-		color: rgba(18, 25, 38, 0.72);
+		color: var(--explore-text);
 		cursor: pointer;
 		transition:
 			background 0.15s,
@@ -246,19 +223,15 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 			color 0.15s;
 		white-space: nowrap;
 	}
-	:global([data-theme='dark']) .tab-btn {
-		border-color: rgba(148, 163, 184, 0.2);
-		color: rgba(241, 245, 249, 0.68);
-	}
 	.tab-btn:hover {
-		background: rgba(33, 150, 243, 0.08);
-		border-color: rgba(33, 150, 243, 0.3);
-		color: #2196f3;
+		background: var(--explore-accent-soft);
+		border-color: var(--explore-accent-border);
+		color: var(--explore-accent-strong);
 	}
 	.tab-btn[aria-selected='true'] {
-		background: rgba(33, 150, 243, 0.1);
-		border-color: #2196f3;
-		color: #2196f3;
+		background: var(--explore-accent-soft);
+		border-color: var(--explore-accent-strong);
+		color: var(--explore-accent-strong);
 		font-weight: 600;
 	}
 	.tab-count {
@@ -272,29 +245,21 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 	}
 	.search-input {
 		padding: 0.375rem 2.25rem 0.375rem 0.875rem;
-		border: 1.5px solid rgba(18, 25, 38, 0.12);
+		border: 1.5px solid var(--explore-border);
 		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.7);
+		background: var(--explore-surface);
 		font-size: 13.5px;
-		color: rgba(18, 25, 38, 0.82);
+		color: var(--explore-text);
 		width: 160px;
 		transition: border-color 0.15s, box-shadow 0.15s;
 		outline: none;
 	}
-	:global([data-theme='dark']) .search-input {
-		border-color: rgba(148, 163, 184, 0.2);
-		background: rgba(18, 27, 40, 0.6);
-		color: rgba(241, 245, 249, 0.82);
-	}
 	.search-input:focus {
-		border-color: #2196f3;
-		box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.14);
+		border-color: var(--explore-accent-strong);
+		box-shadow: var(--explore-focus);
 	}
 	.search-input::placeholder {
-		color: rgba(18, 25, 38, 0.36);
-	}
-	:global([data-theme='dark']) .search-input::placeholder {
-		color: rgba(241, 245, 249, 0.32);
+		color: var(--explore-text-meta);
 	}
 	/* Remove default search cancel button in WebKit */
 	.search-input::-webkit-search-cancel-button {
@@ -307,7 +272,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		transform: translateY(-50%);
 		width: 15px;
 		height: 15px;
-		color: rgba(18, 25, 38, 0.38);
+		color: var(--explore-text-meta);
 		pointer-events: none;
 	}
 
@@ -334,23 +299,16 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 	/* ---- Goods card ---- */
 	.goods-card {
 		border-radius: 16px;
-		background: #ffffff;
-		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+		background: var(--explore-surface);
+		box-shadow: var(--explore-shadow);
 		overflow: hidden;
 		transition:
 			transform 0.2s ease,
 			box-shadow 0.2s ease;
 	}
-	:global([data-theme='dark']) .goods-card {
-		background: #151e2b;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-	}
 	.goods-card:hover {
 		transform: translateY(-3px);
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-	}
-	:global([data-theme='dark']) .goods-card:hover {
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+		box-shadow: var(--explore-shadow-hover);
 	}
 	.goods-card[data-hidden] {
 		display: none;
@@ -377,28 +335,16 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		line-height: 1.4;
 	}
 	.status-active {
-		background: #e8f8f0;
-		color: #1a8c52;
+		background: var(--explore-success-soft);
+		color: var(--explore-success);
 	}
 	.status-retired {
-		background: #f0f0f0;
-		color: #777;
+		background: var(--explore-surface-muted);
+		color: var(--explore-text-muted);
 	}
 	.status-occasional {
-		background: #fff8e6;
-		color: #b07a00;
-	}
-	:global([data-theme='dark']) .status-active {
-		background: rgba(26, 140, 82, 0.2);
-		color: #4ade80;
-	}
-	:global([data-theme='dark']) .status-retired {
-		background: rgba(148, 163, 184, 0.15);
-		color: #94a3b8;
-	}
-	:global([data-theme='dark']) .status-occasional {
-		background: rgba(176, 122, 0, 0.18);
-		color: #fbbf24;
+		background: var(--explore-warning-soft);
+		color: var(--explore-warning);
 	}
 
 	/* Card body */
@@ -411,15 +357,11 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		display: inline-block;
 		padding: 0.15rem 0.5rem;
 		border-radius: 999px;
-		background: rgba(33, 150, 243, 0.1);
+		background: var(--explore-accent-soft);
 		font-size: 11px;
 		font-weight: 600;
-		color: #2196f3;
+		color: var(--explore-accent-strong);
 		margin-bottom: 0.5rem;
-	}
-	:global([data-theme='dark']) .category-tag {
-		background: rgba(126, 203, 255, 0.14);
-		color: #7ecbff;
 	}
 
 	.card-name {
@@ -427,24 +369,18 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		font-size: 15px;
 		font-weight: 700;
 		line-height: 1.3;
-		color: rgba(18, 25, 38, 0.92);
-	}
-	:global([data-theme='dark']) .card-name {
-		color: rgba(241, 245, 249, 0.92);
+		color: var(--explore-text-strong);
 	}
 
 	.card-desc {
 		margin: 0 0 0.625rem;
 		font-size: 12.5px;
 		line-height: 1.6;
-		color: rgba(18, 25, 38, 0.55);
+		color: var(--explore-text-muted);
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-	}
-	:global([data-theme='dark']) .card-desc {
-		color: rgba(241, 245, 249, 0.52);
 	}
 
 	.card-meta {
@@ -457,11 +393,8 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 	.card-price {
 		font-size: 17px;
 		font-weight: 800;
-		color: #2196f3;
+		color: var(--explore-accent-strong);
 		letter-spacing: -0.3px;
-	}
-	:global([data-theme='dark']) .card-price {
-		color: #7ecbff;
 	}
 
 	.card-rating {
@@ -470,34 +403,25 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		gap: 0.2rem;
 		font-size: 12.5px;
 		font-weight: 600;
-		color: rgba(18, 25, 38, 0.7);
-	}
-	:global([data-theme='dark']) .card-rating {
-		color: rgba(241, 245, 249, 0.65);
+		color: var(--explore-text);
 	}
 	.star-icon {
 		width: 13px;
 		height: 13px;
-		color: #f59e0b;
+		color: var(--explore-warning);
 		flex-shrink: 0;
 	}
 	.review-count {
 		font-weight: 400;
-		color: rgba(18, 25, 38, 0.42);
-	}
-	:global([data-theme='dark']) .review-count {
-		color: rgba(241, 245, 249, 0.38);
+		color: var(--explore-text-meta);
 	}
 
 	.card-date {
 		margin: 0;
 		font-size: 12px;
-		color: rgba(18, 25, 38, 0.38);
+		color: var(--explore-text-meta);
 		display: flex;
 		gap: 0.4rem;
-	}
-	:global([data-theme='dark']) .card-date {
-		color: rgba(241, 245, 249, 0.34);
 	}
 	.date-label {
 		flex-shrink: 0;
@@ -508,7 +432,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		text-align: center;
 		padding: 3rem 1rem;
 		font-size: 14px;
-		color: rgba(18, 25, 38, 0.42);
+		color: var(--explore-text-meta);
 	}
 	.empty-state[hidden] {
 		display: none;
@@ -519,10 +443,7 @@ const statusConfig: Record<GoodsStatus, { label: string; cls: string }> = {
 		text-align: center;
 		margin-top: 2rem;
 		font-size: 13px;
-		color: rgba(18, 25, 38, 0.3);
-	}
-	:global([data-theme='dark']) .end-note {
-		color: rgba(241, 245, 249, 0.28);
+		color: var(--explore-text-meta);
 	}
 </style>
 

@@ -1,5 +1,10 @@
 # Astro Starter Kit: Blog
 
+## 内容维护
+
+专栏使用 `src/content/columns/<专栏>/index.md` 和同目录章节文件。新增章节不再手填 `columnId`，按 `order` 排序；Markdown 相对链接在构建时转换。详见 [内容组织与写作指南](docs/content-authoring.md)。发布前运行 `pnpm verify`，快速检查使用 `pnpm content:check`。
+
+
 ```sh
 pnpm create astro@latest -- --template blog
 ```

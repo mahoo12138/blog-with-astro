@@ -2,6 +2,7 @@
 import { getCollection, render, type CollectionEntry } from 'astro:content';
 import { mdxComponents } from '../../../components/mdx-components';
 import BlogPost from '../../../layouts/BlogPost.astro';
+import { chapterSlug } from '../../../consts';
 import {
 	buildColumnIndex,
 	resolvePostCover,
@@ -29,7 +30,7 @@ export async function getStaticPaths() {
 			return [];
 		}
 
-		return [{ params: { column: columnId, slug: post.id }, props: { post, columnId } }];
+		return [{ params: { column: columnId, slug: chapterSlug(post.id, columnId) }, props: { post, columnId } }];
 	});
 }
 

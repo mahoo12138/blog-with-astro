@@ -265,7 +265,7 @@ export const lightbox = style({
 	alignItems: 'center',
 	justifyContent: 'center',
 	padding: vars.space.xl,
-	background: 'rgba(10, 14, 22, 0.92)',
+	background: `color-mix(in srgb, ${vars.color.background} 96%, transparent)`,
 	backdropFilter: 'blur(8px)',
 	selectors: {
 		'&[data-open="true"]': {
@@ -278,7 +278,7 @@ export const lightboxImage = style({
 	maxWidth: 'min(88vw, 1400px)',
 	maxHeight: '82vh',
 	objectFit: 'contain',
-	boxShadow: '0 30px 80px rgba(0, 0, 0, 0.6)',
+	boxShadow: vars.shadow.head,
 	transition: 'opacity 180ms ease',
 	selectors: {
 		'&[data-loading="true"]': {
@@ -291,9 +291,9 @@ const lightboxBtnBase = {
 	display: 'inline-flex',
 	alignItems: 'center',
 	justifyContent: 'center',
-	border: '1px solid rgba(255, 255, 255, 0.28)',
-	background: 'rgba(8, 12, 20, 0.45)',
-	color: '#fff',
+	border: `1px solid ${vars.color.borderStrong}`,
+	background: vars.color.surfaceStrong,
+	color: vars.color.textStrong,
 	cursor: 'pointer',
 	transition: 'background 180ms ease, border-color 180ms ease, transform 180ms ease',
 } as const;
@@ -308,8 +308,8 @@ export const lightboxClose = style({
 	fontSize: '18px',
 	selectors: {
 		'&:hover': {
-			background: 'rgba(255, 255, 255, 0.1)',
-			borderColor: 'rgba(255, 255, 255, 0.6)',
+			background: vars.color.accentSoft,
+			borderColor: vars.color.accentStrong,
 		},
 	},
 });
@@ -327,8 +327,8 @@ export const lightboxPrev = style({
 	lineHeight: 1,
 	selectors: {
 		'&:hover': {
-			background: 'rgba(255, 255, 255, 0.1)',
-			borderColor: 'rgba(255, 255, 255, 0.6)',
+			background: vars.color.accentSoft,
+			borderColor: vars.color.accentStrong,
 			transform: 'translateY(-50%) translateX(-2px)',
 		},
 		'&:disabled': {
@@ -360,8 +360,8 @@ export const lightboxNext = style({
 	lineHeight: 1,
 	selectors: {
 		'&:hover': {
-			background: 'rgba(255, 255, 255, 0.1)',
-			borderColor: 'rgba(255, 255, 255, 0.6)',
+			background: vars.color.accentSoft,
+			borderColor: vars.color.accentStrong,
 			transform: 'translateY(-50%) translateX(2px)',
 		},
 		'&:disabled': {
@@ -399,14 +399,14 @@ export const lightboxCounter = style({
 	fontWeight: 600,
 	letterSpacing: '0.24em',
 	textTransform: 'uppercase',
-	color: 'rgba(255, 255, 255, 0.55)',
+	color: vars.color.textMuted,
 });
 
 export const lightboxCaption = style({
 	fontFamily: vars.font.mono,
 	fontSize: '11px',
 	letterSpacing: '0.12em',
-	color: 'rgba(255, 255, 255, 0.35)',
+	color: vars.color.textMuted,
 });
 
 /* 防止全局标题样式覆盖 h1 字体 */

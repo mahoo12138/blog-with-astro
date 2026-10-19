@@ -5,7 +5,6 @@ const gapMargin = '16px';
 const gapPadding = '16px';
 const borderCardSmall = '12px';
 const borderBar = '8px';
-const bgA20 = vars.color.surfaceMuted;
 const bgA50 = vars.color.surface;
 const bgA100 = vars.color.surfaceStrong;
 const textP1 = vars.color.text;
@@ -23,7 +22,8 @@ export const root = style({
 	flexDirection: 'column',
 	'@media': {
 		[`screen and (min-width: ${breakpoints.laptop})`]: {
-			minHeight: '100dvh',
+			maxHeight: 'calc(100dvh - 64px)',
+			overflowY: 'auto',
 		},
 	},
 });
@@ -43,30 +43,6 @@ export const widgetHeader = style({
 	fontWeight: 500,
 	fontSize: '13px',
 	color: textP1,
-});
-
-export const capAction = style({
-	lineHeight: 0,
-	color: 'inherit',
-	opacity: 0.6,
-	border: 0,
-	borderRadius: '4px',
-	padding: '6px',
-	marginRight: '-6px',
-	background: 'transparent',
-	cursor: 'pointer',
-	selectors: {
-		'&:hover': {
-			color: vars.color.accentStrong,
-			background: bgA100,
-			opacity: 1,
-		},
-		'&[aria-pressed="true"]': {
-			background: vars.color.border,
-			color: vars.color.accentStrong,
-			opacity: 1,
-		},
-	},
 });
 
 export const markdownWidget = style({});
@@ -109,70 +85,6 @@ export const timelineLink = style({
 // 别名：与左栏 recentList/recentItem 对齐，供 gallery-albums 等跨栏 widget 复用
 export const recentList = timeline;
 export const recentItem = timelineLink;
-
-export const tocWidget = style({
-	zIndex: 3,
-	position: 'sticky',
-	top: gapMargin,
-	padding: '16px 0',
-});
-
-export const tocBody = style({
-	position: 'relative',
-	display: 'grid',
-	gridTemplateRows: '1fr',
-	overflow: 'hidden',
-	transition: 'grid-template-rows 0.2s ease',
-	selectors: {
-		[`${tocWidget}.collapse &`]: {
-			gridTemplateRows: '0fr',
-		},
-	},
-});
-
-export const tocList = style({
-	minHeight: 0,
-	maxHeight: '70vh',
-	margin: 0,
-	padding: 0,
-	listStyle: 'none',
-	overflow: 'auto',
-	scrollbarWidth: 'none',
-});
-
-export const tocItem = style({
-	margin: 0,
-	listStyle: 'none',
-});
-
-export const tocLink = style({
-	display: 'block',
-	position: 'relative',
-	margin: '0 8px',
-	padding: '4px 8px',
-	paddingLeft: 'var(--toc-padding, 8px)',
-	borderRadius: borderBar,
-	color: textP3,
-	fontSize: '14px',
-	fontWeight: 500,
-	lineHeight: 1.45,
-	selectors: {
-		'&:hover': {
-			background: vars.color.border,
-			color: vars.color.textStrong,
-		},
-		'&.active': {
-			color: vars.color.textStrong,
-		},
-	},
-});
-
-export const tocText = style({
-	display: 'block',
-	overflow: 'hidden',
-	textOverflow: 'ellipsis',
-	whiteSpace: 'nowrap',
-});
 
 export const ghrepoWidget = style({});
 
@@ -242,29 +154,7 @@ export const mediaCaption = style({
 });
 
 globalStyle(`${widgetHeader} > span`, { opacity: 0.6 });
-globalStyle(`${capAction} svg`, { height: '1em', width: 'auto', transform: 'scale(1.2)', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round' });
 globalStyle(`${markdownBody} > *:first-child`, { marginTop: '0.75rem' });
 globalStyle(`${markdownBody} > *:last-child`, { marginBottom: '0.75rem' });
-globalStyle(`${tocBody}::before`, {
-	content: '',
-	position: 'absolute',
-	top: '6px',
-	bottom: '6px',
-	left: 0,
-	width: '4px',
-	borderRadius: '4px',
-	background: vars.color.border,
-});
-globalStyle(`${tocList}::-webkit-scrollbar`, { display: 'none' });
-globalStyle(`${tocLink}.active::before`, {
-	content: '',
-	position: 'absolute',
-	top: '6px',
-	bottom: '6px',
-	left: '-8px',
-	width: '4px',
-	borderRadius: '4px',
-	background: vars.color.accent,
-});
 globalStyle(`${repoName} svg`, { width: '1em', height: '1em', fill: 'currentColor' });
 globalStyle(`${repoStat} svg`, { width: '1em', height: '1em', marginRight: '4px', fill: 'currentColor' });

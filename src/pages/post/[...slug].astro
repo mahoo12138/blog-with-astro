@@ -2,7 +2,8 @@
 import { type CollectionEntry, getCollection, render } from 'astro:content';
 import { mdxComponents } from '../../components/mdx-components';
 import BlogPost from '../../layouts/BlogPost.astro';
-import { slugifySegment, resolvePostCover, resolvePostDescription } from '../../utils/content';
+import { postHref, resolvePostCover, resolvePostDescription } from '../../utils/content';
+import { legacyPostId } from '../../consts';
 
 // 本路由只渲染**独立文章**（不属于任何专栏）。
 //
@@ -14,10 +15,10 @@ import { slugifySegment, resolvePostCover, resolvePostDescription } from '../../
 export async function getStaticPaths() {
 	// 过滤 draft：草稿不生成静态页面，避免通过直链访问 / 被 sitemap 收录
 	const posts = await getCollection('posts', ({ data }) => !data.draft);
-	return posts.map((post) => ({
-		params: { slug: post.id },
-		props: post,
-	}));
+	return posts.flatMap((post) => {
+		const slug = post.data.columnId ? legacyPostId(post.id) : post.id;
+		return slug ? [{ params: { slug }, props: post }] : [];
+	});
 }
 type Props = CollectionEntry<'posts'>;
 
@@ -28,7 +29,7 @@ const columnId = post.data.columnId?.trim();
 // 静态输出下 Astro.redirect 产出 meta-refresh 桩页（与 /post/index.astro 同款）。
 // 桩页带 noindex，否则新旧两个地址会同时被收录，形成重复内容。
 if (columnId) {
-	return Astro.redirect(`/columns/${slugifySegment(columnId)}/${post.id}/`, 301);
+	return Astro.redirect(postHref(post), 301);
 }
 
 const { Content, headings } = await render(post);

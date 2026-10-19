@@ -1,5 +1,7 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
+import AppearanceButton from '../components/AppearanceButton.astro';
+import { SITE_TITLE } from '../consts';
 import StellarIcon from '../components/StellarIcon.astro';
 import StellarLeftSidebar from '../components/StellarLeftSidebar.astro';
 import StellarPageFooter from '../components/StellarPageFooter.astro';
@@ -33,10 +35,10 @@ const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 	<body class={styles.body}>
 		<TopProgressBar />
 		<SkipLink />
-		<div class={styles.background} aria-hidden="true">
-			<div class={styles.glowLeft}></div>
-			<div class={styles.glowRight}></div>
-		</div>
+		<header class={styles.mobileHeader} data-pagefind-ignore>
+			<a href="/" class={styles.mobileTitle}>{SITE_TITLE}</a>
+			<AppearanceButton compact />
+		</header>
 		<div class={styles.shell} data-stellar-shell>
 			<aside class={styles.left} data-pagefind-ignore>
 				<StellarLeftSidebar menuId={shellConfig.menuId} widgets={shellConfig.leftbar} />

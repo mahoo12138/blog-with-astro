@@ -1,14 +1,11 @@
 ---
 import type { WidgetProps } from './types';
-import * as leftStyles from '../StellarLeftSidebar.css';
-import * as rightStyles from '../StellarRightSidebar.css';
+import * as styles from './welcome.css';
 
-const { widget, side } = Astro.props as WidgetProps;
-const s = side === 'left' ? leftStyles : rightStyles;
-const headerClass = side === 'left' ? leftStyles.widgetTitle : rightStyles.widgetHeader;
+const { widget } = Astro.props as WidgetProps;
 ---
 
-<section class:list={[s.widget, s.markdownWidget]}>
-	<div class={headerClass}><span>{widget.title}</span></div>
-	<div class={s.markdownBody}><p>{widget.body}</p></div>
+<section class={styles.note} data-welcome-note aria-label={widget.title}>
+	<h2 class={styles.title}>{widget.title}</h2>
+	<p class={styles.text}>{widget.body}</p>
 </section>

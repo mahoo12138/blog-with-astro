@@ -2,11 +2,11 @@ import { globalStyle, style } from '@vanilla-extract/css';
 import { breakpoints, vars } from '../styles/theme.css';
 
 const gapCompact = '1rem';
-const borderCardLarge = '24px';
+const borderCardLarge = '12px';
 const borderCard = '16px';
 const borderCardSmall = '12px';
 const borderBar = '8px';
-const borderImage = '24px';
+const borderImage = '10px';
 const textP1 = vars.color.text;
 const textP2 = vars.color.textMuted;
 const textP3 = vars.color.textMeta;
@@ -51,242 +51,51 @@ export const banner = style({
 	},
 });
 
-/* ── 文章页头（沉浸式封面 + 渐变压暗）──
- *
- * 与上面的 `banner` / `bannerContent` / `bannerMeta` / `bannerBottom` 刻意分开：
- * 后者是专栏页仍在用的中性壳（浅底深字），文章页头恒为**暗底白字**——
- * 有封面时压在照片上，无封面时压在由文章身份派生出的光晕上。
- * 两套文字色与 hover 反馈完全不同，共用必然一边看不见、一边看不清。
- */
-
-const ink = '#fff';
-const inkSoft = 'rgba(255, 255, 255, 0.82)';
-const shade = 'rgba(8, 12, 20,';
-
-/** 极细颗粒：让压暗后的渐变像印刷品，而不是一块屏幕色 */
-const grainUrl =
-	"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E\")";
-
+// 标题与封面分离；保留全部元信息，不让文字压在图片或随机渐变上。
 export const postBanner = style({
-	position: 'relative',
-	isolation: 'isolate',
-	display: 'flex',
-	flexDirection: 'column',
-	justifyContent: 'flex-end',
-	alignItems: 'stretch',
-	minHeight: 'clamp(248px, 32vw, 344px)',
-	margin: 0,
-	overflow: 'hidden',
-	borderRadius: borderCardLarge,
-	boxShadow: '0 18px 44px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06)',
-	color: ink,
-	/* 无封面时的兜底底图：色相由 --banner-hue-a / --banner-hue-b 注入（见 utils/banner.ts） */
-	background: [
-		'radial-gradient(130% 120% at 14% 4%, hsl(var(--banner-hue-a, 214) 84% 58% / 0.92), transparent 58%)',
-		'radial-gradient(110% 110% at 86% 96%, hsl(var(--banner-hue-b, 268) 72% 46% / 0.9), transparent 62%)',
-		'linear-gradient(148deg, hsl(var(--banner-hue-a, 214) 62% 24%), hsl(var(--banner-hue-b, 268) 58% 14%))',
-	].join(', '),
-	vars: {
-		'--text-banner': ink,
-		'--button-hover-bg': 'rgba(255, 255, 255, 0.22)',
-	},
-	selectors: {
-		"&[data-cover='false']": {
-			minHeight: 'clamp(212px, 26vw, 288px)',
-		},
-	},
-	'@media': {
-		[`screen and (max-width: ${breakpoints.mobile})`]: {
-			borderRadius: '20px',
-		},
-	},
+	display: 'flex', flexDirection: 'column', minWidth: 0, margin: 0, paddingBottom: '24px',
+	borderBottom: `1px solid ${vars.color.border}`, color: vars.color.textStrong,
+	vars: { '--text-banner': vars.color.textMuted, '--button-hover-bg': vars.color.accentSoft },
 });
-
 export const bannerMedia = style({
-	position: 'absolute',
-	inset: 0,
-	zIndex: 0,
-	overflow: 'hidden',
+	order: 2, margin: '0 16px', aspectRatio: '16 / 7', maxHeight: '280px',
+	overflow: 'hidden', borderRadius: vars.radius.md, background: vars.color.surfaceMuted,
+	'@media': { [`screen and (max-width: ${breakpoints.mobile})`]: { margin: 0 } },
 });
-
 export const bannerImage = style({
-	display: 'block',
-	width: '100%',
-	height: '100%',
-	objectFit: 'cover',
-	margin: 0,
-	userSelect: 'none',
-	transform: 'scale(1.015)',
-	transition: 'transform 1.4s cubic-bezier(0.2, 0.7, 0.3, 1)',
-	'@media': {
-		'(prefers-reduced-motion: reduce)': {
-			transition: 'none',
-		},
-	},
+	display: 'block', width: '100%', height: '100%', objectFit: 'cover', margin: 0, borderRadius: 0,
 });
-
-export const bannerScrim = style({
-	position: 'absolute',
-	inset: 0,
-	zIndex: 1,
-	pointerEvents: 'none',
-	backgroundImage: [
-		`linear-gradient(180deg, ${shade} 0.44) 0%, ${shade} 0.12) 30%, ${shade} 0.32) 62%, ${shade} 0.82) 100%)`,
-		`linear-gradient(102deg, ${shade} 0.42) 0%, ${shade} 0) 62%)`,
-	].join(', '),
-});
-
-export const bannerGrain = style({
-	position: 'absolute',
-	inset: 0,
-	zIndex: 2,
-	pointerEvents: 'none',
-	backgroundImage: grainUrl,
-	backgroundSize: '140px 140px',
-	opacity: 0.07,
-	mixBlendMode: 'overlay',
-});
-
 export const bannerBody = style({
-	position: 'relative',
-	zIndex: 3,
-	display: 'flex',
-	flexDirection: 'column',
-	justifyContent: 'space-between',
-	gap: '1.1rem',
-	width: '100%',
-	padding: '1.15rem 1.35rem 1.35rem',
-	color: ink,
-	'@media': {
-		[`screen and (max-width: ${breakpoints.mobile})`]: {
-			gap: '0.85rem',
-			padding: '0.9rem 1rem 1.1rem',
-		},
-	},
+	order: 1, display: 'flex', flexDirection: 'column', gap: '24px', padding: '8px 16px 24px',
+	'@media': { [`screen and (max-width: ${breakpoints.mobile})`]: { padding: '8px 0 20px', gap: '20px' } },
 });
-
 export const bannerTop = style({
-	display: 'flex',
-	alignItems: 'flex-start',
-	justifyContent: 'space-between',
-	gap: '0.75rem',
-	minWidth: 0,
-	fontSize: '13px',
-	fontWeight: 500,
-	lineHeight: 1,
-	color: inkSoft,
+	display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+	gap: '12px', minWidth: 0, fontSize: '0.8rem', lineHeight: 1.7, color: vars.color.textMuted,
 });
-
-export const crumbRow = style({
-	display: 'flex',
-	alignItems: 'baseline',
-	flexWrap: 'wrap',
-	minWidth: 0,
-	rowGap: '4px',
-});
-
-export const bannerFoot = style({
-	display: 'flex',
-	flexDirection: 'column',
-	alignItems: 'flex-start',
-	gap: '0.6rem',
-	minWidth: 0,
-});
-
-export const kickerRow = style({
-	display: 'flex',
-	flexWrap: 'wrap',
-	alignItems: 'center',
-	gap: '0.4rem',
-	minWidth: 0,
-});
-
+export const crumbRow = style({ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', minWidth: 0, gap: '4px' });
+export const bannerFoot = style({ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '16px', minWidth: 0 });
+export const kickerRow = style({ display: 'flex', flexWrap: 'wrap', gap: '6px', minWidth: 0 });
 export const chip = style({
-	display: 'inline-flex',
-	alignItems: 'center',
-	gap: '0.35rem',
-	height: '26px',
-	padding: '0 0.65rem',
-	borderRadius: '999px',
-	border: '1px solid rgba(255, 255, 255, 0.22)',
-	background: 'rgba(255, 255, 255, 0.14)',
-	backdropFilter: 'blur(10px) saturate(150%)',
-	WebkitBackdropFilter: 'blur(10px) saturate(150%)',
-	color: ink,
-	fontSize: '12.5px',
-	fontWeight: 600,
-	lineHeight: 1,
-	letterSpacing: '0.02em',
-	whiteSpace: 'nowrap',
-	textDecoration: 'none',
-	textShadow: 'none',
-	transition: 'background 180ms ease, border-color 180ms ease, transform 180ms ease',
-	selectors: {
-		'&:hover': {
-			background: 'rgba(255, 255, 255, 0.26)',
-			borderColor: 'rgba(255, 255, 255, 0.36)',
-			color: ink,
-			transform: 'translateY(-1px)',
-		},
-	},
+	display: 'inline-flex', alignItems: 'center', gap: '5px', minHeight: '28px',
+	padding: '3px 8px', borderRadius: '5px', background: vars.color.surfaceMuted,
+	color: vars.color.textMuted, fontSize: '0.75rem', lineHeight: 1.5,
+	selectors: { '&:hover': { background: vars.color.accentSoft, color: vars.color.accentStrong } },
 });
-
-export const chipAccent = style({
-	borderColor: 'rgba(146, 208, 255, 0.42)',
-	background: 'rgba(33, 150, 243, 0.32)',
-	selectors: {
-		'&:hover': {
-			background: 'rgba(33, 150, 243, 0.46)',
-			borderColor: 'rgba(146, 208, 255, 0.6)',
-		},
-	},
-});
-
-export const chipIcon = style({
-	width: '0.875rem',
-	height: '0.875rem',
-	flexShrink: 0,
-	opacity: 0.92,
-});
-
-/** 标题上方那道 2px 微光：整套语言里唯一的「亮线」 */
-export const accentRule = style({
-	width: '44px',
-	height: '2px',
-	borderRadius: '2px',
-	background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.12))',
-});
-
+export const chipAccent = style({ color: vars.color.accentStrong, background: vars.color.accentSoft });
+export const chipIcon = style({ width: '0.875rem', height: '0.875rem', flexShrink: 0 });
 export const postTitle = style({
-	margin: 0,
-	maxWidth: '42rem',
-	color: ink,
-	fontFamily: vars.font.heading,
-	fontSize: 'clamp(1.5rem, 3.4vw, 2.2rem)',
-	fontWeight: 700,
-	lineHeight: 1.18,
-	letterSpacing: '-0.02em',
-	textShadow: '0 2px 20px rgba(6, 10, 18, 0.45)',
+	margin: 0, color: vars.color.textStrong, fontFamily: vars.font.heading,
+	fontSize: 'clamp(1.65rem, 3vw, 2.25rem)', fontWeight: 700, lineHeight: 1.45,
+	letterSpacing: '-0.02em', overflowWrap: 'anywhere',
 });
-
 export const postMeta = style({
-	display: 'flex',
-	flexWrap: 'wrap',
-	alignItems: 'baseline',
-	gap: '0.5rem',
-	fontSize: '13px',
-	lineHeight: 1,
-	color: inkSoft,
-	textShadow: '0 1px 10px rgba(6, 10, 18, 0.35)',
+	display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '8px',
+	fontSize: '0.8rem', lineHeight: 1.7, color: vars.color.textMeta, fontVariantNumeric: 'tabular-nums',
 });
-
-export const metaDot = style({
-	opacity: 0.45,
-});
-
-globalStyle(`${postBanner}:hover ${bannerImage}`, { transform: 'scale(1.06)' });
-globalStyle(`${bannerTop} span.sep`, { opacity: 0.5, padding: '0 2px' });
-globalStyle(`${postMeta} span.sep`, { opacity: 0.45 });
+export const metaDot = style({ opacity: 0.55 });
+globalStyle(`${bannerTop} span.sep`, { opacity: 0.6 });
+globalStyle(`${postMeta} span.sep`, { opacity: 0.6 });
 
 /* ── 以下仍由专栏页复用（columns/[slug].astro），勿随意改动 ── */
 
@@ -357,11 +166,12 @@ export const prose = style({
 	maxWidth: '100%',
 	minWidth: 0,
 	margin: 0,
-	padding: '1rem 1rem 2rem',
-	overflow: 'hidden',
+	padding: '1.75rem 1rem 2.5rem',
 	color: textP1,
-	lineHeight: 1.6,
-	wordBreak: 'break-word',
+	lineHeight: 1.9,
+	wordBreak: 'normal',
+	overflowWrap: 'anywhere',
+	'@media': { [`screen and (max-width: ${breakpoints.mobile})`]: { padding: '1.5rem 0 2rem' } },
 });
 
 globalStyle(`${prose} > :first-child`, { marginTop: 0 });
@@ -369,9 +179,9 @@ globalStyle(`${prose} > :last-child`, { marginBottom: 0 });
 
 globalStyle(`${prose} p`, {
 	fontSize: '1rem',
-	lineHeight: 1.6,
-	marginTop: `calc(${gapCompact} - 4px)`,
-	marginBottom: `calc(${gapCompact} - 4px)`,
+	lineHeight: 1.9,
+	marginTop: '1.15em',
+	marginBottom: '1.15em',
 });
 
 globalStyle(`${prose} ul, ${prose} ol`, {
@@ -440,8 +250,9 @@ globalStyle(`${prose} pre`, {
 	background: vars.color.surfaceStrong,
 	color: vars.color.codeText,
 	lineHeight: 1.55,
-	whiteSpace: 'pre-wrap',
-	overflowWrap: 'anywhere',
+	whiteSpace: 'pre',
+	overflowWrap: 'normal',
+	overflowX: 'auto',
 });
 
 globalStyle(`${prose} code`, {

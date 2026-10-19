@@ -14,7 +14,7 @@ tags:
 
 网络上有很多教程，就不赘述了:
 
-- [手把手教你启用Win10的Linux子系统](手把手教你启用Win10的Linux子系统)
+- [手把手教你启用Win10的Linux子系统](https://blog.csdn.net/zhangdongren/article/details/82663977)
 - [Win10上体验Linux子系统--Linux虚拟机的完美替代方案](https://www.jianshu.com/p/c3025989c28c)
 
 ## 安装 Jupyter Notebook

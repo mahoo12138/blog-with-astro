@@ -15,34 +15,15 @@ export const body = style({
 	position: 'relative',
 });
 
-export const background = style({
-	position: 'fixed',
-	inset: 0,
-	pointerEvents: 'none',
-	zIndex: 0,
+// 宽版探索页沿用主题底色，不再叠加固定的黄蓝光晕。
+export const mobileHeader = style({
+	display: 'none',
+	'@media': { [`screen and (max-width: ${breakpoints.mobile})`]: {
+		display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+		minHeight: '60px', padding: '8px 16px', borderBottom: `1px solid ${vars.color.border}`,
+	} },
 });
-
-export const glowLeft = style({
-	position: 'absolute',
-	left: '10%',
-	top: '18%',
-	width: '22rem',
-	height: '22rem',
-	borderRadius: '50%',
-	background: 'radial-gradient(circle, rgba(255, 210, 119, 0.38), rgba(255, 210, 119, 0.08) 55%, transparent 72%)',
-	filter: 'blur(16px)',
-});
-
-export const glowRight = style({
-	position: 'absolute',
-	right: '10%',
-	top: '8%',
-	width: '16rem',
-	height: '16rem',
-	borderRadius: '50%',
-	background: 'radial-gradient(circle, rgba(188, 227, 255, 0.34), rgba(188, 227, 255, 0.08) 60%, transparent 78%)',
-	filter: 'blur(12px)',
-});
+export const mobileTitle = style({ fontSize: '1rem', fontWeight: 700, color: vars.color.textStrong });
 
 /* 宽版：两端留白 + 左侧固定侧边栏 + 内容占满剩余宽度 */
 export const shell = style({
@@ -160,14 +141,13 @@ export const floatPanel = style({
 	borderRadius: '64px',
 	overflow: 'hidden',
 	background: vars.color.surface,
-	boxShadow: '0 8px 30px rgba(15, 23, 42, 0.10)',
+	boxShadow: vars.shadow.head,
 	backdropFilter: 'saturate(300%) blur(18px)',
 	WebkitBackdropFilter: 'saturate(300%) blur(18px)',
 	transition: 'all 0.2s ease',
 	selectors: {
 		[`${shell}[data-leftbar-open] &`]: {
-			boxShadow:
-				'0 0 4px -1px var(--theme, #2196f3), 0 0 16px -4px var(--theme, #2196f3), 0 0 32px -12px var(--theme, #2196f3), 0 0 128px -32px var(--theme, #2196f3)',
+			boxShadow: vars.shadow.focus,
 		},
 	},
 	'@media': {

@@ -1,53 +1,22 @@
 import { style } from '@vanilla-extract/css';
-import { breakpoints, vars } from '../styles/theme.css';
+import { vars } from '../styles/theme.css';
 
 export const root = style({
-	display: 'flex',
-	alignItems: 'center',
-	justifyContent: 'space-between',
-	gap: vars.space.md,
-	margin: `${vars.space.lg} ${vars.space.lg} ${vars.space.xl}`,
-	padding: `${vars.space.sm} ${vars.space.md}`,
-	borderRadius: '16px',
-	background: vars.color.surfaceStrong,
-	boxShadow: vars.shadow.card,
+	display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', alignItems: 'center',
+	gap: '8px', margin: '24px 16px', paddingTop: '16px', borderTop: `1px solid ${vars.color.border}`,
 	'@media': {
-		[`screen and (max-width: ${breakpoints.mobile})`]: {
-			margin: `${vars.space.lg} 0`,
-			borderRadius: 0,
-		},
+		'screen and (max-width: 667px)': { margin: '24px 0' },
+		'screen and (max-width: 400px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
 	},
 });
-
 export const button = style({
-	display: 'inline-flex',
-	alignItems: 'center',
-	gap: '0.4rem',
-	padding: `0.5rem 0.9rem`,
-	borderRadius: '8px',
-	color: vars.color.text,
-	fontSize: '0.88rem',
-	fontWeight: 500,
-	lineHeight: 1.2,
-	whiteSpace: 'nowrap',
-	transition: 'background 160ms ease, color 160ms ease',
-	selectors: {
-		'&:hover': {
-			background: vars.color.backgroundElevated,
-			color: vars.color.accentStrong,
-		},
-	},
+	display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+	minHeight: '44px', padding: '8px 12px', borderRadius: vars.radius.sm,
+	color: vars.color.text, fontSize: '0.85rem', fontWeight: 500, lineHeight: 1.5, whiteSpace: 'nowrap',
+	selectors: { '&:hover': { background: vars.color.accentSoft, color: vars.color.accentStrong } },
 });
-
-export const disabled = style({
-	pointerEvents: 'none',
-	opacity: 0.35,
-	cursor: 'not-allowed',
-});
-
+export const disabled = style({ pointerEvents: 'none', opacity: 0.45, cursor: 'not-allowed' });
 export const indicator = style({
-	color: vars.color.textMuted,
-	fontFamily: vars.font.mono,
-	fontSize: '0.82rem',
-	whiteSpace: 'nowrap',
+	color: vars.color.textMuted, fontFamily: vars.font.mono, fontSize: '0.75rem', textAlign: 'center',
+	'@media': { 'screen and (max-width: 400px)': { gridColumn: '1 / -1', gridRow: '1', paddingBottom: '4px' } },
 });

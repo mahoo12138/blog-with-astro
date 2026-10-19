@@ -4,27 +4,27 @@ import { SITE_TITLE } from '../consts';
 import * as styles from './StellarPageFooter.css';
 
 const sitemap = stellarConfig.footer.sitemap;
-const count = sitemap.length === 6 ? 3 : [7, 8].includes(sitemap.length) ? 4 : Math.min(sitemap.length, 5);
 const content = stellarConfig.footer.content
 	.replace('{year}', String(new Date().getFullYear()))
 	.replace('{site.title}', SITE_TITLE);
 ---
 
-<footer class:list={[styles.root, 'page-footer', 'footnote']} data-pagefind-ignore>
-	<hr />
+<footer class:list={[styles.root, 'page-footer', 'footnote']} aria-label="站点页脚" data-pagefind-ignore>
 	{
 		sitemap.length > 0 && (
-			<div class={styles.sitemap} style={`column-count:${count};`}>
+			<nav class={styles.sitemap} aria-label="页脚导航">
 				{sitemap.map((group) => (
 					<div class={styles.sitemapGroup}>
-						<span class="fs15">{group.title}</span>
-						{group.items.map((item) => <a href={item.url}>{item.label}</a>)}
+						<h2 class={styles.groupTitle}>{group.title}</h2>
+						<ul class={styles.links} role="list">
+							{group.items.map((item) => (
+								<li class={styles.item}><a class={styles.link} href={item.url}>{item.label}</a></li>
+							))}
+						</ul>
 					</div>
 				))}
-			</div>
+			</nav>
 		)
 	}
-	<div class={styles.text}>
-		<p>{content}</p>
-	</div>
+	<p class={styles.text}>{content}</p>
 </footer>

@@ -141,19 +141,14 @@ export const legend = style({
 	margin: 0,
 	padding: '8px 12px',
 	borderRadius: borderCardSmall,
-	background: 'rgba(255, 255, 255, 0.88)',
-	boxShadow: '0 6px 16px rgba(15, 23, 42, 0.10)',
+	background: vars.color.surfaceStrong,
+	border: `1px solid ${vars.color.border}`,
+	boxShadow: vars.shadow.head,
 	display: 'flex',
 	flexDirection: 'column',
 	gap: '4px',
 	fontSize: '12px',
 	color: vars.color.text,
-	selectors: {
-		':root[data-theme="dark"] &': {
-			background: 'rgba(20, 27, 41, 0.78)',
-			color: vars.color.text,
-		},
-	},
 });
 
 export const legendItem = style({
@@ -167,8 +162,8 @@ export const legendDotTravel = style({
 	height: '10px',
 	borderRadius: '50%',
 	background: vars.color.accent,
-	border: '2px solid #fff',
-	boxShadow: '0 0 0 1px rgba(15, 23, 42, 0.18)',
+	border: `2px solid ${vars.color.surfaceStrong}`,
+	boxShadow: `0 0 0 1px ${vars.color.borderStrong}`,
 });
 
 export const legendDotResidence = style({
@@ -176,8 +171,8 @@ export const legendDotResidence = style({
 	height: '14px',
 	borderRadius: '50%',
 	background: '#FA6400',
-	border: '2px solid #fff',
-	boxShadow: '0 0 0 1px rgba(15, 23, 42, 0.18)',
+	border: `2px solid ${vars.color.surfaceStrong}`,
+	boxShadow: `0 0 0 1px ${vars.color.borderStrong}`,
 });
 
 export const sectionTitle = style({
@@ -515,8 +510,8 @@ globalStyle('.travel-marker .dot', {
 	height: '14px',
 	borderRadius: '50%',
 	background: vars.color.accent,
-	border: '2px solid #fff',
-	boxShadow: '0 0 0 1px rgba(15, 23, 42, 0.18), 0 4px 10px rgba(33, 150, 243, 0.35)',
+	border: `2px solid ${vars.color.surfaceStrong}`,
+	boxShadow: `0 0 0 1px ${vars.color.borderStrong}, 0 4px 10px color-mix(in srgb, ${vars.color.accent} 25%, transparent)`,
 	transition: 'transform 200ms ease',
 });
 
@@ -529,7 +524,7 @@ globalStyle('.travel-marker .pulse', {
 	marginLeft: '-18px',
 	marginTop: '-18px',
 	borderRadius: '50%',
-	background: 'rgba(33, 150, 243, 0.18)',
+	background: `color-mix(in srgb, ${vars.color.accent} 18%, transparent)`,
 	animation: `${pulseAnim} 2s ease-out infinite`,
 	pointerEvents: 'none',
 });
@@ -594,7 +589,8 @@ globalStyle('.amap-info-content', {
 	borderRadius: borderCardSmall,
 	background: vars.color.surfaceStrong,
 	color: vars.color.text,
-	boxShadow: '0 14px 28px rgba(15, 23, 42, 0.18)',
+	boxShadow: vars.shadow.head,
+	border: `1px solid ${vars.color.border}`,
 	overflow: 'hidden',
 });
 

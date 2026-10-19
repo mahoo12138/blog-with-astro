@@ -1,123 +1,28 @@
-import { createVar, globalStyle, style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "../styles/theme.css";
 
 const gapMargin = "16px";
 const gapPadding = "16px";
-const gapMax = "32px";
+const gapMax = "16px";
 const sideContentWidth = "224px";
-const borderCardLarge = "24px";
-const borderCardSmall = "12px";
-const borderBar = "8px";
-const sidebarHeight = `calc(100vh - ${gapMargin} * 2 - 96px)`;
-const sidebarGlassBackground = createVar();
-const sidebarGlassGlow = createVar();
+const borderCardSmall = "8px";
+const borderBar = "6px";
+const sidebarHeight = "calc(100dvh - 64px)";
 const bgA20 = vars.color.surfaceMuted;
 const bgA50 = vars.color.surface;
 const bgA100 = vars.color.surfaceStrong;
 const textP1 = vars.color.text;
 const textP2 = vars.color.textMuted;
 const textP3 = vars.color.textMeta;
-const sidebarBackgroundImage =
-  "url(https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.13/image/sidebar-bg1@small.jpg)";
 
-/* root: 照抄 .l_left margin + border-radius，position:sticky 在 StellarShell 里管 */
-export const root = style({
-  position: "relative",
-  borderRadius: borderCardLarge,
-  margin: 0,
-  maxHeight: sidebarHeight,
-  overflow: "visible" /* 允许 sidebg blur 溢出裁切在 leftbar-container 内 */,
-});
-
-/* sidebg: 背景色光晕层，照抄 .sidebg —— 绝对填满 */
-export const sidebg = style({
-  pointerEvents: "none",
-  position: "absolute",
-  top: "32px",
-  bottom: "32px",
-  left: "32px",
-  right: "32px",
-  borderRadius: borderCardLarge,
-  backgroundImage: sidebarBackgroundImage,
-  backgroundPosition: "center",
-  backgroundSize: "cover",
-  filter: "saturate(400%) blur(100px) opacity(0.8)",
-});
-
-/* container: 照抄 .leftbar-container —— 固定高度 + overflow:hidden + flex列 */
+export const root = style({ position: "relative", margin: 0, maxHeight: sidebarHeight });
 export const container = style({
-  position: "relative",
-  height: sidebarHeight,
-  display: "flex",
-  flexDirection: "column",
-  wordBreak: "break-all",
-  textAlign: "justify",
-  borderRadius: borderCardLarge,
-  overflow: "hidden",
-  vars: {
-    [sidebarGlassBackground]: "rgba(255, 255, 255, 0.05)",
-    [sidebarGlassGlow]: "rgba(255, 255, 255, 0.5)",
-  },
-  selectors: {
-    ':root[data-theme="light"] &': {
-      vars: {
-        [sidebarGlassBackground]: "rgba(255, 255, 255, 0.05)",
-        [sidebarGlassGlow]: "rgba(255, 255, 255, 0.5)",
-      },
-    },
-    ':root[data-theme="dark"] &': {
-      vars: {
-        [sidebarGlassBackground]: "rgba(15, 23, 42, 0.18)",
-        [sidebarGlassGlow]: "rgba(148, 163, 184, 0.18)",
-      },
-    },
-  },
-  "@media": {
-    "(prefers-color-scheme: dark)": {
-      vars: {
-        [sidebarGlassBackground]: "rgba(15, 23, 42, 0.18)",
-        [sidebarGlassGlow]: "rgba(148, 163, 184, 0.18)",
-      },
-    },
-  },
-  /* ::before — 玻璃效果 + mask 渐变淡出 (核心灵魂) */
-  "::before": {
-    content: "",
-    position: "absolute",
-    pointerEvents: "none",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderRadius: borderCardLarge,
-    background: sidebarGlassBackground,
-    boxShadow: `inset 0 0 32px 1px ${sidebarGlassGlow}`,
-    backdropFilter: "saturate(300%)",
-    WebkitBackdropFilter: "saturate(300%)",
-    mask: "linear-gradient(black, rgba(0,0,0,0.5) 70%, transparent 90%, transparent)",
-    WebkitMask:
-      "linear-gradient(black, rgba(0,0,0,0.5) 70%, transparent 90%, transparent)",
-    zIndex: 0,
-  },
+  position: "relative", height: sidebarHeight, display: "flex", flexDirection: "column",
+  textAlign: "left", overflowWrap: "break-word", overflow: "hidden",
 });
-
-/* 底部径向光晕，放在 sidebg 层 */
-export const glow = style({
-  display: "none",
-});
-
-/* inner: 内容滚动区，照抄 >.widgets mask 淡出 */
 export const inner = style({
-  position: "relative",
-  flexGrow: 1,
-  overflow: "scroll",
-  margin: `0 ${gapMargin}`,
-  scrollbarWidth: "none",
-  zIndex: 1,
-  lineHeight: 1.2,
-  borderRadius: borderBar,
-  mask: "linear-gradient(white, white 90%, transparent)",
-  WebkitMask: "linear-gradient(white, white 90%, transparent)",
+  position: "relative", flexGrow: 1, minHeight: 0, overflow: "auto",
+  margin: `0 ${gapMargin}`, scrollbarWidth: "thin", lineHeight: 1.5,
 });
 
 export const profile = style({
@@ -143,12 +48,7 @@ export const avatar = style({
   // objectFit: 'cover',
   flexShrink: 0,
   transformOrigin: "center",
-  transition: "transform 560ms cubic-bezier(0.22, 1, 0.36, 1)",
-  selectors: {
-    "&:hover": {
-      transform: "rotate(1turn)",
-    },
-  },
+  objectFit: "cover",
 });
 
 export const titleWrap = style({
@@ -158,8 +58,8 @@ export const titleWrap = style({
 export const title = style({
   display: "block",
   margin: 0,
-  fontSize: "1.5rem",
-  fontWeight: 900,
+  fontSize: "1.25rem",
+  fontWeight: 700,
   lineHeight: 1.2,
   color: vars.color.textStrong,
   letterSpacing: 0,
@@ -169,9 +69,9 @@ export const title = style({
 export const subtitle = style({
   margin: 0,
   fontSize: "0.78rem",
-  lineHeight: 1.2,
-  whiteSpace: "nowrap",
-  color: textP1,
+  lineHeight: 1.6,
+  whiteSpace: "normal",
+  color: textP2,
 });
 
 export const navArea = style({
@@ -198,7 +98,8 @@ export const menuLink = style({
   justifyContent: "center",
   boxSizing: "border-box",
   width: "100%",
-  minHeight: "40px",
+  minHeight: "58px",
+  gap: "5px",
   borderRadius: borderBar,
   background: bgA20,
   color: textP3,
@@ -220,7 +121,7 @@ export const menuLink = style({
 });
 
 export const menuActive = style({
-  color: "var(--menu-theme, #2196f3)",
+  color: vars.color.accentStrong,
   background: bgA100,
   boxShadow: "none",
   selectors: {
@@ -239,12 +140,12 @@ export const menuActive = style({
 });
 
 export const menuIcon = style({
-  height: "28px",
-  width: "28px",
+  height: "20px",
+  width: "20px",
   objectFit: "contain",
   fill: "currentColor",
   stroke: "none",
-  filter: "grayscale(50%) brightness(0.8) opacity(0.5)",
+  filter: "none",
   selectors: {
     [`${menuLink}:hover &`]: {
       filter: "unset",
@@ -263,6 +164,8 @@ export const menuIconTone = style({
   opacity: 1,
 });
 
+export const menuText = style({ fontSize: "11px", lineHeight: 1.4, whiteSpace: "nowrap" });
+
 export const menuLabel = style({
   position: "absolute",
   width: "1px",
@@ -276,7 +179,7 @@ export const menuLabel = style({
 });
 
 export const searchWrapper = style({
-  paddingBottom: "32px",
+  paddingBottom: "20px",
   width: "100%",
   borderRadius: borderCardSmall,
 });
@@ -405,19 +308,10 @@ export const markdownBody = style({
 export const postListWidget = style({});
 
 export const widgetTitle = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingLeft: gapPadding,
-  paddingRight: gapPadding,
-  lineHeight: "28px",
-  fontWeight: 500,
-  fontSize: "13px",
-  letterSpacing: 0,
-  textTransform: "none",
-  color: textP1,
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  padding: `0 ${gapPadding} 8px`, lineHeight: "20px", fontWeight: 600,
+  fontSize: "12px", letterSpacing: 0, color: textP2,
 });
-
 export const widgetLink = style({
   fontSize: "0.78rem",
   color: vars.color.textMeta,
@@ -436,8 +330,8 @@ export const recentItem = style({
   padding: `6px ${gapPadding}`,
   borderRadius: borderBar,
   color: textP1,
-  fontSize: "14px",
-  lineHeight: 1.2,
+  fontSize: "13px",
+  lineHeight: 1.55,
   minWidth: 0,
   overflow: "hidden",
   transition: "background-color 160ms ease, color 160ms ease",
@@ -464,57 +358,41 @@ export const recentItemTitle = style({
 export const footer = style({
   position: "relative",
   flexShrink: 0,
-  margin: `0.5rem ${gapMax} 1rem`,
-  padding: 0,
+  margin: `0.5rem ${gapMargin} 1rem`,
+  padding: "12px 0 0",
+  borderTop: `1px solid ${vars.color.border}`,
   fontSize: "14px",
   color: textP3,
   zIndex: 1,
 });
 
+export const footerTools = style({
+  display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px",
+  "@media": { "(pointer: coarse)": { gap: 0 } },
+});
+
 export const socialWrap = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, 32px)",
+  display: "flex",
+  flexShrink: 0,
   gap: "0.25rem",
   textAlign: "center",
+  // 平板横屏侧栏只有 224px：保留 44px 触控目标，压缩的是间距而不是按钮。
+  "@media": { "(pointer: coarse)": { gap: 0 } },
 });
 
 export const socialLink = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  lineHeight: 0,
-  padding: "6px",
-  borderRadius: "32px",
-  filter: "grayscale(100%)",
-  overflow: "hidden",
-  background: "transparent",
-  color: textP2,
-  transition: "box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease",
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  width: "40px", height: "40px", flexShrink: 0, lineHeight: 0, padding: "10px",
+  border: 0, borderRadius: "6px", background: "transparent", color: textP2,
+  transition: "background-color 150ms ease, color 150ms ease",
   selectors: {
-    "&:hover": {
-      zIndex: 1,
-      filter: "unset",
-      background: bgA100,
-      color: vars.color.accentStrong,
-    },
+    "&:hover": { background: vars.color.accentSoft, color: vars.color.accentStrong },
+    "&:focus-visible": { outline: `2px solid ${vars.color.accentStrong}`, outlineOffset: "2px" },
   },
+  "@media": { "(pointer: coarse)": { width: "44px", height: "44px" } },
 });
-
-export const themeToggle = style({
-  padding: "6px",
-  border: 0,
-  cursor: "pointer",
-  selectors: {
-    "&:focus-visible": {
-      outline: "none",
-      boxShadow: vars.shadow.focus,
-    },
-  },
-});
-
-export const themeStatusIcon = style({
-  display: "none",
-});
+export const themeToggle = style({ cursor: "pointer" });
+export const themeStatusIcon = style({ display: "none" });
 
 export const themeStatusSystem = style({
   display: "block",
@@ -545,12 +423,12 @@ export const themeStatusDark = style({
 });
 
 export const socialIcon = style({
-  width: "20px",
-  height: "20px",
+  width: "18px",
+  height: "18px",
 });
 
 globalStyle(`${container}::-webkit-scrollbar`, { display: "none" });
 globalStyle(`${inner}::-webkit-scrollbar`, { display: "none" });
 globalStyle(`${markdownBody} > *:first-child`, { marginTop: "0.75rem" });
 globalStyle(`${markdownBody} > *:last-child`, { marginBottom: "0.75rem" });
-globalStyle(`${widgetTitle} > span`, { opacity: 0.6 });
+globalStyle(`${widgetTitle} > span`, { opacity: 1 });

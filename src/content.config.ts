@@ -1,6 +1,7 @@
 import { defineCollection } from "astro:content";
 import { file, glob } from "astro/loaders";
 import { z } from "astro/zod";
+import { localContentLoader } from './content-model/loader';
 
 const taxonomyFields = {
   tags: z.array(z.string()).default([]),
@@ -18,8 +19,8 @@ const mediaFields = <T extends z.ZodType>(image: () => T) => ({
 });
 
 const posts = defineCollection({
-  // Load Markdown and MDX files in the `src/content/posts/` directory.
-  loader: glob({ base: "./src/content/posts", pattern: "**/*.{md,mdx}" }),
+  // Independent posts + folder-owned chapters share the existing query interface.
+  loader: localContentLoader('posts'),
   // Type-check frontmatter using a schema
   schema: ({ image }) =>
     z
@@ -32,7 +33,7 @@ const posts = defineCollection({
         description: z.string().min(1, 'description 不能为空串：请填写，或直接省略由正文自动生成').optional(),
         author: z.string().default(""),
         layout: z.string().optional(),
-        columnId: z.string().optional(),
+        columnId: z.string().optional(), // Loader-derived; never authored in frontmatter.
         // 专栏章节的阅读顺序（从 1 开始）。仅对属于专栏的文章有意义。
         // 必须显式声明而不能只靠日期：实测 stm32-8 的日期早于 stm32-5，
         // 且 dsa-2/3、dsa-4/5 共享同一时间戳，纯按 pubDate 排序会打乱章节顺序。
@@ -60,13 +61,13 @@ const posts = defineCollection({
 });
 
 const columns = defineCollection({
-  loader: glob({ base: "./src/content/columns", pattern: "**/*.{md,mdx}" }),
+  loader: localContentLoader('columns'),
   schema: ({ image }) =>
     z.object({
       title: z.string(),
       description: z.string().default(""),
       pubDate: z.coerce.date().optional(),
-      columnId: z.string().optional(),
+      columnId: z.string().optional(), // Loader-derived; never authored in frontmatter.
       order: z.number().int().default(0),
       icon: z.string().optional(),
       accent: z.string().optional(),

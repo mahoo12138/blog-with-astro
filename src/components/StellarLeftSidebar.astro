@@ -5,6 +5,7 @@ import { stellarConfig, type MenuId, type SidebarWidgetConfig } from '../config/
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import SidebarRenderer from './SidebarRenderer.astro';
 import StellarIcon from './StellarIcon.astro';
+import AppearanceButton from './AppearanceButton.astro';
 import type { ColumnSidebarContext } from './sidebar/types';
 import * as styles from './StellarLeftSidebar.css';
 
@@ -32,12 +33,7 @@ const socialItems = stellarConfig.footer.social;
 ---
 
 <div class={styles.root}>
-	{/* sidebg: 背景色层 + 底部光晕 —— 对应 .sidebg */}
-	<div class={styles.sidebg} aria-hidden="true">
-		<div class={styles.glow}></div>
-	</div>
-
-	{/* leftbar-container: 固定高度 + overflow:hidden + ::before 玻璃+mask */}
+	{/* 导航与底部工具固定，中间内容独立滚动。 */}
 	<div class={styles.container}>
 
 		{/* 不滚动区域：logo（头像+标题）+ 菜单 + 搜索 */}
@@ -65,16 +61,16 @@ const socialItems = stellarConfig.footer.social;
 			<nav class={styles.menuGrid} style={`--menubar-columns: ${stellarConfig.menubar.columns};`} aria-label="Primary">
 				{
 					stellarConfig.menubar.items.map((item) => (
-						<a class:list={[styles.menuLink, isActive(item.id, item.url) && styles.menuActive]} style={`--menu-theme: ${item.theme};`} href={item.url} title={item.title} aria-label={item.title}>
+						<a class:list={[styles.menuLink, isActive(item.id, item.url) && styles.menuActive]} style={`--menu-theme: ${item.theme};`} href={item.url} title={item.title} aria-label={item.title} aria-current={isActive(item.id, item.url) ? 'page' : undefined}>
 							<StellarIcon name={item.icon} class={styles.menuIcon} />
-							<span class={styles.menuLabel}>{item.title}</span>
+							<span class={styles.menuText}>{item.title}</span>
 						</a>
 					))
 				}
 			</nav>
 		</div>
 
-		{/* 可滚动 widgets 区域，底部 mask 渐隐 —— 对应 >.widgets */}
+		{/* 保留全部侧栏挂件，不用渐隐遮住末尾内容。 */}
 		<div class={styles.inner}>
 			<div class={styles.widgets}>
 				<div class={styles.searchWrapper} id="search-wrapper">
@@ -91,6 +87,7 @@ const socialItems = stellarConfig.footer.social;
 		</div>
 
 		<footer class={styles.footer}>
+			<div class={styles.footerTools} data-sidebar-tools>
 			<div class={styles.socialWrap}>
 				{
 					socialItems.map((item) => (
@@ -121,6 +118,8 @@ const socialItems = stellarConfig.footer.social;
 					</svg>
 					<span class={styles.menuLabel}>主题设置</span>
 				</button>
+			</div>
+			<AppearanceButton variant="toolbar" />
 			</div>
 		</footer>
 	</div>
@@ -158,88 +157,5 @@ const socialItems = stellarConfig.footer.social;
 				window.location.assign(target.toString());
 			});
 		});
-	})();
-</script>
-
-<script is:inline>
-	(() => {
-		const themeStorageKey = 'theme-preference';
-		const validThemes = new Set(['system', 'light', 'dark']);
-		const themeOrder = ['system', 'light', 'dark'];
-		const themeLabels = {
-			system: '跟随系统',
-			light: '浅色',
-			dark: '深色',
-		};
-
-		const getThemePreference = () => {
-			try {
-				const storedTheme = localStorage.getItem(themeStorageKey);
-				return storedTheme && validThemes.has(storedTheme) ? storedTheme : 'system';
-			} catch {
-				return 'system';
-			}
-		};
-
-		const applyThemePreference = (theme) => {
-			if (theme === 'light' || theme === 'dark') {
-				document.documentElement.dataset.theme = theme;
-			} else {
-				document.documentElement.removeAttribute('data-theme');
-			}
-
-			const currentIndex = themeOrder.indexOf(theme);
-			const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length];
-			const buttonLabel = `主题：${themeLabels[theme]}，点击切换到${themeLabels[nextTheme]}`;
-
-			document.querySelectorAll('[data-theme-cycler]').forEach((button) => {
-				if (!(button instanceof HTMLButtonElement)) {
-					return;
-				}
-
-				button.dataset.themeMode = theme;
-				button.title = buttonLabel;
-				button.setAttribute('aria-label', buttonLabel);
-			});
-		};
-
-		const persistThemePreference = (theme) => {
-			try {
-				if (theme === 'system') {
-					localStorage.removeItem(themeStorageKey);
-				} else {
-					localStorage.setItem(themeStorageKey, theme);
-				}
-			} catch {}
-
-			applyThemePreference(theme);
-		};
-
-		const initializeThemePicker = () => {
-			applyThemePreference(getThemePreference());
-		};
-
-		document.addEventListener('click', (event) => {
-			const target = event.target;
-			if (!(target instanceof Element)) {
-				return;
-			}
-
-			const button = target.closest('[data-theme-cycler]');
-			if (button instanceof HTMLButtonElement) {
-				const currentTheme = validThemes.has(button.dataset.themeMode ?? '') ? button.dataset.themeMode ?? 'system' : getThemePreference();
-				const currentIndex = themeOrder.indexOf(currentTheme);
-				const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length];
-				persistThemePreference(nextTheme);
-				}
-		});
-
-		if (document.readyState === 'loading') {
-			document.addEventListener('DOMContentLoaded', initializeThemePicker, { once: true });
-		} else {
-			initializeThemePicker();
-		}
-
-		document.addEventListener('astro:page-load', initializeThemePicker);
 	})();
 </script>

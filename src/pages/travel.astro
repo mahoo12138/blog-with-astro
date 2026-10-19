@@ -244,7 +244,7 @@ function durationLabel(since: Date, until?: Date) {
 
 			// SDK 已就绪则直接取；否则等待 onload 回调（defer 加载，不阻塞解析）。
 			const AMap = window.AMap ?? (await window.__amapReady);
-			if (!AMap) return;
+			if (!AMap || !container.isConnected) return;
 			container.dataset.mapReady = '1';
 			const cities = readJson(container, 'data-cities');
 			const residences = readJson(container, 'data-residences');
@@ -367,10 +367,17 @@ function durationLabel(since: Date, until?: Date) {
 			}
 			const observer = new MutationObserver(swapStyle);
 			observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-				if (document.documentElement.dataset.theme) return;
-				swapStyle();
-			});
+			const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+			const onSystemChange = () => {
+				if (!document.documentElement.dataset.theme) swapStyle();
+			};
+			darkQuery.addEventListener('change', onSystemChange);
+			// 离开探索页后不保留旧地图的主题监听，防止切回时操作已卸载实例。
+			document.addEventListener('astro:before-swap', () => {
+				observer.disconnect();
+				darkQuery.removeEventListener('change', onSystemChange);
+				map.destroy();
+			}, { once: true });
 		}
 
 		// 地图区域进入视口才开始初始化：地图卡在页面较下方，

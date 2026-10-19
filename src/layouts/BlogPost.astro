@@ -9,7 +9,6 @@ import StellarIcon from '../components/StellarIcon.astro';
 import type { SiteTreeKey } from '../config/stellar';
 import { SITE_AUTHOR, columnUrl, postCommentKey } from '../consts';
 import { postHref, slugifySegment, type ResolvedPostCover } from '../utils/content';
-import { bannerTint } from '../utils/banner';
 import StellarShell from './StellarShell.astro';
 import * as chapterStyles from '../styles/columnChapters.css';
 import * as styles from './BlogPost.css';
@@ -88,8 +87,6 @@ const articleImageUrl = coverSrc
 	? new URL(typeof coverSrc === 'string' ? coverSrc : coverSrc.src, Astro.site).toString()
 	: undefined;
 
-// 页头在无封面时的兜底色相：由文章身份确定性派生，同一篇永远是同一个色
-const tint = bannerTint(postId ?? title);
 const primaryCategory = categories.find(Boolean);
 const tagList = tags.filter(Boolean).slice(0, 3);
 const blogPostingJsonLd = {
@@ -133,7 +130,6 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 		<header
 			class:list={[styles.postBanner, 'article', 'banner', 'top']}
 			data-cover={cover ? 'true' : 'false'}
-			style={tint.style}
 		>
 			{
 				cover && (
@@ -146,8 +142,6 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 					</div>
 				)
 			}
-			<div class={styles.bannerScrim} aria-hidden="true"></div>
-			<div class={styles.bannerGrain} aria-hidden="true"></div>
 			<div class={styles.bannerBody}>
 				<div class={styles.bannerTop}>
 					<div class={styles.crumbRow}>
@@ -197,7 +191,6 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 							<a class={styles.chip} href={`/tags/${slugifySegment(tag)}/`}>#{tag}</a>
 						))}
 					</div>
-					<div class={styles.accentRule} aria-hidden="true"></div>
 					<h1 class={styles.postTitle}>{title}</h1>
 					<div class={styles.postMeta}>
 						<span><FormattedDate date={pubDate} /></span>

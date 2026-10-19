@@ -3,7 +3,16 @@ import type { ExploreIconImageKey } from '../assets/explore-icons';
 export type ExploreContentLayoutKey = 'default' | 'wide' | 'blank';
 export type ExploreRouteKind = 'generated' | 'file';
 
+// 分组只服务于入口页的阅读结构，不改变子页面路由或独立主题。
+export const exploreGroups = [
+	{ id: 'life', title: '日常与心绪' },
+	{ id: 'objects', title: '物件与折腾' },
+	{ id: 'moments', title: '影像与足迹' },
+] as const;
+export type ExploreGroupId = typeof exploreGroups[number]['id'];
+
 interface ExploreItemBase {
+	group: ExploreGroupId;
 	title: string;
 	description: string;
 	href: string;
@@ -37,6 +46,7 @@ export const explorePageConfig: ExplorePageConfig = {
 	items: [
 		{
 			title: '碎碎念',
+			group: 'life',
 			description: '记录自己的奇思妙想',
 			href: 'https://memos.mahoo12138.cn/',
 			icon: 'memos',
@@ -45,6 +55,7 @@ export const explorePageConfig: ExplorePageConfig = {
 		},
 		{
 			title: '恋爱纪念日',
+			group: 'life',
 			description: '记录自己的恋爱纪念日',
 			href: '/love/',
 			icon: 'love',
@@ -53,6 +64,7 @@ export const explorePageConfig: ExplorePageConfig = {
 		},
 		{
 			title: '我的好物',
+			group: 'objects',
 			description: '我购置的一些觉得好用的东西',
 			href: '/my-goods/',
 			icon: 'goods',
@@ -61,6 +73,7 @@ export const explorePageConfig: ExplorePageConfig = {
 		},
 		{
 			title: '玩机岁月',
+			group: 'objects',
 			description: '十四年间陪我走过的手机们',
 			href: '/phones/',
 			icon: 'phone',
@@ -69,6 +82,7 @@ export const explorePageConfig: ExplorePageConfig = {
 		},
 		{
 			title: '我的相册',
+			group: 'moments',
 			description: '我的日常生活记录',
 			href: '/gallery/',
 			icon: 'photo',
@@ -77,6 +91,7 @@ export const explorePageConfig: ExplorePageConfig = {
 		},
 		{
 			title: '旅行地图',
+			group: 'moments',
 			description: '点亮过的城市与时间',
 			href: '/travel/',
 			icon: 'travel',

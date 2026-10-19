@@ -1,5 +1,7 @@
 ---
 import '../styles/theme.css.ts';
+import '../styles/themes/index.css';
+import { appearanceStorageKeys, colorSchemeIds } from '../config/appearance';
 // 代码块外壳（语言标签 + 复制按钮）样式。
 // 放在 BaseHead 是因为代码块可能出现在任何渲染 Markdown 的页面，
 // 这里是全站唯一的公共入口，能保证样式一定被引入。
@@ -63,27 +65,28 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
 
 <ClientRouter />
 
-<script is:inline>
+<!-- 在首次绘制前恢复配色；后续导航由统一 appearance 控制器保留内存状态。 -->
+<script is:inline define:vars={{ appearanceStorageKeys, colorSchemeIds }}>
 	(() => {
-		const themeStorageKey = 'theme-preference';
-
+		if (window.__appearanceBootstrapped) return;
+		window.__appearanceBootstrapped = true;
+		const root = document.documentElement;
+		let mode = 'system', scheme = 'blog';
 		try {
-			const theme = localStorage.getItem(themeStorageKey);
-			if (theme === 'light' || theme === 'dark') {
-				document.documentElement.dataset.theme = theme;
-				return;
-			}
+			const savedMode = localStorage.getItem(appearanceStorageKeys.mode);
+			const savedScheme = localStorage.getItem(appearanceStorageKeys.scheme);
+			if (savedMode === 'light' || savedMode === 'dark') mode = savedMode;
+			if (colorSchemeIds.includes(savedScheme)) scheme = savedScheme;
 		} catch {}
-
-		document.documentElement.removeAttribute('data-theme');
+		if (mode !== 'system') root.dataset.theme = mode;
+		else root.removeAttribute('data-theme');
+		if (scheme !== 'blog') { root.dataset.colorScheme = scheme; root.classList.add(`theme-${scheme}`); }
+		else root.removeAttribute('data-color-scheme');
+		root.classList.toggle('dark', mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches));
 	})();
-
-	document.addEventListener('astro:before-swap', (event) => {
-		const currentTheme = document.documentElement.dataset.theme;
-		if (currentTheme) {
-			event.newDocument.documentElement.dataset.theme = currentTheme;
-		}
-	});
+</script>
+<script>
+	import '../scripts/appearance';
 </script>
 
 <!-- 字体加载策略

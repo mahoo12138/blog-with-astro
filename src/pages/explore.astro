@@ -1,53 +1,61 @@
 ---
 import { Image } from 'astro:assets';
 import { exploreIconImages, isImageMetadata } from '../assets/explore-icons';
-import { explorePageConfig } from '../config/explore';
+import { exploreGroups, explorePageConfig } from '../config/explore';
 import { SITE_TITLE } from '../consts';
 import StellarShell from '../layouts/StellarShell.astro';
 import * as styles from '../styles/explore.css';
 
 const { title, description, items } = explorePageConfig;
+const groups = exploreGroups
+	.map((group) => ({ ...group, items: items.filter((item) => item.group === group.id) }))
+	.filter((group) => group.items.length > 0);
 ---
 
 <StellarShell title={`${title} · ${SITE_TITLE}`} description={description} siteTree="explore" mainClass={styles.pageMain}>
-	<h1 class={styles.srOnly}>{title}</h1>
-	<div class={styles.grid}>
-		{
-			items.map((item) => {
-				const target = item.openInNewTab ? '_blank' : undefined;
-				const rel = [item.external ? 'external nofollow' : '', item.openInNewTab ? 'noopener noreferrer' : ''].filter(Boolean).join(' ') || undefined;
-				const icon = exploreIconImages[item.icon];
-
-				return (
-					<a class={styles.card} href={item.href} target={target} rel={rel} aria-label={item.title}>
-						<article class={styles.article}>
-							<div class={styles.preview}>
-								{isImageMetadata(icon) ? (
-									/* 位图图标走管线：卡片里显示尺寸很小，出 192px 的 webp 足够覆盖 2x。
-									   之前直出 love.png(499KB) / memos.png(311KB)，且用 loading="eager"
-									   抢先加载，是 /explore 首屏的主要负担。 */
-									<Image
-										class={styles.iconImage}
-										src={icon}
-										width={192}
-										height={192}
-										format="webp"
-										loading="lazy"
-										decoding="async"
-										alt=""
-									/>
-								) : (
-									<img class={styles.iconImage} src={icon} alt="" loading="lazy" decoding="async" />
-								)}
-							</div>
-							<div class={styles.body}>
-								<h2 class={styles.title}>{item.title}</h2>
-								<p class={styles.description}>{item.description}</p>
-							</div>
-						</article>
-					</a>
-				);
-			})
-		}
+	<div class={styles.page} data-explore-page>
+		<nav class={styles.breadcrumbs} aria-label="面包屑导航">
+			<a href="/">首页</a><span aria-hidden="true">/</span><span aria-current="page">{title}</span>
+		</nav>
+		<header class={styles.header}>
+			<h1 class={styles.pageTitle}>{title}</h1>
+			<p class={styles.introduction}>{description}</p>
+		</header>
+		{groups.length > 0 ? groups.map((group) => (
+			<section class={styles.group} aria-labelledby={`explore-${group.id}`} data-explore-group={group.id}>
+				<h2 class={styles.groupTitle} id={`explore-${group.id}`}>{group.title}</h2>
+				<ul class={styles.entries} role="list">
+					{group.items.map((item) => {
+						const target = item.openInNewTab ? '_blank' : undefined;
+						const rel = [item.external ? 'external nofollow' : '', item.openInNewTab ? 'noopener noreferrer' : ''].filter(Boolean).join(' ') || undefined;
+						const icon = exploreIconImages[item.icon];
+						return (
+							<li class={styles.item}>
+								<a class={styles.entry} href={item.href} target={target} rel={rel} data-explore-entry aria-label={`${item.title}${item.openInNewTab ? '（新窗口打开）' : ''}`}>
+									<div class={styles.preview} aria-hidden="true">
+										{isImageMetadata(icon) ? (
+											// 保留本地图标与图片优化，不加载大尺寸原 PNG。
+											<Image class={styles.iconImage} src={icon} width={96} height={96} format="webp" loading="lazy" decoding="async" alt="" />
+										) : (
+											<img class={styles.iconImage} src={icon} width="48" height="48" alt="" loading="lazy" decoding="async" />
+										)}
+									</div>
+									<div class={styles.entryBody}>
+										<div class={styles.entryHeading}>
+											<h3 class={styles.entryTitle}>{item.title}</h3>
+											<svg class={styles.arrow} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+												{item.openInNewTab ? <path d="M7 17 17 7M7 7h10v10" /> : <path d="M5 12h14m-5-5 5 5-5 5" />}
+											</svg>
+										</div>
+										<p class={styles.entryDescription}>{item.description}</p>
+										{item.openInNewTab && <span class={styles.externalNote}>{item.external ? '站外页面 · 新窗口打开' : '新窗口打开'}</span>}
+									</div>
+								</a>
+							</li>
+						);
+					})}
+				</ul>
+			</section>
+		)) : <p class={styles.empty}>还没有添加探索页面。</p>}
 	</div>
 </StellarShell>

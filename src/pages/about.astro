@@ -1,62 +1,125 @@
 ---
-import Layout from '../layouts/BlogPost.astro';
+import StellarShell from '../layouts/StellarShell.astro';
+import ArtalkComments from '../components/ArtalkComments.astro';
+import { SITE_TITLE } from '../consts';
+import { aboutProfile, aboutInterests, aboutSkills, aboutPersonality, aboutWriting } from '../config/about';
+import * as styles from '../styles/about.css';
+
+const readingLinks = [
+	{ href: '/', label: '最新文章', external: false },
+	{ href: '/columns/', label: '专栏目录', external: false },
+	{ href: '/rss.xml', label: '订阅 RSS', external: false },
+	{ href: aboutProfile.writingArchive, label: '写作存档', external: true },
+];
+const headings = [
+	{ depth: 2, slug: 'about-me', text: '关于我' },
+	{ depth: 2, slug: 'skills', text: '我的技能' },
+	{ depth: 2, slug: 'personality', text: '性格的一面' },
+	{ depth: 2, slug: 'writing', text: '可能会写的内容' },
+];
 ---
 
-<Layout
-	title="About Me"
-	description="Lorem ipsum dolor sit amet"
-	pubDate={new Date('August 08 2021')}
+<StellarShell
+	title={`关于我 · ${SITE_TITLE}`}
+	description={aboutProfile.description}
+	mainClass={styles.main}
 	siteTree="page"
+	rightbar={['toc', 'timeline']}
+	tocHeadings={headings}
 >
-	<p>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-		labore et dolore magna aliqua. Vitae ultricies leo integer malesuada nunc vel risus commodo
-		viverra. Adipiscing enim eu turpis egestas pretium. Euismod elementum nisi quis eleifend quam
-		adipiscing. In hac habitasse platea dictumst vestibulum. Sagittis purus sit amet volutpat. Netus
-		et malesuada fames ac turpis egestas. Eget magna fermentum iaculis eu non diam phasellus
-		vestibulum lorem. Varius sit amet mattis vulputate enim. Habitasse platea dictumst quisque
-		sagittis. Integer quis auctor elit sed vulputate mi. Dictumst quisque sagittis purus sit amet.
-	</p>
+	<article class={styles.page} aria-labelledby="about-title" data-about-page>
+		<nav class={styles.breadcrumbs} aria-label="面包屑导航">
+			<a href="/">首页</a><span aria-hidden="true">/</span><span aria-current="page">关于</span>
+		</nav>
 
-	<p>
-		Morbi tristique senectus et netus. Id semper risus in hendrerit gravida rutrum quisque non
-		tellus. Habitasse platea dictumst quisque sagittis purus sit amet. Tellus molestie nunc non
-		blandit massa. Cursus vitae congue mauris rhoncus. Accumsan tortor posuere ac ut. Fringilla urna
-		porttitor rhoncus dolor. Elit ullamcorper dignissim cras tincidunt lobortis. In cursus turpis
-		massa tincidunt dui ut ornare lectus. Integer feugiat scelerisque varius morbi enim nunc.
-		Bibendum neque egestas congue quisque egestas diam. Cras ornare arcu dui vivamus arcu felis
-		bibendum. Dignissim suspendisse in est ante in nibh mauris. Sed tempus urna et pharetra pharetra
-		massa massa ultricies mi.
-	</p>
+		<header class={styles.hero}>
+			<div class={styles.heroCopy}>
+				<h1 class={styles.title} id="about-title">你好，我是<span class={styles.name}>{aboutProfile.name}。</span></h1>
+				<p class={styles.greeting}>{aboutProfile.greeting}</p>
+				<p class={styles.introduction}>{aboutProfile.introduction}</p>
+				<a class={styles.heroLink} href="#about-me">认识一下
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m-5-5 5 5 5-5" /></svg>
+				</a>
+			</div>
+			<figure class={styles.portrait}>
+				<img class={styles.illustration} src={aboutPersonality.illustration} width="400" height="400" alt="16Personalities 的 INTP 逻辑学家男性插画" loading="eager" decoding="async" data-intp-illustration />
+				<figcaption class={styles.portraitCaption}><a href="#personality">{aboutPersonality.name} · {aboutPersonality.type}</a></figcaption>
+			</figure>
+		</header>
 
-	<p>
-		Mollis nunc sed id semper risus in. Convallis a cras semper auctor neque. Diam sit amet nisl
-		suscipit. Lacus viverra vitae congue eu consequat ac felis donec. Egestas integer eget aliquet
-		nibh praesent tristique magna sit amet. Eget magna fermentum iaculis eu non diam. In vitae
-		turpis massa sed elementum. Tristique et egestas quis ipsum suspendisse ultrices. Eget lorem
-		dolor sed viverra ipsum. Vel turpis nunc eget lorem dolor sed viverra. Posuere ac ut consequat
-		semper viverra nam. Laoreet suspendisse interdum consectetur libero id faucibus. Diam phasellus
-		vestibulum lorem sed risus ultricies tristique. Rhoncus dolor purus non enim praesent elementum
-		facilisis. Ultrices tincidunt arcu non sodales neque. Tempus egestas sed sed risus pretium quam
-		vulputate. Viverra suspendisse potenti nullam ac tortor vitae purus faucibus ornare. Fringilla
-		urna porttitor rhoncus dolor purus non. Amet dictum sit amet justo donec enim.
-	</p>
+		<section class={styles.section} aria-labelledby="about-me">
+			<h2 class={styles.sectionTitle} id="about-me">关于我</h2>
+			<p class={styles.bio}>{aboutProfile.bio}</p>
+			<dl class={styles.interests}>
+				{aboutInterests.map((interest) => (
+					<div class={styles.interest}>
+						<dt>{interest.title}</dt>
+						<dd>{interest.text}</dd>
+					</div>
+				))}
+			</dl>
+		</section>
 
-	<p>
-		Mattis ullamcorper velit sed ullamcorper morbi tincidunt. Tortor posuere ac ut consequat semper
-		viverra. Tellus mauris a diam maecenas sed enim ut sem viverra. Venenatis urna cursus eget nunc
-		scelerisque viverra mauris in. Arcu ac tortor dignissim convallis aenean et tortor at. Curabitur
-		gravida arcu ac tortor dignissim convallis aenean et tortor. Egestas tellus rutrum tellus
-		pellentesque eu. Fusce ut placerat orci nulla pellentesque dignissim enim sit amet. Ut enim
-		blandit volutpat maecenas volutpat blandit aliquam etiam. Id donec ultrices tincidunt arcu. Id
-		cursus metus aliquam eleifend mi.
-	</p>
+		<section class={styles.section} aria-labelledby="skills">
+			<div class={styles.sectionHeading}>
+				<h2 class={styles.sectionTitle} id="skills">我的技能</h2>
+				<p class={styles.sectionNote}>语言、框架，以及手边的工具。</p>
+			</div>
+			<dl class={styles.skills}>
+				{aboutSkills.map((group) => (
+					<div class={styles.skillGroup} data-skill-group>
+						<dt class={styles.skillLabel}>{group.title}</dt>
+						<dd class={styles.skillItems}>
+							<ul class={styles.skillList} role="list">{group.items.map((item) => <li>{item}</li>)}</ul>
+						</dd>
+					</div>
+				))}
+			</dl>
+		</section>
 
-	<p>
-		Tempus quam pellentesque nec nam aliquam sem. Risus at ultrices mi tempus imperdiet. Id porta
-		nibh venenatis cras sed felis eget velit. Ipsum a arcu cursus vitae. Facilisis magna etiam
-		tempor orci eu lobortis elementum. Tincidunt dui ut ornare lectus sit. Quisque non tellus orci
-		ac. Blandit libero volutpat sed cras. Nec tincidunt praesent semper feugiat nibh sed pulvinar
-		proin gravida. Egestas integer eget aliquet nibh praesent tristique magna.
-	</p>
-</Layout>
+		<section class:list={[styles.section, styles.personality]} aria-labelledby="personality">
+			<div class={styles.personalityIntro}>
+				<h2 class={styles.sectionTitle} id="personality">性格的一面</h2>
+				<p class={styles.personalityType}>{aboutPersonality.type}</p>
+				<p class={styles.personalityName}>{aboutPersonality.name}</p>
+				<p class={styles.personalityNote}>{aboutPersonality.note}</p>
+				<a class={styles.sourceLink} href={aboutPersonality.illustrationSource} target="_blank" rel="noopener noreferrer">插画来自 16Personalities<span class="sr-only">（新窗口打开）</span></a>
+			</div>
+			<dl class={styles.traits}>
+				{aboutPersonality.traits.map((trait) => (
+					<div class={styles.trait} data-personality-trait>
+						<dt class={styles.traitDimension}>{trait.dimension}</dt>
+						<dd class={styles.traitResult}>
+							<span class={styles.traitPreference}>{trait.preference}</span>
+							<span class={styles.traitValue}>{trait.value}<span>%</span></span>
+						</dd>
+						<dd class={styles.traitTrack}>
+							<meter class={styles.meter} value={trait.value} min="0" max="100" aria-label={`${trait.dimension}：${trait.value}% ${trait.preference}`}>{trait.value}% {trait.preference}</meter>
+						</dd>
+					</div>
+				))}
+			</dl>
+		</section>
+
+		<section class:list={[styles.section, styles.closingSection]} aria-labelledby="writing">
+			<h2 class={styles.sectionTitle} id="writing">可能会写的内容</h2>
+			<dl class={styles.writingList}>
+				{aboutWriting.map((topic) => (
+					<div class={styles.writingItem}>
+						<dt>{topic.title}</dt><dd>{topic.text}</dd>
+					</div>
+				))}
+			</dl>
+			<nav class={styles.readingLinks} aria-label="继续逛逛">
+				{readingLinks.map((link) => (
+					<a href={link.href} target={link.external ? '_blank' : undefined} rel={link.external ? 'noopener noreferrer' : undefined}>
+						{link.label}{link.external && <span class="sr-only">（新窗口打开）</span>}
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg>
+					</a>
+				))}
+			</nav>
+		</section>
+		{/* 沿用原关于页的评论 key 和开关，不因更换布局另建评论页。 */}
+		<ArtalkComments pageKey={Astro.url.pathname} pageTitle="关于我" />
+	</article>
+</StellarShell>

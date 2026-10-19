@@ -1,0 +1,9 @@
+---
+import * as styles from './AppearancePicker.css';
+interface Props { compact?: boolean; variant?: 'default' | 'toolbar'; }
+const { compact = false, variant = 'default' } = Astro.props;
+---
+<button class:list={[styles.trigger, compact && styles.triggerCompact, variant === 'toolbar' && styles.triggerToolbar]} type="button" data-appearance-open aria-label="外观设置" aria-haspopup="dialog" title="外观设置" disabled>
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.3a2.2 2.2 0 0 0 1.6-3.7 1.5 1.5 0 0 1 1.1-2.5h1A4 4 0 0 0 21 11a9 9 0 0 0-9-8Z"/><circle cx="7.3" cy="10.3" r=".6"/><circle cx="10.5" cy="7" r=".6"/><circle cx="15" cy="7.7" r=".6"/></svg>
+	<span class={compact || variant === 'toolbar' ? 'sr-only' : undefined}>外观</span>
+</button>

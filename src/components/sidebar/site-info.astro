@@ -1,25 +1,11 @@
 ---
-/**
- * 技术信息小部件
- *
- * 展示站点构建平台、协议、版本等静态元信息。
- * EdgeOne 图标使用远端 favicon；其它图标内联 SVG。
- */
+/** 站点元信息使用轻量资料行，详细版本按需展开。 */
 import type { WidgetProps } from './types';
-import * as rightStyles from '../StellarRightSidebar.css';
 import * as styles from './site-info.css';
 
 const { widget } = Astro.props as WidgetProps;
-
-const platform = {
-	name: 'EdgeOne',
-	icon: 'https://edgeone.ai/favicon.ico',
-};
-
-const storage = {
-	name: '本地',
-};
-
+const platform = { name: 'EdgeOne', icon: 'https://edgeone.ai/favicon.ico' };
+const storage = { name: '本地' };
 const versions: Array<{ label: string; value: string }> = [
 	{ label: 'Astro', value: '^6.3.3' },
 	{ label: 'React', value: '^19.2.6' },
@@ -32,72 +18,41 @@ const versions: Array<{ label: string; value: string }> = [
 ];
 ---
 
-<section class:list={[rightStyles.widget, styles.widget]} id="data-site-info" data-site-info-widget aria-labelledby="site-info-title">
-	<div class={rightStyles.widgetHeader}><span id="site-info-title">{widget.title}</span></div>
-	<div class={styles.card}>
+<section class={styles.widget} id="data-site-info" data-site-info-widget aria-labelledby="site-info-title">
+	<h2 class={styles.heading} id="site-info-title">{widget.title}</h2>
+	<dl class={styles.facts}>
 		<div class={styles.row}>
-			<span class={styles.rowLabel}>构建平台</span>
-			<span class={styles.rowValue}>
-				<img class={styles.platformIcon} src={platform.icon} alt={platform.name} loading="lazy" decoding="async" />
+			<dt class={styles.rowLabel}>构建平台</dt>
+			<dd class={styles.rowValue}>
+				<img class={styles.platformIcon} src={platform.icon} alt="" loading="lazy" decoding="async" />
 				{platform.name}
-			</span>
+			</dd>
 		</div>
 		<div class={styles.row}>
-			<span class={styles.rowLabel}>图片存储</span>
-			<span class={styles.rowValue}>
-				<svg class={styles.folderIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-				</svg>
+			<dt class={styles.rowLabel}>图片存储</dt>
+			<dd class={styles.rowValue}>
+				<svg class={styles.folderIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
 				{storage.name}
-			</span>
+			</dd>
 		</div>
-		<div class={styles.row}>
-			<span class={styles.rowLabel}>软件协议</span>
-			<span class={styles.rowValue}>MIT</span>
-		</div>
-		<div class={styles.row}>
-			<span class={styles.rowLabel}>文章许可</span>
-			<span class={styles.rowValue}>CC BY-NC-ND 4.0</span>
-		</div>
-		<div class={styles.row}>
-			<span class={styles.rowLabel}>规范域名</span>
-			<span class={styles.rowValue}>mahoo12138.cn</span>
-		</div>
-		<button class={styles.toggleRow} type="button" aria-label="收起构建信息" aria-pressed="false" data-site-info-toggle>
-			<span data-site-info-toggle-label>收起构建信息</span>
-			<svg class={styles.toggleIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-				<polyline points="6 9 12 15 18 9" />
-			</svg>
-		</button>
-		<div class={styles.detailPanel}>
-			<div class={styles.detailInner}>
-				<div class={styles.versionGrid}>
-					{versions.map((item) => (
-						<div class={styles.versionCard}>
-							<span class={styles.versionLabel}>{item.label}</span>
-							<span class={styles.versionValue}>{item.value}</span>
-						</div>
-					))}
+		<div class={styles.row}><dt class={styles.rowLabel}>软件协议</dt><dd class={styles.rowValue}>MIT</dd></div>
+		<div class={styles.row}><dt class={styles.rowLabel}>文章许可</dt><dd class={styles.rowValue}>CC BY-NC-ND 4.0</dd></div>
+		<div class={styles.row}><dt class={styles.rowLabel}>规范域名</dt><dd class={styles.rowValue}>mahoo12138.cn</dd></div>
+	</dl>
+	{/* 原生 details 保留键盘操作与无 JavaScript 展开，不再维护额外的折叠状态。 */}
+	<details class={styles.details} data-site-info-details>
+		<summary class={styles.toggleRow} data-site-info-toggle>
+			<span data-site-info-toggle-label>构建信息</span>
+			<span class={styles.detailCount}>{versions.length} 项</span>
+			<svg class={styles.toggleIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 5 7 7-7 7" /></svg>
+		</summary>
+		<dl class={styles.versionList} data-site-info-versions>
+			{versions.map((item) => (
+				<div class={styles.versionRow}>
+					<dt class={styles.versionLabel}>{item.label}</dt>
+					<dd class={styles.versionValue}>{item.value}</dd>
 				</div>
-			</div>
-		</div>
-	</div>
+			))}
+		</dl>
+	</details>
 </section>
-
-<script is:inline>
-	(() => {
-		const widget = document.querySelector('[data-site-info-widget]');
-		if (!widget) return;
-
-		const toggle = widget.querySelector('[data-site-info-toggle]');
-		const labelEl = widget.querySelector('[data-site-info-toggle-label]');
-
-		toggle?.addEventListener('click', () => {
-			const collapsed = widget.classList.toggle('collapse');
-			toggle.setAttribute('aria-pressed', String(collapsed));
-			if (labelEl) {
-				labelEl.textContent = collapsed ? '展开构建信息' : '收起构建信息';
-			}
-		});
-	})();
-</script>

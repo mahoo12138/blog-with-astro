@@ -13,7 +13,9 @@
     "preview": "astro preview",
     "check": "astro check",
     "audit:dist": "node scripts/audit-dist.mjs",
-    "verify": "astro check && node scripts/clean-dist.mjs && astro build && node scripts/audit-dist.mjs",
+    "content:check": "node scripts/check-content.mjs",
+    "test:content": "node --test scripts/tests/content-model.test.mjs",
+    "verify": "pnpm content:check && pnpm test:content && astro check && node scripts/clean-dist.mjs && astro build && node scripts/audit-dist.mjs",
     "astro": "astro"
   },
   "dependencies": {
@@ -38,8 +40,14 @@
     "vite": "7.3.2"
   },
   "devDependencies": {
+    "@astrojs/markdown-remark": "7.1.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@webgpu/types": "^0.1.72"
+    "@webgpu/types": "^0.1.72",
+    "github-slugger": "2.0.0",
+    "hast-util-from-html": "2.0.3",
+    "remark-mdx": "3.1.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
   }
 }

@@ -25,28 +25,33 @@ const { target = 'main-content', label = '跳到主内容' } = Astro.props;
 
 <a class="skip-link" href={`#${target}`}>{label}</a>
 
-<style is:global define:vars={{ accent: vars.color.accent, accentStrong: vars.color.accentStrong }}>
+<style is:global define:vars={{ accentStrong: vars.color.accentStrong, contrast: vars.color.surfaceStrong }}>
 	.skip-link {
 		position: fixed;
-		top: calc(-1 * (0.6rem * 2 + 1.8rem + 2px));
+		top: 0;
+		transform: translateY(calc(-100% - 16px));
+		opacity: 0;
+		pointer-events: none;
 		left: 0;
 		z-index: 9999;
 		padding: 0.6rem 1.1rem;
-		background: var(--accent-strong, #3367d6);
-		color: #fff;
+		background: var(--accentStrong, #365b81);
+		color: var(--contrast, #fff);
 		font-size: 0.9rem;
 		font-weight: 600;
 		line-height: 1.8;
 		text-decoration: none;
 		border-radius: 0 0 8px 0;
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-		transition: top 0.18s ease;
+		transition: transform 0.18s ease, opacity 0.18s ease;
 	}
 
 	.skip-link:focus,
 	.skip-link:focus-visible {
-		top: 0;
-		outline: 2px solid #fff;
+		transform: translateY(0);
+		opacity: 1;
+		pointer-events: auto;
+		outline: 2px solid var(--contrast, #fff);
 		outline-offset: -4px;
 	}
 

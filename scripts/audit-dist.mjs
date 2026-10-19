@@ -29,6 +29,8 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getContentCatalog } from '../src/content-model/catalog.mjs';
+import { auditContentOutput } from './content-output.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -335,19 +337,8 @@ if (!existsSync(copyScriptPath)) {
  *      十几条同系列条目直接推进订阅器。而且 rss.xml 是纯文本产物，
  *      页面检查与链接检查都覆盖不到它 —— 只能在这里正面断言。
  */
-const postsDir = path.join(root, 'src', 'content', 'posts');
-const columnChapterIds = [];
-if (existsSync(postsDir)) {
-	for (const name of await readdir(postsDir)) {
-		if (!/\.mdx?$/.test(name)) continue;
-		const source = await readFile(path.join(postsDir, name), 'utf8');
-		// 容忍 frontmatter 后没有换行（实测 front-end-2.md / fronted-interview.md 就是这样）
-		const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source);
-		if (frontmatter && /^columnId:\s*\S/m.test(frontmatter[1])) {
-			columnChapterIds.push(name.replace(/\.mdx?$/, ''));
-		}
-	}
-}
+const sourceCatalog = getContentCatalog(root);
+const columnChapterIds = [...sourceCatalog.aliases.keys()].map(route => decodeURIComponent(route.slice('/post/'.length, -1)));
 
 const stubsThatRender = [];
 const brokenRedirects = [];
@@ -452,18 +443,7 @@ if (existsSync(rssPath)) {
 		for (const link of leaked.slice(0, 10)) failures.push(`    ${link}`);
 	}
 
-	let publishedStandalone = 0;
-	if (existsSync(postsDir)) {
-		for (const name of await readdir(postsDir)) {
-			if (!/\.mdx?$/.test(name)) continue;
-			const source = await readFile(path.join(postsDir, name), 'utf8');
-			const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source);
-			if (!fm) continue;
-			if (/^draft:\s*true\b/m.test(fm[1])) continue;
-			if (/^columnId:\s*\S/m.test(fm[1])) continue;
-			publishedStandalone += 1;
-		}
-	}
+	const publishedStandalone = sourceCatalog.posts.filter(entry => entry.kind === 'post' && entry.published).length;
 	if (itemLinks.length !== publishedStandalone) {
 		failures.push(
 			`RSS 条目数 ${itemLinks.length} 与已发布独立文章数 ${publishedStandalone} 不一致（少了说明有文章被静默漏掉）`,
@@ -533,13 +513,13 @@ function parseFrontmatterList(frontmatter, key) {
 	return out;
 }
 
-if (existsSync(postsDir)) {
-	for (const name of await readdir(postsDir)) {
-		if (!/\.mdx?$/.test(name)) continue;
+{
+	for (const entry of sourceCatalog.posts) {
+		const name = entry.relative;
 
 		if (INVISIBLE_CHARS.test(name)) invisibleFilenames.push(name);
 
-		const source = await readFile(path.join(postsDir, name), 'utf8');
+		const source = await readFile(entry.file, 'utf8');
 		// 容忍 frontmatter 后没有换行（实测 front-end-2.md / fronted-interview.md 就是这样）
 		const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(source);
 		if (!match) continue;
@@ -554,7 +534,7 @@ if (existsSync(postsDir)) {
 		}
 
 		// d) 章节不得自带 tags / categories
-		if (/^columnId:\s*\S/m.test(frontmatter)) {
+		if (entry.kind === 'chapter') {
 			const own = [...parseFrontmatterList(frontmatter, 'tags'), ...parseFrontmatterList(frontmatter, 'categories')];
 			if (own.length) chaptersWithTaxonomy.push(`${name} → ${own.join(' / ')}`);
 		}
@@ -562,11 +542,10 @@ if (existsSync(postsDir)) {
 }
 
 // 专栏自身的分类同样受词表约束（章节的分类已收上来，这里才是唯一来源）
-const columnsDir = path.join(root, 'src', 'content', 'columns');
-if (existsSync(columnsDir)) {
-	for (const name of await readdir(columnsDir)) {
-		if (!/\.mdx?$/.test(name)) continue;
-		const source = await readFile(path.join(columnsDir, name), 'utf8');
+{
+	for (const entry of sourceCatalog.columns) {
+		const name = entry.relative;
+		const source = await readFile(entry.file, 'utf8');
 		const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source);
 		if (!match) continue;
 		for (const category of parseFrontmatterList(match[1], 'categories')) {
@@ -593,7 +572,7 @@ if (emptyPublishedPosts.length) {
 }
 if (chaptersWithTaxonomy.length) {
 	failures.push(
-		`专栏章节自带 tags / categories ${chaptersWithTaxonomy.length} 处（应登记在专栏上，章节只留 columnId）:`,
+		`专栏章节自带 tags / categories ${chaptersWithTaxonomy.length} 处（应登记在专栏上，章节归属由目录推导）:`,
 	);
 	for (const item of chaptersWithTaxonomy.slice(0, 10)) failures.push(`    ${item}`);
 }
@@ -655,45 +634,21 @@ function hasMathDelimiter(body) {
 	return /\$\$/.test(body) || /\$[^\s$][^$\n]*[^\s$]\$/.test(body);
 }
 
-/**
- * 文章 id → 产物页面路径。
- * 专栏章节的真实页面在 /columns/<columnId>/<id>/，而 /post/<id>/ 只是跳转桩页
- * —— 桩页的真实目标直接从它的 refresh 头里取，避免猜 columnId 与列目录名是否同名。
- */
-async function postPagePaths(id, columnId) {
-	const stub = path.join(dist, 'post', id, 'index.html');
-	const out = [];
-	if (columnId) {
-		if (existsSync(stub)) {
-			const target = /http-equiv="refresh"\s+content="0;url=([^"]+)"/.exec(
-				await readFile(stub, 'utf8'),
-			)?.[1];
-			if (target) {
-				out.push(path.join(dist, ...target.replace(/^\/|\/$/g, '').split('/'), 'index.html'));
-			}
-		}
-		out.push(path.join(dist, 'columns', columnId, id, 'index.html'));
-	} else {
-		out.push(stub);
-	}
-	return out.filter((p) => existsSync(p));
-}
-
 const mathNotRendered = [];
 const mathLeaked = [];
 let mathChecked = 0;
-if (existsSync(postsDir)) {
-	for (const name of await readdir(postsDir)) {
-		if (!/\.mdx?$/.test(name)) continue;
-		const source = await readFile(path.join(postsDir, name), 'utf8');
+{
+	for (const entry of sourceCatalog.posts) {
+		const name = entry.relative;
+		const source = await readFile(entry.file, 'utf8');
 		const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(source);
 		if (!match) continue;
 		const [, frontmatter, body] = match;
 		if (!hasMathDelimiter(body)) continue;
 
-		const id = name.replace(/\.mdx?$/, '');
 		const flagged = /^mathjax:\s*true\b/m.test(frontmatter);
-		const pages = await postPagePaths(id, frontmatterScalar(frontmatter, 'columnId'));
+		const target = path.join(dist, decodeURIComponent(entry.route.slice(1)), 'index.html');
+		const pages = entry.published && existsSync(target) ? [target] : [];
 		// 页面本身缺失由第 1 组链接断言负责，这里不重复报
 		if (!pages.length) continue;
 
@@ -719,6 +674,10 @@ if (mathLeaked.length) {
 	for (const p of mathLeaked.slice(0, 10)) failures.push(`    ${p}`);
 }
 
+/* Source-relative links and fragments use a real HTML parser, including the cases skipped above. */
+const contentOutput = auditContentOutput(dist, sourceCatalog);
+failures.push(...contentOutput.failures);
+
 /* ---------- 11. 报告 ---------- */
 const fmt = (b) => `${(b / 1024 / 1024).toFixed(2)} MB`;
 console.log('📦 构建产物体检');
@@ -728,7 +687,7 @@ console.log('   分类型:');
 for (const [ext, { count, bytes }] of [...byExt.entries()].sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 8)) {
 	console.log(`     ${(ext || '(no ext)').padEnd(8)} ${String(count).padStart(4)} 个  ${fmt(bytes)}`);
 }
-console.log(`   站内链接: 检查 ${seen.size} 条`);
+console.log(`   站内链接: 检查 ${seen.size} 条；完整链接/锚点审计 ${contentOutput.linkCount} 条`);
 console.log(`   专栏章节: ${columnChapterIds.length} 个（旧地址均为跳转桩页）`);
 console.log(`   数学公式: 校验 ${mathChecked} 篇（标了 mathjax 且正文含公式）`);
 

@@ -1,7 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
 import type { WidgetProps } from './types';
-import * as rightStyles from '../StellarRightSidebar.css';
 import { postHref, sortBlogPosts } from '../../utils/content';
 import * as styles from './heatmap.css';
 
@@ -114,8 +113,11 @@ const weeks = Array.from({ length: weekCount }, (_, index) => days.slice(index *
 const totalText = posts.length > 0 ? `写写停停，博主已记录 ${formatNumber(posts.length)} 篇文章！` : '还在酝酿第一篇文章。';
 ---
 
-<section class:list={[rightStyles.widget, styles.widget]} aria-labelledby="writing-heatmap-title">
-	<div class={rightStyles.widgetHeader}><span id="writing-heatmap-title">{widget.title}</span></div>
+<section class={styles.widget} data-writing-heatmap aria-labelledby="writing-heatmap-title">
+	<div class={styles.headingRow}>
+		<h2 class={styles.heading} id="writing-heatmap-title">{widget.title}</h2>
+		<span class={styles.period}>最近 {weekCount} 周</span>
+	</div>
 	<div class={styles.body}>
 		<div class={styles.chart} aria-label={`最近 ${weekCount} 周文章发布热力图`}>
 			<div class={styles.weeks}>

@@ -1,6 +1,18 @@
 // Place any global data in this file.
 // You can import this data from anywhere in your site by using the `import` keyword.
 
+import legacyPostIds from './config/legacy-post-ids.json';
+
+/** Existing articles keep their pre-folder comment/redirect identity. New chapters need no legacy alias. */
+export function legacyPostId(id: string): string | undefined {
+	return (legacyPostIds as Record<string, string>)[id];
+}
+export function chapterSlug(id: string, columnId: string): string {
+	const prefix = `${columnId}/`;
+	if (!id.startsWith(prefix)) throw new Error(`Chapter identity ${id} does not belong to ${columnId}`);
+	return id.slice(prefix.length);
+}
+
 export const SITE_TITLE = 'Mahoo Space';
 export const SITE_DESCRIPTION = 'Welcome to my planet!';
 export const SITE_AUTHOR = 'mahoo12138';
@@ -22,7 +34,7 @@ export const COLUMN_ROUTE_PREFIX = 'columns';
  * 通常来自 utils/content.ts 的 buildColumnIndex()。
  */
 export function postUrl(id: string, columnSlug?: string): string {
-	return columnSlug ? `/${COLUMN_ROUTE_PREFIX}/${columnSlug}/${id}/` : `/${POST_ROUTE_PREFIX}/${id}/`;
+	return columnSlug ? `/${COLUMN_ROUTE_PREFIX}/${columnSlug}/${chapterSlug(id, columnSlug)}/` : `/${POST_ROUTE_PREFIX}/${id}/`;
 }
 
 /** 专栏目录页 URL。 */
@@ -38,5 +50,5 @@ export function columnUrl(slug: string): string {
  * /columns/<col>/<id>/ 之后，历史评论仍然落在同一个 key 上，不会看起来凭空消失。
  */
 export function postCommentKey(id: string): string {
-	return `/${POST_ROUTE_PREFIX}/${id}/`;
+	return `/${POST_ROUTE_PREFIX}/${legacyPostId(id) ?? id}/`;
 }
