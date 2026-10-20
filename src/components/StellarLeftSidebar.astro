@@ -17,7 +17,6 @@ interface Props {
 
 const { menuId = 'post', widgets = [], column } = Astro.props;
 const pathname = Astro.url.pathname;
-const searchQuery = pathname.replace(/\/+$/, '') === '/search' ? Astro.url.searchParams.get('q')?.trim() ?? '' : '';
 
 function isActive(id: MenuId, href: string) {
 	if (id === menuId) {
@@ -36,7 +35,7 @@ const socialItems = stellarConfig.footer.social;
 	{/* 导航与底部工具固定，中间内容独立滚动。 */}
 	<div class={styles.container}>
 
-		{/* 不滚动区域：logo（头像+标题）+ 菜单 + 搜索 */}
+		{/* 不滚动区域：logo（头像+标题）+ 菜单；搜索已迁移至内容区 tab 行右侧。 */}
 		<header class={styles.profile}>
 			{/* 侧栏头像显示尺寸仅 48px，源文件为 738KB 的 avatar.png。
 				此前用原生 <img src={AvatarImage.src}> 绕过图片管线直出原图，且每个页面都会加载；
@@ -70,18 +69,9 @@ const socialItems = stellarConfig.footer.social;
 			</nav>
 		</div>
 
-		{/* 保留全部侧栏挂件，不用渐隐遮住末尾内容。 */}
+		{/* 滚动区域：仅承载侧栏挂件，与固定区之间以留白分隔。 */}
 		<div class={styles.inner}>
 			<div class={styles.widgets}>
-				<div class={styles.searchWrapper} id="search-wrapper">
-					<form class={styles.searchForm} action="/search/" method="get" role="search" data-site-search-form>
-						<button class={styles.searchButton} type="submit" aria-label="站内搜索">
-							<StellarIcon name="default:search" class={styles.searchIcon} />
-						</button>
-						<input class={styles.searchInput} type="search" name="q" value={searchQuery} placeholder="站内搜索" aria-label="站内搜索" autocomplete="off" data-site-search-input />
-					</form>
-					<div class={styles.searchNoResult}>没有找到内容</div>
-				</div>
 				<SidebarRenderer widgets={widgets} side="left" context={{ pathname, column }} />
 			</div>
 		</div>
@@ -124,38 +114,3 @@ const socialItems = stellarConfig.footer.social;
 		</footer>
 	</div>
 </div>
-
-<script is:inline>
-	(() => {
-		const isSearchPage = window.location.pathname.replace(/\/+$/, '') === '/search';
-		const pageQuery = isSearchPage ? new URLSearchParams(window.location.search).get('q')?.trim() ?? '' : '';
-
-		document.querySelectorAll('[data-site-search-form]').forEach((form) => {
-			if (!(form instanceof HTMLFormElement)) {
-				return;
-			}
-
-			const input = form.querySelector('[data-site-search-input]');
-			if (!(input instanceof HTMLInputElement)) {
-				return;
-			}
-
-			if (pageQuery) {
-				input.value = pageQuery;
-			}
-
-			form.addEventListener('submit', (event) => {
-				const query = input.value.trim();
-				const target = new URL(form.action || '/search/', window.location.origin);
-				target.search = '';
-
-				if (query) {
-					target.searchParams.set('q', query);
-				}
-
-				event.preventDefault();
-				window.location.assign(target.toString());
-			});
-		});
-	})();
-</script>

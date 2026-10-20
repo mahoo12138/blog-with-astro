@@ -4,10 +4,11 @@ import { vars } from "../styles/theme.css";
 const gapMargin = "16px";
 const gapPadding = "16px";
 const gapMax = "16px";
-const sideContentWidth = "224px";
 const borderCardSmall = "8px";
 const borderBar = "6px";
 const sidebarHeight = "calc(100dvh - 64px)";
+// 与 StellarShell 的 leftDrawer 断点保持一致：≤900px 左栏变抽屉面板。
+const drawerBreakpoint = "screen and (max-width: 900px)";
 const bgA20 = vars.color.surfaceMuted;
 const bgA50 = vars.color.surface;
 const bgA100 = vars.color.surfaceStrong;
@@ -30,7 +31,11 @@ export const profile = style({
   display: "flex",
   alignItems: "center",
   minHeight: "48px",
-  margin: `${gapMax} ${gapMargin} 0`,
+  // 桌面栏顶格起步：右栏挂件（margin 0 16px 28px）无顶部留白，
+  // Profile 若再留 16px 顶距，两栏首元素会错位、整体读起来不等高。
+  // 抽屉态是带边框的浮层面板，保留顶部留白作呼吸感。
+  margin: `0 ${gapMargin}`,
+  "@media": { [drawerBreakpoint]: { margin: `${gapMax} ${gapMargin} 0` } },
   padding: 0,
   overflow: "hidden",
   zIndex: 1,
@@ -178,104 +183,11 @@ export const menuLabel = style({
   border: 0,
 });
 
-export const searchWrapper = style({
-  paddingBottom: "20px",
-  width: "100%",
-  borderRadius: borderCardSmall,
-});
-
-export const searchForm = style({
-  position: "sticky",
-  top: 0,
-  height: "40px",
-  display: "flex",
-  alignItems: "center",
-  transition: "0.38s ease-out",
-  zIndex: 1,
-  borderRadius: borderCardSmall,
-  color: vars.color.textStrong,
-  selectors: {
-    "&::before": {
-      content: "",
-      position: "absolute",
-      height: "2px",
-      bottom: 0,
-      left: gapPadding,
-      right: gapPadding,
-      borderRadius: borderBar,
-      background: bgA100,
-      zIndex: 0,
-      transition: "0.2s ease-out",
-    },
-    "&:hover::before": {
-      height: "100%",
-      left: 0,
-      right: 0,
-    },
-    "&:focus-within::before": {
-      height: "100%",
-      left: 0,
-      right: 0,
-    },
-  },
-});
-
-export const searchButton = style({
-  position: "relative",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  height: "40px",
-  width: `calc((${sideContentWidth} + ${gapPadding} * 2 - 3 * 8px) * 0.25)`,
-  padding: 0,
-  border: 0,
-  borderRadius: borderBar,
-  background: "transparent",
-  color: textP2,
-  cursor: "pointer",
-  zIndex: 1,
-});
-
-export const searchIcon = style({
-  width: "1rem",
-  height: "1rem",
-  color: "currentColor",
-});
-
-export const searchInput = style({
-  position: "relative",
-  width: "100%",
-  boxSizing: "border-box",
-  fontFamily: vars.font.body,
-  fontSize: "14px",
-  padding: "12px 0",
-  border: 0,
-  outline: 0,
-  background: "transparent",
-  color: vars.color.textStrong,
-  zIndex: 1,
-  selectors: {
-    "&::placeholder": {
-      color: textP3,
-    },
-  },
-});
-
-export const searchNoResult = style({
-  display: "none",
-  color: textP1,
-  textAlign: "center",
-  fontSize: "14px",
-  padding: "2rem",
-  margin: "8px 0",
-  background: bgA20,
-  borderRadius: borderCardSmall,
-});
-
 export const widgets = style({
   position: "relative",
   display: "block",
-  padding: 0,
+  // 搜索框迁出后，滚动区首个挂件与菜单之间保留呼吸间距。
+  padding: "16px 0 0",
   zIndex: 1,
 });
 

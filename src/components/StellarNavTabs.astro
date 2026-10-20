@@ -1,4 +1,6 @@
 ---
+import StellarIcon from './StellarIcon.astro';
+import StellarSearchModal from './StellarSearchModal.astro';
 import * as styles from './StellarNavTabs.css';
 
 interface Item {
@@ -34,6 +36,14 @@ const items: Item[] = [
 					))
 				}
 			</nav>
+			{/* kbar 式命令面板触发器：搜索文章、跳转页面、切换主题，⌘K 亦可全局唤起。 */}
+			<button class={styles.searchTrigger} type="button" data-search-open title="搜索或命令（⌘K）" aria-label="搜索或命令">
+				<StellarIcon name="default:search" class={styles.searchTriggerIcon} />
+				<span class={styles.searchTriggerText}>搜索或命令</span>
+				<kbd class={styles.searchTriggerKbd} data-search-kbd-hint>⌘K</kbd>
+			</button>
 		</div>
 	</div>
 </div>
+
+<StellarSearchModal />

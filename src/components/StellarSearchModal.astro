@@ -1,0 +1,519 @@
+---
+import StellarIcon from './StellarIcon.astro';
+import * as styles from './StellarSearchModal.css';
+
+interface Command {
+	id: string;
+	group: string;
+	label: string;
+	hint?: string;
+	href?: string;
+	action?: string;
+	keywords?: string;
+	icon: string;
+}
+
+// kbar 式命令：导航跳转 + 外观切换。keywords 供输入过滤（含中英别名）。
+const commands: Command[] = [
+	// { id: 'blog', group: '导航', label: '博客', hint: '/', href: '/', keywords: 'blog home 首页 文章', icon: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5zM8 7h7M8 11h7' },
+	{ id: 'columns', group: '导航', label: '专栏', hint: '/columns', href: '/columns', keywords: 'columns zhuanlan series 系列', icon: 'M4 5h6v14H4zM14 5h6v14h-6z' },
+	{ id: 'explore', group: '导航', label: '探索', hint: '/explore', href: '/explore', keywords: 'explore faxian 发现 planet', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z' },
+	{ id: 'lab', group: '导航', label: '实验室', hint: '/lab', href: '/lab', keywords: 'lab shiyan 实验 demos', icon: 'M9 3h6M10 3v5.5L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9.5V3M8 15h8' },
+	{ id: 'archives', group: '导航', label: '归档', hint: '/archives', href: '/archives', keywords: 'archives guidang 时间线 timeline', icon: 'M4 7h16v13H4zM3 4h18v3H3zM10 11h4' },
+	// { id: 'categories', group: '导航', label: '分类', hint: '/categories', href: '/categories', keywords: 'categories fenlei category', icon: 'M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z' },
+	// { id: 'tags', group: '导航', label: '标签', hint: '/tags', href: '/tags', keywords: 'tags biaoqian tag', icon: 'M3 12.5V4h8.5L21 13.5 13.5 21zM7.5 8.2a.7.7 0 1 0 0-1.4.7.7 0 0 0 0 1.4z' },
+	{ id: 'about', group: '导航', label: '关于', hint: '/about', href: '/about', keywords: 'about guanyu 我', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 21c1.4-3.7 4.1-5.5 7.5-5.5s6.1 1.8 7.5 5.5' },
+	// { id: 'rss', group: '导航', label: 'RSS 订阅', hint: '/rss.xml', href: '/rss.xml', keywords: 'rss feed 订阅', icon: 'M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14M6 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z' },
+	{ id: 'theme-light', group: '外观', label: '浅色模式', action: 'theme:light', keywords: 'theme light qianse 白天 主题', icon: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8' },
+	{ id: 'theme-dark', group: '外观', label: '深色模式', action: 'theme:dark', keywords: 'theme dark shense 夜间 主题', icon: 'M20 14.2A8.5 8.5 0 0 1 9.8 4 8.5 8.5 0 1 0 20 14.2z' },
+	{ id: 'theme-system', group: '外观', label: '跟随系统', action: 'theme:system', keywords: 'theme system auto 系统 主题', icon: 'M4 5h16v11H4zM9 20h6M12 16v4' },
+	{ id: 'appearance', group: '外观', label: '外观设置', action: 'appearance', keywords: 'appearance peise 外观 配色 color theme', icon: 'M12 3a9 9 0 1 0 0 18c1.7 0 2.2-1.3 1.5-2.3-.8-1.2 0-2.7 1.5-2.7H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.8 12.2a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8zM9.4 8.2a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8zM14 8.2a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8z' },
+];
+---
+
+{/* kbar 式命令面板：tab 行触发器（data-search-open）或 ⌘K 唤起。
+    命令区（导航/外观）+ 搜索区（pagefind），统一键盘导航。 */}
+<div
+	class={styles.backdrop}
+	data-search-modal
+	data-commands={JSON.stringify(commands)}
+	data-class-group={styles.groupTitle}
+	data-class-item={styles.resultItem}
+	data-class-command={styles.commandRow}
+	data-class-icon={styles.commandIcon}
+	data-class-label={styles.commandLabel}
+	data-class-hint={styles.commandHint}
+	data-class-link={styles.resultLink}
+	data-class-title={styles.resultTitle}
+	data-class-url={styles.resultUrl}
+	data-class-excerpt={styles.resultExcerpt}
+	inert
+	aria-hidden="true"
+>
+	<div class={styles.dialog} role="dialog" aria-modal="true" aria-label="搜索或命令" data-search-dialog>
+		<div class={styles.inputRow}>
+			<StellarIcon name="default:search" class={styles.inputIcon} />
+			<input class={styles.input} type="search" placeholder="搜索文章、页面或命令…" aria-label="搜索文章、页面或命令" autocomplete="off" data-search-modal-input />
+			<kbd class={styles.kbd} data-search-esc-hint>Esc</kbd>
+		</div>
+
+		<div class={styles.body}>
+			<ol class={styles.results} data-search-modal-results></ol>
+			<p class={styles.hint} data-search-modal-empty hidden>没有找到内容，换个关键词试试</p>
+		</div>
+
+		<div class={styles.footer}>
+			<span class={styles.footerItem}><kbd class={styles.kbd}>↑</kbd><kbd class={styles.kbd}>↓</kbd>选择</span>
+			<span class={styles.footerItem}><kbd class={styles.kbd}>Enter</kbd>打开</span>
+			<span class={styles.footerItem}><kbd class={styles.kbd}>Esc</kbd>关闭</span>
+			<span class={styles.footerItem} data-search-kbd-hint-wrap><kbd class={styles.kbd} data-search-kbd-hint>⌘K</kbd>唤起面板</span>
+		</div>
+	</div>
+</div>
+
+<script is:inline>
+	(() => {
+		const backdrop = document.querySelector('[data-search-modal]');
+		const dialog = document.querySelector('[data-search-dialog]');
+		const input = document.querySelector('[data-search-modal-input]');
+		const results = document.querySelector('[data-search-modal-results]');
+		const empty = document.querySelector('[data-search-modal-empty]');
+
+		if (!(backdrop instanceof HTMLElement) || !(input instanceof HTMLInputElement) || !(results instanceof HTMLOListElement)) {
+			return;
+		}
+
+		const commands = JSON.parse(backdrop.dataset.commands || '[]');
+		const pageSize = 8;
+		// 动态创建的元素类名（vanilla-extract 哈希）经 data 属性传入。
+		const cls = {
+			group: backdrop.dataset.classGroup || '',
+			item: backdrop.dataset.classItem || '',
+			command: backdrop.dataset.classCommand || '',
+			icon: backdrop.dataset.classIcon || '',
+			label: backdrop.dataset.classLabel || '',
+			hint: backdrop.dataset.classHint || '',
+			link: backdrop.dataset.classLink || '',
+			title: backdrop.dataset.classTitle || '',
+			url: backdrop.dataset.classUrl || '',
+			excerpt: backdrop.dataset.classExcerpt || '',
+		};
+		let pagefindPromise;
+		let activeSearchId = 0;
+		let activeIndex = -1;
+		let lastFocused = null;
+		let debounceTimer = 0;
+
+		const setHidden = (element, hidden) => {
+			if (element instanceof HTMLElement) {
+				element.hidden = hidden;
+			}
+		};
+
+		// 非 Mac 平台把 ⌘K 提示换成 Ctrl K（触发器上的提示同样处理）。
+		const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+		if (!isMac) {
+			document.querySelectorAll('[data-search-kbd-hint]').forEach((el) => {
+				el.textContent = 'Ctrl K';
+			});
+		}
+
+		const loadPagefind = () => {
+			pagefindPromise ??= import('/pagefind/pagefind.js').then((module) => module.default ?? module);
+			return pagefindPromise;
+		};
+
+		const isOpen = () => backdrop.hasAttribute('data-open');
+
+		const openModal = () => {
+			if (isOpen()) {
+				input.focus();
+				return;
+			}
+			lastFocused = document.activeElement;
+			// inert/aria-hidden 管理可达性；显示与否由 CSS 的 [data-open] 控制。
+			backdrop.removeAttribute('inert');
+			backdrop.setAttribute('aria-hidden', 'false');
+			// 双 rAF 确保首帧以关闭态渲染，过渡才能触发。
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					// 值必须是 "true"，CSS 选择器按 [data-open="true"] 匹配。
+					backdrop.setAttribute('data-open', 'true');
+					if (dialog instanceof HTMLElement) {
+						dialog.setAttribute('data-open', 'true');
+					}
+					// visibility 变可见后才能聚焦（hidden 元素 focus() 会静默失败）。
+					input.focus();
+					input.select();
+				});
+			});
+			document.documentElement.style.overflow = 'hidden';
+		};
+
+		const closeModal = () => {
+			if (!isOpen()) {
+				return;
+			}
+			backdrop.removeAttribute('data-open');
+			if (dialog instanceof HTMLElement) {
+				dialog.removeAttribute('data-open');
+			}
+			backdrop.setAttribute('aria-hidden', 'true');
+			document.documentElement.style.overflow = '';
+			// 等退出动画结束再彻底退出交互与无障碍树，动画时长 200ms。
+			setTimeout(() => {
+				if (!isOpen()) {
+					backdrop.setAttribute('inert', '');
+				}
+			}, 220);
+			if (lastFocused instanceof HTMLElement) {
+				lastFocused.focus();
+			}
+		};
+
+		// —— 主题命令：复用侧栏 [data-theme-cycler] 的循环逻辑（持久化 + 控件同步都在那边）。——
+		const themeOrder = ['system', 'light', 'dark'];
+		const currentTheme = () => document.documentElement.getAttribute('data-theme') || 'system';
+		const setTheme = (target) => {
+			const btn = document.querySelector('[data-theme-cycler]');
+			if (btn instanceof HTMLElement) {
+				let steps = (themeOrder.indexOf(target) - themeOrder.indexOf(currentTheme()) + 3) % 3;
+				for (let i = 0; i < steps; i++) {
+					btn.click();
+				}
+				return;
+			}
+			// 兜底：无侧栏按钮时直接改根节点（与 appearance.ts 的 applyTo/persist 一致）。
+			if (target === 'system') {
+				document.documentElement.removeAttribute('data-theme');
+			} else {
+				document.documentElement.setAttribute('data-theme', target);
+			}
+			try {
+				if (target === 'system') localStorage.removeItem('theme-preference');
+				else localStorage.setItem('theme-preference', target);
+			} catch { /* 存储不可用时仅本次生效 */ }
+		};
+
+		const syncThemeHints = () => {
+			const current = currentTheme();
+			results.querySelectorAll('[data-theme-hint]').forEach((el) => {
+				el.textContent = el.getAttribute('data-theme-hint') === current ? '✓ 当前' : 'Enter 切换';
+			});
+		};
+
+		const runCommand = (command) => {
+			if (command.action?.startsWith('theme:')) {
+				setTheme(command.action.slice(6));
+				syncThemeHints();
+				return; // 面板保持打开，方便连续切换对比。
+			}
+			if (command.action === 'appearance') {
+				closeModal();
+				setTimeout(() => {
+					document.querySelector('[data-appearance-open]')?.click();
+				}, 250);
+			}
+		};
+
+		// —— 渲染：命令区（分组）+ 搜索结果区。——
+		const createGroupTitle = (text) => {
+			const item = document.createElement('li');
+			item.className = cls.group;
+			item.setAttribute('role', 'presentation');
+			item.textContent = text;
+			return item;
+		};
+
+		const createCommandItem = (command) => {
+			const item = document.createElement('li');
+			item.className = cls.item;
+			item.dataset.item = '';
+
+			const row = document.createElement(command.href ? 'a' : 'button');
+			row.className = cls.command;
+			if (command.href) {
+				row.href = command.href;
+			} else {
+				row.type = 'button';
+			}
+
+			const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+			svg.setAttribute('class', cls.icon);
+			svg.setAttribute('viewBox', '0 0 24 24');
+			svg.setAttribute('fill', 'none');
+			svg.setAttribute('stroke', 'currentColor');
+			svg.setAttribute('stroke-width', '1.7');
+			svg.setAttribute('stroke-linecap', 'round');
+			svg.setAttribute('stroke-linejoin', 'round');
+			svg.setAttribute('aria-hidden', 'true');
+			const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+			path.setAttribute('d', command.icon);
+			svg.append(path);
+
+			const label = document.createElement('span');
+			label.className = cls.label;
+			label.textContent = command.label;
+
+			const hint = document.createElement('span');
+			hint.className = cls.hint;
+			if (command.action?.startsWith('theme:')) {
+				hint.dataset.themeHint = command.action.slice(6);
+				hint.textContent = 'Enter 切换';
+			} else {
+				hint.textContent = command.hint || '';
+			}
+
+			row.append(svg, label, hint);
+			if (!command.href) {
+				row.addEventListener('click', () => runCommand(command));
+			}
+			item.append(row);
+			return item;
+		};
+
+		const createResultItem = (result) => {
+			const item = document.createElement('li');
+			item.className = cls.item;
+			item.dataset.item = '';
+
+			const link = document.createElement('a');
+			link.href = result.url;
+			link.className = cls.link;
+
+			const title = document.createElement('span');
+			title.className = cls.title;
+			title.textContent = result.meta?.title || result.title || result.url;
+
+			const url = document.createElement('span');
+			url.className = cls.url;
+			url.textContent = result.url;
+
+			const excerpt = document.createElement('p');
+			excerpt.className = cls.excerpt;
+			// excerpt 来自 pagefind 索引（含 <mark> 高亮），与 /search 页同一信任来源。
+			excerpt.innerHTML = result.excerpt || '';
+
+			link.append(title, url, excerpt);
+			item.append(link);
+			return item;
+		};
+
+		const createSearchMoreItem = (query) => {
+			const item = document.createElement('li');
+			item.className = cls.item;
+			item.dataset.item = '';
+
+			const link = document.createElement('a');
+			link.className = cls.command;
+			link.href = `/search/?q=${encodeURIComponent(query)}`;
+
+			const label = document.createElement('span');
+			label.className = cls.label;
+			label.textContent = `搜索“${query}”的全部结果`;
+
+			const hint = document.createElement('span');
+			hint.className = cls.hint;
+			hint.textContent = '/search';
+
+			link.append(label, hint);
+			item.append(link);
+			return item;
+		};
+
+		const selectableItems = () => Array.from(results.querySelectorAll('[data-item] > a, [data-item] > button'));
+
+		const setActive = (index) => {
+			const items = selectableItems();
+			if (items.length === 0) {
+				activeIndex = -1;
+				return;
+			}
+			activeIndex = Math.max(0, Math.min(index, items.length - 1));
+			items.forEach((row, i) => {
+				const item = row.parentElement;
+				if (item instanceof HTMLElement) {
+					item.toggleAttribute('data-active', i === activeIndex);
+				}
+				if (i === activeIndex) {
+					row.scrollIntoView({ block: 'nearest' });
+				}
+			});
+		};
+
+		const renderCommands = (query) => {
+			const q = query.toLowerCase();
+			const matched = q
+				? commands.filter((command) => `${command.label} ${command.keywords || ''} ${command.hint || ''}`.toLowerCase().includes(q))
+				: commands;
+			const fragment = document.createDocumentFragment();
+			let lastGroup = '';
+			for (const command of matched) {
+				if (command.group !== lastGroup) {
+					fragment.append(createGroupTitle(command.group));
+					lastGroup = command.group;
+				}
+				fragment.append(createCommandItem(command));
+			}
+			return { fragment, count: matched.length };
+		};
+
+		const runSearch = async (query) => {
+			const searchId = activeSearchId + 1;
+			activeSearchId = searchId;
+
+			// 命令区即时渲染（不等搜索）。
+			const { fragment, count } = renderCommands(query);
+			results.replaceChildren(fragment);
+			setHidden(empty, true);
+
+			if (!query) {
+				syncThemeHints();
+				setActive(count > 0 ? 0 : -1);
+				return;
+			}
+
+			try {
+				const pagefind = await loadPagefind();
+				const search = await pagefind.search(query);
+				if (searchId !== activeSearchId) {
+					return;
+				}
+
+				const handles = search.results.slice(0, pageSize);
+				const resultData = await Promise.all(handles.map((result) => result.data()));
+				if (searchId !== activeSearchId) {
+					return;
+				}
+
+				const tail = document.createDocumentFragment();
+				if (resultData.length > 0) {
+					tail.append(createGroupTitle('搜索结果'));
+					resultData.forEach((result) => {
+						tail.append(createResultItem(result));
+					});
+				}
+				tail.append(createSearchMoreItem(query));
+				results.append(tail);
+
+				if (count === 0 && resultData.length === 0) {
+					setHidden(empty, false);
+				}
+				syncThemeHints();
+				setActive(0);
+			} catch {
+				if (searchId !== activeSearchId) {
+					return;
+				}
+				// pagefind 不可用（如未构建）时保留命令区，仅追加搜索页入口。
+				results.append(createSearchMoreItem(query));
+				if (count === 0) {
+					if (empty) {
+						empty.textContent = '搜索索引暂不可用，可前往搜索页查看';
+					}
+					setHidden(empty, false);
+				}
+				setActive(0);
+			}
+		};
+
+		const scheduleSearch = () => {
+			window.clearTimeout(debounceTimer);
+			debounceTimer = window.setTimeout(() => {
+				runSearch(input.value.trim());
+			}, 120);
+		};
+
+		// 触发器：任意页面上的 data-search-open 按钮。
+		document.addEventListener('click', (event) => {
+			const target = event.target instanceof Element ? event.target.closest('[data-search-open]') : null;
+			if (target) {
+				event.preventDefault();
+				openModal();
+			}
+		});
+
+		// 点击遮罩关闭。
+		backdrop.addEventListener('click', (event) => {
+			if (event.target === backdrop) {
+				closeModal();
+			}
+		});
+
+		input.addEventListener('input', scheduleSearch);
+
+		document.addEventListener('keydown', (event) => {
+			// ⌘K / Ctrl+K 全局唤起。
+			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+				event.preventDefault();
+				if (isOpen()) {
+					input.focus();
+					input.select();
+				} else {
+					openModal();
+				}
+				return;
+			}
+
+			if (!isOpen()) {
+				return;
+			}
+
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				closeModal();
+				return;
+			}
+
+			if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+				event.preventDefault();
+				const items = selectableItems();
+				if (items.length === 0) {
+					return;
+				}
+				if (activeIndex === -1) {
+					setActive(0);
+				} else {
+					setActive(activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+				}
+				return;
+			}
+
+			if (event.key === 'Enter') {
+				const items = selectableItems();
+				if (items.length > 0) {
+					event.preventDefault();
+					items[activeIndex >= 0 ? activeIndex : 0].click();
+				}
+				return;
+			}
+
+			// 焦点陷阱：Tab 循环停留在面板内。
+			if (event.key === 'Tab' && dialog instanceof HTMLElement) {
+				const focusable = [input, ...selectableItems()].filter((el) => el instanceof HTMLElement);
+				if (focusable.length === 0) {
+					return;
+				}
+				const first = focusable[0];
+				const last = focusable[focusable.length - 1];
+				if (event.shiftKey && document.activeElement === first) {
+					event.preventDefault();
+					last.focus();
+				} else if (!event.shiftKey && document.activeElement === last) {
+					event.preventDefault();
+					first.focus();
+				}
+			}
+		});
+
+		// 链接跳转后收起面板；主题命令保持打开。
+		results.addEventListener('click', (event) => {
+			if (event.target instanceof Element && event.target.closest('a')) {
+				closeModal();
+			}
+		});
+
+		// 初始渲染：完整命令区。
+		runSearch('');
+	})();
+</script>
