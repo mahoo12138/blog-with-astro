@@ -1,0 +1,62 @@
+---
+import StellarShell from '../layouts/StellarShell.astro';
+import { SITE_TITLE } from '../consts';
+import { projects, projectGroups, projectsSnapshot } from '../config/projects';
+import * as styles from '../styles/projects.css';
+
+const groupTitles = Object.fromEntries(projectGroups.map(group => [group.id, group.title]));
+const dateFormat = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' });
+const dateText = (value: string) => dateFormat.format(new Date(value)).replaceAll('/', '.');
+const profileUrl = `https://github.com/${projectsSnapshot.owner}?tab=repositories`;
+---
+
+<StellarShell title={`我的项目 · ${SITE_TITLE}`} description="Mahoo 最近在做的公开项目：自部署应用、开发框架、编译器研究与交互实验。" siteTree="explore" mainClass={styles.main} contentWidth="wide" rightbar={null}>
+  <div class={styles.page} data-projects-page>
+    <nav class={styles.breadcrumbs} aria-label="面包屑导航">
+      <a href="/">首页</a><span aria-hidden="true">/</span><a href="/explore/">探索</a><span aria-hidden="true">/</span><span aria-current="page">我的项目</span>
+    </nav>
+    <header class={styles.header}>
+      <h1 class={styles.title}>我的项目</h1>
+      <p class={styles.introduction}>把日常需要和一时的好奇，慢慢做成可以运行的东西。</p>
+      <div class={styles.overview}>
+        <p class={styles.snapshot}>近 {projectsSnapshot.windowDays} 天的公开仓库 · 整理于 <time datetime={projectsSnapshot.fetchedAt}>{dateText(projectsSnapshot.fetchedAt)}</time></p>
+        <a class={styles.textLink} href={profileUrl} target="_blank" rel="noopener noreferrer">GitHub 主页<span class="sr-only">（新窗口打开）</span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10" /></svg></a>
+      </div>
+    </header>
+
+    <div class={styles.listHeading}>
+      <p class={styles.resultCount} data-project-count>{projects.length} 个项目</p>
+      <span class={styles.sortNote}>按最近推送排序</span>
+    </div>
+    <ul class={styles.list} role="list" aria-label="项目列表" data-project-list>
+      {projects.map(project => (
+        <li class={styles.item} data-project-item>
+          <article class={styles.project} aria-labelledby={`project-${project.name}`}>
+            <div class={styles.projectHeader}>
+              <div class={styles.identity}>
+                <h2 class={styles.projectTitle} id={`project-${project.name}`}><a href={project.url} target="_blank" rel="noopener noreferrer">{project.title}<span class="sr-only">（GitHub，新窗口打开）</span></a></h2>
+                <p class={styles.repoName}>{project.fullName}</p>
+              </div>
+              <div class={styles.meta}>
+                <span class={styles.category}>{groupTitles[project.group]}{project.fork && <span class={styles.flag}> · Fork</span>}{project.archived && <span class={styles.flag}> · 已归档</span>}</span>
+                <span class={styles.updated}>最近推送 <time datetime={project.pushedAt}>{dateText(project.pushedAt)}</time></span>
+              </div>
+            </div>
+            <p class={styles.description}>{project.summary}</p>
+            {project.note && <p class={styles.note}>{project.note}</p>}
+            <div class={styles.projectFooter}>
+              <ul class={styles.stack} role="list" aria-label={`${project.title} 技术栈`}>{project.stack.map(tech => <li>{tech}</li>)}</ul>
+              <div class={styles.links}>
+                <a class={styles.textLink} href={project.url} target="_blank" rel="noopener noreferrer" aria-label={`${project.title} 源码（新窗口打开）`}>源码<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10" /></svg></a>
+                {project.homepage && <a class={styles.textLink} href={project.homepage} target="_blank" rel="noopener noreferrer" aria-label={`${project.title} 项目网站（新窗口打开）`}>项目网站<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10" /></svg></a>}
+              </div>
+            </div>
+          </article>
+        </li>
+      ))}
+    </ul>
+    {projects.length === 0 && <p class={styles.empty}>暂时还没有可展示的项目。</p>}
+    <p class={styles.sourceNote}>收录 {dateText(projectsSnapshot.since)} 至 {dateText(projectsSnapshot.fetchedAt)} 有推送的公开项目，按展示规则整理。时间来自 GitHub 的仓库推送记录，不代表版本发布时间。项目说明以仓库为准。</p>
+  </div>
+</StellarShell>
+

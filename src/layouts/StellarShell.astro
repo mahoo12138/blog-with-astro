@@ -22,6 +22,8 @@ interface Props {
 	publishedTime?: Date;
 	modifiedTime?: Date;
 	mainClass?: string;
+	/** 仅无右栏时可使用宽内容区；文章等页面默认保持阅读宽度。 */
+	contentWidth?: 'reading' | 'wide';
 	siteTree?: SiteTreeKey;
 	menuId?: MenuId;
 	leftbar?: SidebarValue;
@@ -31,13 +33,14 @@ interface Props {
 	noindex?: boolean;
 }
 
-const { title, description, lang = 'zh-CN', image, type, publishedTime, modifiedTime, mainClass, siteTree = 'page', menuId, leftbar, rightbar, tocHeadings = [], column, noindex = false } = Astro.props;
+const { title, description, lang = 'zh-CN', image, type, publishedTime, modifiedTime, mainClass, contentWidth = 'reading', siteTree = 'page', menuId, leftbar, rightbar, tocHeadings = [], column, noindex = false } = Astro.props;
 const hasHero = Astro.slots.has('hero');
 const hasLead = Astro.slots.has('lead');
 const hasLeftbar = Astro.slots.has('leftbar');
 const hasRightbar = Astro.slots.has('rightbar');
 const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar, rightbar });
 const hasRightbarContent = shellConfig.rightbar.length > 0 || hasRightbar;
+const expandContent = contentWidth === 'wide' && !hasRightbarContent;
 ---
 
 <!doctype html>
@@ -58,7 +61,7 @@ const hasRightbarContent = shellConfig.rightbar.length > 0 || hasRightbar;
 				</button>
 			</div>
 		</header>
-		<div class={styles.shell} data-stellar-shell>
+		<div class:list={[styles.shell, expandContent && styles.wideContent]} data-stellar-shell data-content-width={expandContent ? 'wide' : undefined}>
 			<aside id="site-leftbar" class={styles.left} aria-label="站点导航" data-pagefind-ignore>
 				<button class:list={[styles.sidebarClose, styles.leftClose]} type="button" data-sidebar-close>关闭导航</button>
 				<StellarLeftSidebar menuId={shellConfig.menuId} widgets={shellConfig.leftbar} column={column} />
@@ -72,7 +75,7 @@ const hasRightbarContent = shellConfig.rightbar.length > 0 || hasRightbar;
 				</div>
 			</main>
 			{hasRightbarContent && (
-				<aside id="site-rightbar" class:list={[styles.right, siteTree === 'home' && styles.homeRight]} aria-label="页面侧栏" data-pagefind-ignore>
+				<aside id="site-rightbar" class={styles.right} aria-label="页面侧栏" data-pagefind-ignore>
 					<button class:list={[styles.sidebarClose, styles.rightClose]} type="button" data-sidebar-close>关闭侧栏</button>
 					<StellarRightSidebar widgets={shellConfig.rightbar} headings={tocHeadings} column={column} />
 					{hasRightbar && <slot name="rightbar" />}

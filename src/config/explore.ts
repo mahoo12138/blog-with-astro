@@ -8,6 +8,7 @@ export const exploreGroups = [
 	{ id: 'life', title: '日常与心绪' },
 	{ id: 'objects', title: '物件与折腾' },
 	{ id: 'moments', title: '影像与足迹' },
+	{ id: 'building', title: '创造与实践' },
 ] as const;
 export type ExploreGroupId = typeof exploreGroups[number]['id'];
 
@@ -96,6 +97,15 @@ export const explorePageConfig: ExplorePageConfig = {
 			href: '/travel/',
 			icon: 'travel',
 			layout: 'wide',
+			routeKind: 'file',
+		},
+		{
+			title: '我的项目',
+			group: 'building',
+			description: '最近在做的应用、工具与技术实验',
+			href: '/projects/',
+			icon: 'projects',
+			layout: 'default',
 			routeKind: 'file',
 		},
 	],

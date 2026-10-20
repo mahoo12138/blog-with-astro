@@ -6,6 +6,7 @@ import goodsIcon from './goods.svg?url';
 import phoneIcon from './phone.svg?url';
 import photoIcon from './photo.svg?url';
 import travelIcon from './travel.svg?url';
+import projectsIcon from './projects.svg?url';
 // PNG 是位图且源文件很大（love.png 499KB / memos.png 311KB），
 // 必须走 Astro 图片管线输出小尺寸 webp，否则每张卡片都要拉原图。
 import loveIcon from './love.png';
@@ -23,6 +24,7 @@ export const exploreIconImages = {
 	phone: phoneIcon,
 	photo: photoIcon,
 	travel: travelIcon,
+	projects: projectsIcon,
 	love: loveIcon,
 	memos: memosIcon,
 } as const satisfies Record<string, string | ImageMetadata>;

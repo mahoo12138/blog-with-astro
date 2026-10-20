@@ -14,6 +14,12 @@ export const shell = style({
 		'screen and (max-width: 480px)': { padding: '0 16px' },
 	},
 });
+// 显式启用且没有右栏时，使用原先右栏的空间；移动抽屉与其他页面不变。
+export const wideContent = style({
+	'@media': {
+		'screen and (min-width: 1181px)': { gridTemplateColumns: '256px minmax(0, 1fr)' },
+	},
+});
 export const left = style({
 	gridColumn: '1', minWidth: 0, position: 'sticky', top: '24px', marginTop: '24px',
 	'@media': { [leftDrawer]: {
@@ -44,10 +50,9 @@ export const right = style({
 	} },
 	selectors: { [`${shell}[data-rightbar-open] &`]: { transform: 'translateX(0)', visibility: 'visible' } },
 });
-// 首页右栏从文章流起点开始；滚动后仍停在 24px，正文目录与手机抽屉不受影响。
-export const homeRight = style({
-	'@media': { 'screen and (min-width: 1181px)': { marginTop: '120px' } },
-});
+// 首页右栏与左栏同高起点：沿用基础样式（sticky top 24px + margin 24px），
+// 不再做文章流起点的额外偏移 —— 偏移放 margin 会产生滚动位移（见 git 历史），
+// 放 padding 又会让右栏比左栏矮一截。顶部对齐后滚动零位移，两侧栏视觉对称。
 export const mainMask = style({
 	position: 'fixed', inset: 0, padding: 0, border: 0, zIndex: 25,
 	background: 'rgba(15, 18, 22, 0.32)', opacity: 0, visibility: 'hidden',

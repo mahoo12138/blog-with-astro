@@ -15,7 +15,9 @@
     "audit:dist": "node scripts/audit-dist.mjs",
     "content:check": "node scripts/check-content.mjs",
     "test:content": "node --test scripts/tests/content-model.test.mjs",
-    "verify": "pnpm content:check && pnpm test:content && astro check && node scripts/clean-dist.mjs && astro build && node scripts/audit-dist.mjs",
+    "projects:sync": "node scripts/sync-projects.mjs",
+    "test:projects": "node --test scripts/tests/projects.test.mjs",
+    "verify": "pnpm content:check && pnpm test:content && pnpm test:projects && astro check && node scripts/clean-dist.mjs && astro build && node scripts/audit-dist.mjs",
     "astro": "astro"
   },
   "dependencies": {
