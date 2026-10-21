@@ -1,10 +1,10 @@
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
 export type MenuId = 'post' | 'columns' | 'explore' | 'lab' | 'about' | 'rss' | 'wiki' | 'notebooks';
-export type SidebarWidgetId = 'welcome' | 'recent' | 'related' | 'timeline' | 'media' | 'toc' | 'ghrepo' | 'heatmap' | 'goods-stats' | 'gallery-info' | 'gallery-albums' | 'column-info' | 'column-posts' | 'travel-stats' | 'travel-recent' | 'archives-stats' | 'site-info' | 'lab-demos';
+export type SidebarWidgetId = 'welcome' | 'recent' | 'related' | 'timeline' | 'media' | 'toc' | 'ghrepo' | 'heatmap' | 'goods-stats' | 'gallery-info' | 'gallery-albums' | 'column-posts' | 'travel-stats' | 'travel-recent' | 'archives-stats' | 'site-info' | 'lab-demos' | 'tool-catalog';
 // 只保留真实存在的内容树节点：此前 wiki / notebooks / notes / note / author / error_page
 // 六个键指向不存在的内容，属于失效配置，已删除。
-export type SiteTreeKey = 'home' | 'index_blog' | 'index_topic' | 'explore' | 'gallery' | 'post' | 'topic' | 'column' | 'page' | 'travel' | 'archives' | 'lab';
+export type SiteTreeKey = 'home' | 'index_blog' | 'index_topic' | 'explore' | 'gallery' | 'post' | 'topic' | 'column' | 'page' | 'travel' | 'archives' | 'lab' | 'tools';
 
 export interface MenubarItem {
 	id: MenuId;
@@ -113,6 +113,7 @@ export const stellarConfig = {
 				title: '站点',
 				items: [
 					{ label: '专栏', url: '/columns' },
+					{ label: '工具箱', url: '/tools' },
 					{ label: '关于', url: '/about' },
 					{ label: 'RSS', url: '/rss.xml' },
 				],
@@ -162,6 +163,7 @@ export const stellarConfig = {
 		'archives-stats': { id: 'archives-stats', layout: 'archives-stats', title: '归档统计' },
 		'site-info': { id: 'site-info', layout: 'site-info', title: '技术信息' },
 		'lab-demos': { id: 'lab-demos', layout: 'lab-demos', title: '实验目录' },
+		'tool-catalog': { id: 'tool-catalog', layout: 'tool-catalog', title: '工具分类' },
 	} satisfies Record<SidebarWidgetId, SidebarWidgetConfig>,
 	siteTree: {
 		home: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['heatmap', 'site-info'] },
@@ -176,6 +178,8 @@ export const stellarConfig = {
 		archives: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['archives-stats'] },
 		// 实验室：左栏换成「实验室简介 + demo 目录」，沿用 welcome 挂件但覆写文案
 		lab: { menuId: 'lab', leftbar: [{ id: 'welcome', title: '实验室', body: '用代码做的小实验，点击即可进入。' }, 'lab-demos'], rightbar: null },
+		// 工具箱：左栏是工具分类目录（同实验室的「demo 目录」模式）
+		tools: { menuId: 'explore', leftbar: [{ id: 'welcome', title: '工具箱', body: '开箱即用的小工具，全部本地运行。' }, 'tool-catalog'], rightbar: null },
 		page: { menuId: 'about', leftbar: ['recent'], rightbar: ['timeline'] },
 	} satisfies Record<SiteTreeKey, SiteTreeEntry>,
 };

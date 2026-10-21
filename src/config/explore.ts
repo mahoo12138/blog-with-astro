@@ -108,6 +108,15 @@ export const explorePageConfig: ExplorePageConfig = {
 			layout: 'default',
 			routeKind: 'file',
 		},
+		{
+			title: '工具箱',
+			group: 'building',
+			description: '时间戳转换等开发小工具，开箱即用、本地运行',
+			href: '/tools/',
+			icon: 'tools',
+			layout: 'default',
+			routeKind: 'file',
+		},
 	],
 };
 

@@ -1,0 +1,61 @@
+---
+/**
+ * 工具分类挂件（左栏）。
+ * 数据直接读 src/config/tools.ts 的注册表，加新工具不用改这里。
+ * 排版走 sidebarRows 统一标准（16px 基线 / 行 13px / meta 0.7rem）。
+ * 链接指向 /tools/#tool-<id>，同页 hash 切换由工具页脚本接管。
+ */
+import { getToolsByCategory, toolCategories } from '../../config/tools';
+import * as leftStyles from '../StellarLeftSidebar.css';
+import * as rightStyles from '../StellarRightSidebar.css';
+import * as rows from '../../styles/sidebarRows.css';
+import type { WidgetProps } from './types';
+
+const { widget, side } = Astro.props as WidgetProps;
+
+const widgetClass = side === 'left' ? leftStyles.widget : rightStyles.widget;
+const headerClass = side === 'left' ? leftStyles.widgetTitle : rightStyles.widgetHeader;
+const firstToolId = getToolsByCategory('dev')[0]?.id;
+---
+
+<section class={widgetClass} data-tools-nav data-class-active={rows.itemActive}>
+	<div class={headerClass}><span>{widget.title}</span></div>
+	{
+		toolCategories.map((category) => {
+			const tools = getToolsByCategory(category.id);
+			return (
+				<div class={rows.group}>
+					<h3 class={rows.groupTitle}>
+						<span>{category.title}</span>
+						{category.status === 'planned' && <span class={rows.meta}>即将上线</span>}
+					</h3>
+					{tools.length > 0 ? (
+						<ul class={rows.list} role="list">
+							{tools.map((tool) => {
+								const active = tool.id === firstToolId;
+								return (
+									<li>
+										<a
+											class:list={[rows.item, active && rows.itemActive]}
+											href={`/tools/#tool-${tool.id}`}
+											data-tool-link={tool.id}
+											aria-current={active ? 'page' : undefined}
+										>
+											<span class={rows.itemLabel}>{tool.title}</span>
+										</a>
+									</li>
+								);
+							})}
+						</ul>
+					) : (
+						category.status === 'active' && (
+							<ul class={rows.list} role="list">
+								<li class={rows.emptyRow}>暂无工具</li>
+							</ul>
+						)
+					)}
+				</div>
+			);
+		})
+	}
+</section>

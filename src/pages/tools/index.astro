@@ -1,0 +1,123 @@
+---
+/**
+ * 工具箱页面（/tools）。
+ *
+ * 布局：StellarShell 宽内容区（无右栏）；工具分类不在内容区里，
+ * 而是站点左侧栏的 tool-catalog 挂件（见 src/components/sidebar/tool-catalog.astro，
+ * 与实验室的「demo 目录」同一模式）。内容区只放当前工具面板。
+ * 分类/工具清单来自 src/config/tools.ts；面板组件在下方 panels 表里按 id 注册。
+ */
+import StellarShell from '../../layouts/StellarShell.astro';
+import TimestampConverter from '../../components/tools/TimestampConverter.astro';
+import { SITE_TITLE } from '../../consts';
+import { toolEntries, toolsPageConfig } from '../../config/tools';
+import * as styles from '../../styles/tools.css';
+
+// 工具面板注册表：id → 组件。加新工具时在这里登记即可。
+const panels = {
+	timestamp: TimestampConverter,
+} as const;
+---
+
+<StellarShell
+	title={`${toolsPageConfig.title} · ${SITE_TITLE}`}
+	description={toolsPageConfig.description}
+	siteTree="tools"
+	mainClass={styles.main}
+	contentWidth="wide"
+	rightbar={null}
+>
+	<div class={styles.page} data-tools-page>
+		<nav class={styles.breadcrumbs} aria-label="面包屑导航">
+			<a href="/">首页</a><span aria-hidden="true">/</span><a href="/explore/">探索</a><span aria-hidden="true">/</span><span aria-current="page">{toolsPageConfig.title}</span>
+		</nav>
+		<header class={styles.header}>
+			<h1 class={styles.title}>{toolsPageConfig.title}</h1>
+			<p class={styles.introduction}>{toolsPageConfig.description}</p>
+			<div class={styles.overview}>
+				<p class={styles.snapshot}>{toolEntries.length} 个工具 · 分类在左栏 · 数据不离开浏览器</p>
+			</div>
+		</header>
+
+		<div class={styles.stage} data-tools-stage>
+			{
+				toolEntries.map((tool, index) => {
+					const Panel = panels[tool.id as keyof typeof panels];
+					return (
+						<div id={`tool-${tool.id}`} data-tool-panel={tool.id} hidden={index > 0}>
+							{Panel ? <Panel /> : <p class={styles.empty}>这个工具还在建设中。</p>}
+						</div>
+					);
+				})
+			}
+		</div>
+	</div>
+</StellarShell>
+
+<script>
+	// 左栏「工具分类」挂件（data-tool-link）切换工具面板：URL hash 深链 + 键盘可达。
+	// ClientRouter 约定：自执行一次 + astro:page-load 重挂，同一 DOM 不重复绑定。
+	let cleanup: (() => void) | undefined;
+	let initializedRoot: HTMLElement | null = null;
+
+	function initToolsPage() {
+		const root = document.querySelector<HTMLElement>('[data-tools-page]');
+		if (root && root === initializedRoot) return;
+		cleanup?.();
+		if (!root) return;
+		initializedRoot = root;
+
+		const controller = new AbortController();
+		const { signal } = controller;
+		// 链接在左侧栏挂件里（root 之外），必须 document 范围查询；
+		// 活动态类名是 VE 哈希，经挂件的 data-class-active 传入。
+		const activeClass = document.querySelector('[data-tools-nav]')?.getAttribute('data-class-active') || '';
+		const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-tool-link]'));
+		const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-tool-panel]'));
+
+		function activate(id: string, updateHash: boolean) {
+			const panel = panels.find((item) => item.dataset.toolPanel === id) ?? panels[0];
+			if (!panel) return;
+			const activeId = panel.dataset.toolPanel!;
+			for (const item of panels) item.hidden = item !== panel;
+			for (const link of links) {
+				const active = link.dataset.toolLink === activeId;
+				if (activeClass) link.classList.toggle(activeClass, active);
+				if (active) link.setAttribute('aria-current', 'page');
+				else link.removeAttribute('aria-current');
+			}
+			if (updateHash && location.hash !== `#tool-${activeId}`) {
+				history.replaceState(null, '', `#tool-${activeId}`);
+			}
+		}
+
+		for (const link of links) {
+			link.addEventListener('click', (event) => {
+				const id = link.dataset.toolLink;
+				if (!id) return;
+				// 已经在工具页：hash 切换即可，不必整页跳转
+				event.preventDefault();
+				activate(id, true);
+				const heading = panels.find((item) => item.dataset.toolPanel === id)?.querySelector<HTMLElement>('[data-tool-title]');
+				heading?.focus();
+				heading?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+			}, { signal });
+		}
+
+		const applyHash = () => {
+			const match = /^#tool-(.+)$/.exec(location.hash);
+			if (match) activate(match[1], false);
+		};
+		window.addEventListener('hashchange', applyHash, { signal });
+		applyHash();
+
+		cleanup = () => {
+			controller.abort();
+			if (initializedRoot === root) initializedRoot = null;
+		};
+	}
+
+	initToolsPage();
+	document.addEventListener('astro:page-load', initToolsPage);
+	document.addEventListener('astro:before-swap', () => { cleanup?.(); cleanup = undefined; });
+</script>

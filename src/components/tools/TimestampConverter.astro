@@ -1,0 +1,426 @@
+---
+/**
+ * 时间戳转换工具。
+ *
+ * 纯前端本地运行：所有解析与格式化都用 Date / Intl，不发任何网络请求。
+ * 脚本遵循站内 ClientRouter 约定 —— 模块自执行一次 + astro:page-load 重挂，
+ * 同一 DOM 不重复绑定，astro:before-swap 时停掉秒表。
+ */
+import * as styles from '../../styles/tools.css';
+---
+
+<section class={styles.tool} data-timestamp-tool aria-labelledby="tool-timestamp-title">
+	<header class={styles.toolHeader}>
+		<h2 class={styles.toolTitle} id="tool-timestamp-title" tabindex="-1" data-tool-title>时间戳转换</h2>
+		<p class={styles.toolDesc}>
+			Unix 时间戳与日期时间双向互转。10 位按秒、13 位按毫秒自动识别，输出本地时间、UTC 与 ISO 8601；负数时间戳（1970 之前）同样支持。
+		</p>
+		<p class={styles.toolMeta}>
+			<span>开发工具</span>
+			<span>更新于 2026.10.21</span>
+			<span data-ts-timezone>时区 —</span>
+		</p>
+	</header>
+
+	<div class={styles.card}>
+		<h3 class={styles.cardTitle}>现在</h3>
+		<div class={styles.clockGrid}>
+			<div class={styles.clockItem}>
+				<span class={styles.clockHead}>
+					<span class={styles.clockLabel}>Unix 秒</span>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-now-seconds" aria-label="复制 Unix 秒时间戳">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</span>
+				<code class={styles.clockValue} data-ts-now-seconds>—</code>
+			</div>
+			<div class={styles.clockItem}>
+				<span class={styles.clockHead}>
+					<span class={styles.clockLabel}>Unix 毫秒</span>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-now-millis" aria-label="复制 Unix 毫秒时间戳">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</span>
+				<code class={styles.clockValue} data-ts-now-millis>—</code>
+			</div>
+			<div class={styles.clockItem}>
+				<span class={styles.clockHead}>
+					<span class={styles.clockLabel}>本地时间</span>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-now-local" aria-label="复制当前本地时间">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</span>
+				<code class={styles.clockValue} data-ts-now-local>—</code>
+			</div>
+		</div>
+		<p class={styles.clockNote}>每秒自动刷新；复制按钮拿的是点击那一刻的值。</p>
+	</div>
+
+	<div class={styles.convertGrid}>
+		<div class={styles.card}>
+			<h3 class={styles.cardTitle}>时间戳 → 时间</h3>
+			<label class={styles.fieldLabel} for="ts-input">Unix 时间戳（秒或毫秒）</label>
+			<div class={styles.fieldRow}>
+				<input
+					class={styles.input}
+					id="ts-input"
+					type="text"
+					inputmode="numeric"
+					autocomplete="off"
+					spellcheck="false"
+					placeholder="如 1729488000 或 1729488000000"
+					data-ts-input
+				/>
+			</div>
+			<p class={styles.hint}>自动识别 10 位（秒）与 13 位（毫秒），小数秒也可以。</p>
+			<p class={styles.error} data-ts-input-error hidden></p>
+			<p class={styles.empty} data-ts-input-empty>输入时间戳后，这里会显示转换结果。</p>
+			<div class={styles.results} data-ts-input-results hidden>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>本地时间</span>
+					<code class={styles.resultValue} data-ts-out-local>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-local" aria-label="复制本地时间">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>UTC 时间</span>
+					<code class={styles.resultValue} data-ts-out-utc>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-utc" aria-label="复制 UTC 时间">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>ISO 8601</span>
+					<code class={styles.resultValue} data-ts-out-iso>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-iso" aria-label="复制 ISO 8601 时间">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>相对时间</span>
+					<code class={styles.resultValue} data-ts-out-relative>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-relative" aria-label="复制相对时间">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>识别为</span>
+					<code class={styles.resultValue} data-ts-out-unit>—</code>
+					<span></span>
+				</div>
+			</div>
+		</div>
+
+		<div class={styles.card}>
+			<h3 class={styles.cardTitle}>时间 → 时间戳</h3>
+			<label class={styles.fieldLabel} for="ts-datetime">日期时间（本地时区）</label>
+			<div class={styles.fieldRow}>
+				<input class={styles.input} id="ts-datetime" type="datetime-local" step="1" data-ts-datetime />
+				<button class={styles.actionButton} type="button" data-ts-now-fill>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>
+					使用当前时间
+				</button>
+			</div>
+			<p class={styles.hint}>按上方显示的时区解析；切换系统时区后刷新页面即可更新。</p>
+			<p class={styles.error} data-ts-datetime-error hidden></p>
+			<p class={styles.empty} data-ts-datetime-empty>选择日期时间后，这里会显示时间戳。</p>
+			<div class={styles.results} data-ts-datetime-results hidden>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>Unix 秒</span>
+					<code class={styles.resultValue} data-ts-out-seconds>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-seconds" aria-label="复制 Unix 秒时间戳">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>Unix 毫秒</span>
+					<code class={styles.resultValue} data-ts-out-millis>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-millis" aria-label="复制 Unix 毫秒时间戳">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+				<div class={styles.resultRow}>
+					<span class={styles.resultLabel}>ISO 8601</span>
+					<code class={styles.resultValue} data-ts-out-iso2>—</code>
+					<button class={styles.copyButton} type="button" data-copy-target="data-ts-out-iso2" aria-label="复制 ISO 8601 时间">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+						复制
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<p class={styles.sourceNote}>
+		所有转换都在你的浏览器里完成，不上传任何数据。识别规则：绝对值 10 位数字按秒解析、13 位按毫秒解析，其余位数按小数秒处理。
+	</p>
+</section>
+
+<script>
+	// ClientRouter 会替换 body；同一 DOM 只绑定一次，离开页面停掉秒表。
+	let cleanup: (() => void) | undefined;
+	let initializedRoot: HTMLElement | null = null;
+
+	const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>';
+	const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>';
+
+	function pad(value: number, size = 2) {
+		return String(value).padStart(size, '0');
+	}
+
+	function formatLocal(date: Date) {
+		return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+	}
+
+	function formatUtc(date: Date) {
+		return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;
+	}
+
+	function formatRelative(date: Date, now: Date) {
+		const diffMs = date.getTime() - now.getTime();
+		const past = diffMs < 0;
+		const abs = Math.abs(diffMs);
+		const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+			['year', 365 * 24 * 3600_000],
+			['month', 30 * 24 * 3600_000],
+			['day', 24 * 3600_000],
+			['hour', 3600_000],
+			['minute', 60_000],
+			['second', 1000],
+		];
+		const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' });
+		for (const [unit, size] of units) {
+			if (abs >= size || unit === 'second') {
+				return rtf.format(past ? -Math.round(abs / size) : Math.round(abs / size), unit);
+			}
+		}
+		return '刚刚';
+	}
+
+	function timezoneLabel() {
+		try {
+			const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			const offset = -new Date().getTimezoneOffset();
+			const sign = offset >= 0 ? '+' : '−';
+			const hours = pad(Math.floor(Math.abs(offset) / 60));
+			const minutes = pad(Math.abs(offset) % 60);
+			return `时区 ${zone}（UTC${sign}${hours}:${minutes}）`;
+		} catch {
+			return '时区 本地';
+		}
+	}
+
+	/**
+	 * 解析时间戳文本 → Date。
+	 * 10 位整数按秒、13 位整数按毫秒；带小数或位数不符的按小数秒（兼容 12/11 位的远期秒）。
+	 */
+	function parseTimestamp(raw: string): { date: Date; unit: string } | { error: string } {
+		const text = raw.trim().replace(/[,_\s]/g, '');
+		if (!text) return { error: 'EMPTY' };
+		if (!/^[+-]?\d+(\.\d+)?$/.test(text)) {
+			return { error: '时间戳只能是数字。10 位按秒、13 位按毫秒解析，例如 1729488000。' };
+		}
+		const value = Number(text);
+		if (!Number.isFinite(value)) return { error: '这个时间戳超出了可解析的范围。' };
+
+		const intDigits = text.replace(/^[+-]/, '').split('.')[0].length;
+		let millis: number;
+		let unit: string;
+		if (text.includes('.') || (intDigits !== 10 && intDigits !== 13)) {
+			millis = Math.round(value * 1000);
+			unit = '小数秒（×1000 得毫秒）';
+		} else if (intDigits === 13) {
+			millis = value;
+			unit = '毫秒（13 位）';
+		} else {
+			millis = value * 1000;
+			unit = '秒（10 位）';
+		}
+
+		const date = new Date(millis);
+		if (Number.isNaN(date.getTime())) return { error: '这个时间戳超出了可解析的范围。' };
+		return { date, unit };
+	}
+
+	function setHidden(element: HTMLElement | null, hidden: boolean) {
+		if (element) element.hidden = hidden;
+	}
+
+	function initTimestampTool() {
+		const root = document.querySelector<HTMLElement>('[data-timestamp-tool]');
+		if (root && root === initializedRoot) return;
+		cleanup?.();
+		if (!root) return;
+		initializedRoot = root;
+
+		const controller = new AbortController();
+		const { signal } = controller;
+		const copyTimers = new WeakMap<HTMLButtonElement, number>();
+
+		const q = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector);
+
+		// 「现在」条
+		const nowSeconds = q<HTMLElement>('[data-ts-now-seconds]');
+		const nowMillis = q<HTMLElement>('[data-ts-now-millis]');
+		const nowLocal = q<HTMLElement>('[data-ts-now-local]');
+		const timezoneEl = q<HTMLElement>('[data-ts-timezone]');
+
+		const tick = () => {
+			const now = new Date();
+			if (nowSeconds) nowSeconds.textContent = String(Math.floor(now.getTime() / 1000));
+			if (nowMillis) nowMillis.textContent = String(now.getTime());
+			if (nowLocal) nowLocal.textContent = formatLocal(now);
+		};
+		tick();
+		if (timezoneEl) timezoneEl.textContent = timezoneLabel();
+		const timer = window.setInterval(tick, 1000);
+
+		// 时间戳 → 时间
+		const inputEl = q<HTMLInputElement>('[data-ts-input]');
+		const inputError = q<HTMLElement>('[data-ts-input-error]');
+		const inputEmpty = q<HTMLElement>('[data-ts-input-empty]');
+		const inputResults = q<HTMLElement>('[data-ts-input-results]');
+		const outLocal = q<HTMLElement>('[data-ts-out-local]');
+		const outUtc = q<HTMLElement>('[data-ts-out-utc]');
+		const outIso = q<HTMLElement>('[data-ts-out-iso]');
+		const outRelative = q<HTMLElement>('[data-ts-out-relative]');
+		const outUnit = q<HTMLElement>('[data-ts-out-unit]');
+
+		const renderInput = () => {
+			if (!inputEl) return;
+			const raw = inputEl.value.trim();
+			if (!raw) {
+				setHidden(inputError, true);
+				setHidden(inputResults, true);
+				setHidden(inputEmpty, false);
+				return;
+			}
+			const parsed = parseTimestamp(raw);
+			if ('error' in parsed) {
+				if (parsed.error === 'EMPTY') {
+					setHidden(inputError, true);
+					setHidden(inputEmpty, false);
+				} else {
+					if (inputError) inputError.textContent = parsed.error;
+					setHidden(inputError, false);
+					// 错误提示已经说明下一步，不再重复空态文案
+					setHidden(inputEmpty, true);
+				}
+				setHidden(inputResults, true);
+				return;
+			}
+			const { date, unit } = parsed;
+			setHidden(inputError, true);
+			setHidden(inputEmpty, true);
+			setHidden(inputResults, false);
+			if (outLocal) outLocal.textContent = formatLocal(date);
+			if (outUtc) outUtc.textContent = formatUtc(date);
+			if (outIso) outIso.textContent = date.toISOString();
+			if (outRelative) outRelative.textContent = formatRelative(date, new Date());
+			if (outUnit) outUnit.textContent = unit;
+		};
+		inputEl?.addEventListener('input', renderInput, { signal });
+
+		// 时间 → 时间戳
+		const datetimeEl = q<HTMLInputElement>('[data-ts-datetime]');
+		const datetimeError = q<HTMLElement>('[data-ts-datetime-error]');
+		const datetimeEmpty = q<HTMLElement>('[data-ts-datetime-empty]');
+		const datetimeResults = q<HTMLElement>('[data-ts-datetime-results]');
+		const outSeconds = q<HTMLElement>('[data-ts-out-seconds]');
+		const outMillis = q<HTMLElement>('[data-ts-out-millis]');
+		const outIso2 = q<HTMLElement>('[data-ts-out-iso2]');
+		const nowFill = q<HTMLButtonElement>('[data-ts-now-fill]');
+
+		const toLocalInputValue = (date: Date) =>
+			`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+
+		const renderDatetime = () => {
+			if (!datetimeEl) return;
+			const raw = datetimeEl.value;
+			if (!raw) {
+				setHidden(datetimeError, true);
+				setHidden(datetimeResults, true);
+				setHidden(datetimeEmpty, false);
+				return;
+			}
+			const date = new Date(raw);
+			if (Number.isNaN(date.getTime())) {
+				if (datetimeError) datetimeError.textContent = '这个日期时间无法识别，请用「2026-10-21 09:18:51」这种格式。';
+				setHidden(datetimeError, false);
+				setHidden(datetimeResults, true);
+				setHidden(datetimeEmpty, true);
+				return;
+			}
+			setHidden(datetimeError, true);
+			setHidden(datetimeEmpty, true);
+			setHidden(datetimeResults, false);
+			if (outSeconds) outSeconds.textContent = String(Math.floor(date.getTime() / 1000));
+			if (outMillis) outMillis.textContent = String(date.getTime());
+			if (outIso2) outIso2.textContent = date.toISOString();
+		};
+		datetimeEl?.addEventListener('input', renderDatetime, { signal });
+		nowFill?.addEventListener('click', () => {
+			if (!datetimeEl) return;
+			datetimeEl.value = toLocalInputValue(new Date());
+			renderDatetime();
+		}, { signal });
+
+		// 复制按钮：拿点击那一刻的文本，成功后短暂切换为 ✓ 已复制
+		root.addEventListener('click', async (event) => {
+			const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-copy-target]');
+			if (!button || !root.contains(button)) return;
+			const targetName = button.dataset.copyTarget;
+			if (!targetName) return;
+			const source = root.querySelector<HTMLElement>(`[${targetName}]`);
+			const text = source?.textContent?.trim();
+			if (!text || text === '—') return;
+
+			try {
+				await navigator.clipboard.writeText(text);
+			} catch {
+				// 非安全上下文（如 http 局域网）时 clipboard API 不可用，退回选区复制
+				const helper = document.createElement('textarea');
+				helper.value = text;
+				helper.setAttribute('readonly', '');
+				helper.style.position = 'fixed';
+				helper.style.opacity = '0';
+				document.body.appendChild(helper);
+				helper.select();
+				try {
+					document.execCommand('copy');
+				} finally {
+					helper.remove();
+				}
+			}
+
+			const original = button.innerHTML;
+			button.innerHTML = `${CHECK_ICON}已复制`;
+			button.setAttribute('data-copied', 'true');
+			window.clearTimeout(copyTimers.get(button));
+			copyTimers.set(button, window.setTimeout(() => {
+				button.innerHTML = original || `${COPY_ICON}复制`;
+				button.removeAttribute('data-copied');
+			}, 1600));
+		}, { signal });
+
+		cleanup = () => {
+			window.clearInterval(timer);
+			controller.abort();
+			if (initializedRoot === root) initializedRoot = null;
+		};
+	}
+
+	initTimestampTool();
+	document.addEventListener('astro:page-load', initTimestampTool);
+	document.addEventListener('astro:before-swap', () => { cleanup?.(); cleanup = undefined; });
+</script>
