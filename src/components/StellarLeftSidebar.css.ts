@@ -3,12 +3,12 @@ import { vars } from "../styles/theme.css";
 
 const gapMargin = "16px";
 const gapPadding = "16px";
-const gapMax = "16px";
 const borderCardSmall = "8px";
 const borderBar = "6px";
-const sidebarHeight = "calc(100dvh - 64px)";
-// 与 StellarShell 的 leftDrawer 断点保持一致：≤900px 左栏变抽屉面板。
-const drawerBreakpoint = "screen and (max-width: 900px)";
+// 侧栏应用壳总高 = 视口高 − 上下各一档呼吸（vars.space.xxl）。
+// 与 StellarShell 的 left/right 吸顶偏移同源（top/marginTop = vars.space.xxl）：
+// 吸顶后容器上下留白对称，footer 钉底、挂件内部滚动与底部区域不受影响。
+const sidebarHeight = `calc(100dvh - 2 * ${vars.space.xxl})`;
 const bgA20 = vars.color.surfaceMuted;
 const bgA50 = vars.color.surface;
 const bgA100 = vars.color.surfaceStrong;
@@ -31,11 +31,13 @@ export const profile = style({
   display: "flex",
   alignItems: "center",
   minHeight: "48px",
-  // 桌面栏顶格起步：右栏挂件（margin 0 16px 28px）无顶部留白，
-  // Profile 若再留 16px 顶距，两栏首元素会错位、整体读起来不等高。
-  // 抽屉态是带边框的浮层面板，保留顶部留白作呼吸感。
-  margin: `0 ${gapMargin}`,
-  "@media": { [drawerBreakpoint]: { margin: `${gapMax} ${gapMargin} 0` } },
+  // 身份块比容器顶再沉一档（vars.space.lg = 16px）：头像顶边落在 48px
+  // （容器 32px + 16px，恰为 vars.space.xxxl），站名 cap 线约 54px，
+  // 与文章页右栏 TOC 标题、面包屑的首行文字同线。
+  // 刻意不与右栏容器顶严格齐平：头像+站名是顶带最重的墨，若贴着 32px 顶线
+  // 会成为全页最高的墨迹，显得顶得太紧；下沉后与邻列文字形成温和的错落。
+  // 抽屉态（≤900px 浮层面板，上方还有关闭按钮）同样适用这档顶距，无需单独分支。
+  margin: `${vars.space.lg} ${gapMargin} 0`,
   padding: 0,
   overflow: "hidden",
   zIndex: 1,
@@ -229,43 +231,14 @@ export const widgetLink = style({
   color: vars.color.textMeta,
 });
 
-export const recentList = style({
-  display: "block",
-  paddingRight: "8px",
-});
+// 最近更新 / 相册列表等「文字行」挂件统一走 sidebarRows 标准：
+// 文字左基线 16px、行 padding 6px 16px、hover accentSoft 淡晕。
+// 别名保留旧名字，gallery-albums 等跨栏 widget 不必改引用。
+import * as rows from "../styles/sidebarRows.css";
 
-export const recentItem = style({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "8px",
-  padding: `6px ${gapPadding}`,
-  borderRadius: borderBar,
-  color: textP1,
-  fontSize: "13px",
-  lineHeight: 1.55,
-  minWidth: 0,
-  overflow: "hidden",
-  transition: "background-color 160ms ease, color 160ms ease",
-  selectors: {
-    "& + &": {
-      marginTop: "2px",
-    },
-    "&:hover": {
-      background: bgA100,
-      color: textP1,
-    },
-  },
-});
-
-export const recentItemTitle = style({
-  display: "block",
-  minWidth: 0,
-  flex: "1 1 auto",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
+export const recentList = rows.list;
+export const recentItem = rows.item;
+export const recentItemTitle = rows.itemLabel;
 
 export const footer = style({
   position: "relative",

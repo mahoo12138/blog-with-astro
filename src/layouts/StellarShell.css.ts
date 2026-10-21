@@ -3,6 +3,10 @@ import { vars } from '../styles/theme.css';
 
 const leftDrawer = 'screen and (max-width: 900px)';
 const rightDrawer = 'screen and (max-width: 1180px)';
+// 侧栏顶部呼吸间距：左右两栏同值，且与 mainArea 顶部 padding 共用 vars.space.xxl（2rem = 32px），
+// 三列首内容块从同一条水平线起步。用 token 而不是 px，改节奏时只动 theme 一处。
+// sticky 的 top 必须与 marginTop 同值 —— 否则滚动起步阶段侧栏会先位移再吸顶（见 git 历史）。
+const sidebarTop = vars.space.xxl;
 export const body = style({ minHeight: '100vh' });
 export const shell = style({
 	width: '100%', maxWidth: '1360px', margin: '0 auto', padding: '0 24px',
@@ -21,7 +25,7 @@ export const wideContent = style({
 	},
 });
 export const left = style({
-	gridColumn: '1', minWidth: 0, position: 'sticky', top: '24px', marginTop: '24px',
+	gridColumn: '1', minWidth: 0, position: 'sticky', top: sidebarTop, marginTop: sidebarTop,
 	'@media': { [leftDrawer]: {
 		position: 'fixed', left: '12px', top: '12px', margin: 0,
 		width: 'min(288px, calc(100vw - 24px))', maxHeight: 'calc(100dvh - 24px)',
@@ -33,13 +37,15 @@ export const left = style({
 	selectors: { [`${shell}[data-leftbar-open] &`]: { transform: 'translateX(0)', visibility: 'visible' } },
 });
 export const mainArea = style({
-	gridColumn: '2', width: '100%', minWidth: 0, margin: 0, padding: '32px 0 48px',
-	'@media': { [leftDrawer]: { paddingTop: '16px' } },
+	gridColumn: '2', width: '100%', minWidth: 0, margin: 0,
+	// 顶部与侧栏同为 vars.space.xxl，三列首行对齐；移动端收窄为一档（vars.space.lg）。
+	padding: `${vars.space.xxl} 0 ${vars.space.xxxl}`,
+	'@media': { [leftDrawer]: { paddingTop: vars.space.lg } },
 });
 export const mainContent = style({ minWidth: 0 });
 export const lead = style({ marginBottom: vars.space.xl });
 export const right = style({
-	gridColumn: '3', minWidth: 0, position: 'sticky', top: '24px', marginTop: '24px',
+	gridColumn: '3', minWidth: 0, position: 'sticky', top: sidebarTop, marginTop: sidebarTop,
 	'@media': { [rightDrawer]: {
 		position: 'fixed', right: '12px', top: '12px', margin: 0,
 		width: 'min(288px, calc(100vw - 24px))', maxHeight: 'calc(100dvh - 24px)',
@@ -50,7 +56,7 @@ export const right = style({
 	} },
 	selectors: { [`${shell}[data-rightbar-open] &`]: { transform: 'translateX(0)', visibility: 'visible' } },
 });
-// 首页右栏与左栏同高起点：沿用基础样式（sticky top 24px + margin 24px），
+// 首页右栏与左栏同高起点：沿用基础样式（sticky top 与 marginTop 同为 sidebarTop），
 // 不再做文章流起点的额外偏移 —— 偏移放 margin 会产生滚动位移（见 git 历史），
 // 放 padding 又会让右栏比左栏矮一截。顶部对齐后滚动零位移，两侧栏视觉对称。
 export const mainMask = style({

@@ -324,47 +324,6 @@ export const stageBody = style({
 	},
 });
 
-/* ------------------------------------------------------------------ *
- *  侧栏挂件：实验室目录
- * ------------------------------------------------------------------ */
-
-export const sideList = style({
-	display: 'flex',
-	flexDirection: 'column',
-	gap: '2px',
-	listStyle: 'none',
-	margin: 0,
-	padding: 0,
-});
-
-export const sideItem = style({
-	display: 'flex',
-	alignItems: 'center',
-	justifyContent: 'space-between',
-	gap: vars.space.sm,
-	padding: `${vars.space.xs} ${vars.space.sm}`,
-	borderRadius: vars.radius.sm,
-	fontSize: '0.82rem',
-	color: vars.color.text,
-	selectors: {
-		'&:hover': {
-			background: vars.color.accentSoft,
-			color: vars.color.accentStrong,
-		},
-	},
-});
-
-export const sideItemActive = style({
-	background: vars.color.accentSoft,
-	color: vars.color.accentStrong,
-	fontWeight: 600,
-});
-
-export const sideItemMeta = style({
-	fontSize: '0.7rem',
-	color: vars.color.textMeta,
-});
-
 /* demo 内部通用：铺满舞台的 canvas */
 globalStyle('[data-lab-canvas]', {
 	display: 'block',

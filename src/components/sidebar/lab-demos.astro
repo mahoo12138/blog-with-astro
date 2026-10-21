@@ -2,11 +2,12 @@
 /**
  * 实验室目录挂件（左栏）。
  * 数据直接读 src/config/lab.ts 的注册表，加新 demo 不用改这里。
+ * 排版走 sidebarRows 统一标准（16px 基线 / 行 13px / meta 0.7rem）。
  */
 import { LAB_RUNTIME_LABEL, getSortedLabDemos, labDemoUrl } from '../../config/lab';
 import * as leftStyles from '../StellarLeftSidebar.css';
 import * as rightStyles from '../StellarRightSidebar.css';
-import * as labStyles from '../../styles/lab.css';
+import * as rows from '../../styles/sidebarRows.css';
 import type { WidgetProps } from './types';
 
 const { widget, side } = Astro.props as WidgetProps;
@@ -19,7 +20,7 @@ const headerClass = side === 'left' ? leftStyles.widgetTitle : rightStyles.widge
 
 <section class:list={[widgetClass]}>
 	<div class={headerClass}><span>{widget.title}</span></div>
-	<ul class={labStyles.sideList}>
+	<ul class={rows.list}>
 		{
 			demos.map((demo) => {
 				const href = labDemoUrl(demo.id);
@@ -27,12 +28,12 @@ const headerClass = side === 'left' ? leftStyles.widgetTitle : rightStyles.widge
 				return (
 					<li>
 						<a
-							class:list={[labStyles.sideItem, active && labStyles.sideItemActive]}
+							class:list={[rows.item, active && rows.itemActive]}
 							href={href}
 							aria-current={active ? 'page' : undefined}
 						>
-							<span>{demo.title}</span>
-							<span class={labStyles.sideItemMeta}>{LAB_RUNTIME_LABEL[demo.runtime]}</span>
+							<span class={rows.itemLabel}>{demo.title}</span>
+							<span class={rows.meta}>{LAB_RUNTIME_LABEL[demo.runtime]}</span>
 						</a>
 					</li>
 				);

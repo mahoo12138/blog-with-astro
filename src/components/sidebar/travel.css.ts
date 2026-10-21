@@ -41,14 +41,14 @@ export const statLabel = style({
 export const regionsList = style({
 	listStyle: 'none',
 	margin: '0.75rem 0 0',
-	padding: '0 0.25rem',
+	padding: 0,
 });
 
 export const regionItem = style({
 	display: 'flex',
 	alignItems: 'center',
 	justifyContent: 'space-between',
-	padding: '0.35rem 0.5rem',
+	padding: '5px 16px',
 	borderRadius: borderBar,
 	fontSize: '0.8rem',
 	color: vars.color.text,
@@ -95,7 +95,7 @@ export const recentLink = style({
 	display: 'flex',
 	alignItems: 'center',
 	gap: '0.6rem',
-	padding: '0.45rem 0.75rem',
+	padding: '6px 16px',
 	borderRadius: borderBar,
 	color: vars.color.text,
 	cursor: 'pointer',
@@ -103,9 +103,10 @@ export const recentLink = style({
 		'& + &': {
 			marginTop: '2px',
 		},
+		// 反馈统一 accentSoft 淡晕（近白底上 surfaceStrong 白色会隐形）
 		'&:hover': {
-			background: vars.color.surfaceStrong,
-			color: vars.color.textStrong,
+			background: vars.color.accentSoft,
+			color: vars.color.accentStrong,
 		},
 	},
 });

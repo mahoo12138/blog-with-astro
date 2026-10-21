@@ -22,7 +22,9 @@ export const root = style({
 	flexDirection: 'column',
 	'@media': {
 		[`screen and (min-width: ${breakpoints.laptop})`]: {
-			maxHeight: 'calc(100dvh - 64px)',
+			// 与外壳 right 的吸顶偏移同源（top/marginTop = vars.space.xxl）：
+			// 吸顶后上下留白对称，长挂件在内部滚动，不影响页面滚动条。
+			maxHeight: `calc(100dvh - 2 * ${vars.space.xxl})`,
 			overflowY: 'auto',
 		},
 	},
