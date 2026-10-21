@@ -1,7 +1,7 @@
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
 export type MenuId = 'post' | 'columns' | 'explore' | 'lab' | 'about' | 'rss' | 'wiki' | 'notebooks';
-export type SidebarWidgetId = 'welcome' | 'recent' | 'related' | 'timeline' | 'media' | 'toc' | 'ghrepo' | 'heatmap' | 'goods-stats' | 'gallery-info' | 'gallery-albums' | 'column-posts' | 'travel-stats' | 'travel-recent' | 'archives-stats' | 'site-info' | 'lab-demos' | 'tool-catalog';
+export type SidebarWidgetId = 'welcome' | 'recent' | 'related' | 'timeline' | 'media' | 'toc' | 'ghrepo' | 'heatmap' | 'goods-stats' | 'gallery-info' | 'gallery-albums' | 'column-posts' | 'travel-stats' | 'travel-recent' | 'archives-stats' | 'site-info' | 'lab-demos' | 'tool-catalog' | 'recent-columns';
 // 只保留真实存在的内容树节点：此前 wiki / notebooks / notes / note / author / error_page
 // 六个键指向不存在的内容，属于失效配置，已删除。
 export type SiteTreeKey = 'home' | 'index_blog' | 'index_topic' | 'explore' | 'gallery' | 'post' | 'topic' | 'column' | 'page' | 'travel' | 'archives' | 'lab' | 'tools';
@@ -156,8 +156,11 @@ export const stellarConfig = {
 		'goods-stats': { id: 'goods-stats', layout: 'goods-stats', title: '好物统计' },
 		'gallery-info': { id: 'gallery-info', layout: 'gallery-info', title: '我的相册', body: '这里是我的日常生活记录，用镜头记下每一个小确幸。' },
 		'gallery-albums': { id: 'gallery-albums', layout: 'gallery-albums', title: '相册列表' },
-		'column-info': { id: 'column-info', layout: 'column-info', title: '专栏简介' },
+		// 专栏简介卡片已下线：其信息（标题/篇数/简介）在专栏导读页正文头部已完整呈现，
+		// 侧栏再复述一遍是冗余；只保留专栏目录。
 		'column-posts': { id: 'column-posts', layout: 'column-posts', title: '专栏目录' },
+		// 专栏维度的最近更新：按末章发布时间倒序列**专栏**，与 recent（文章）语义不同
+		'recent-columns': { id: 'recent-columns', layout: 'recent-columns', title: '最近更新', limit: 6 },
 		'travel-stats': { id: 'travel-stats', layout: 'travel-stats', title: '足迹统计' },
 		'travel-recent': { id: 'travel-recent', layout: 'travel-recent', title: '最近点亮', limit: 6 },
 		'archives-stats': { id: 'archives-stats', layout: 'archives-stats', title: '归档统计' },
@@ -168,12 +171,14 @@ export const stellarConfig = {
 	siteTree: {
 		home: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['heatmap', 'site-info'] },
 		index_blog: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: null },
-		index_topic: { menuId: 'columns', leftbar: ['welcome', 'recent'], rightbar: null },
+		// 专栏目录页：右栏是「最近更新」的**专栏**（按末章时间倒序），
+		// 与左栏 recent（最近更新的独立文章）刻意不同名同页并存。
+		index_topic: { menuId: 'columns', leftbar: ['welcome', 'recent'], rightbar: ['recent-columns'] },
 		explore: { menuId: 'explore', leftbar: ['welcome', 'recent'], rightbar: null },
 		gallery: { menuId: 'explore', leftbar: ['gallery-info', 'gallery-albums'], rightbar: null },
 		post: { menuId: 'post', leftbar: ['related', 'recent'], rightbar: ['ghrepo', 'toc'] },
 		topic: { menuId: 'post', leftbar: ['related', 'recent'], rightbar: ['ghrepo', 'toc'] },
-		column: { menuId: 'columns', leftbar: ['column-info', 'column-posts'], rightbar: ['toc'] },
+		column: { menuId: 'columns', leftbar: ['column-posts'], rightbar: ['toc'] },
 		travel: { menuId: 'explore', leftbar: ['travel-stats', 'travel-recent'], rightbar: null },
 		archives: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['archives-stats'] },
 		// 实验室：左栏换成「实验室简介 + demo 目录」，沿用 welcome 挂件但覆写文案

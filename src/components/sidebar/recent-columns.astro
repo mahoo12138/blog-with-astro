@@ -1,0 +1,52 @@
+---
+/**
+ * 「最近更新」挂件 —— 专栏维度。
+ *
+ * 列的是**最近更新的专栏**（按末章发布时间倒序），不是最近更新的文章：
+ * 文章维度的最近更新归 `recent` 挂件，两者语义不同，不要合并。
+ * 排版走 sidebarRows 统一标准（16px 基线 / 行 13px / meta 0.7rem）。
+ */
+import { getCollection } from 'astro:content';
+import { buildColumnBuckets, sortBlogPosts } from '../../utils/content';
+import * as rows from '../../styles/sidebarRows.css';
+import * as leftStyles from '../StellarLeftSidebar.css';
+import * as rightStyles from '../StellarRightSidebar.css';
+import type { WidgetProps } from './types';
+
+const { widget, side } = Astro.props as WidgetProps;
+const limit = widget.limit ?? 6;
+
+// buildColumnBuckets 必须接收全量文章（含章节），空专栏会在这里被剔除
+const posts = sortBlogPosts(await getCollection('posts'));
+const columns = await getCollection('columns');
+const recentColumns = buildColumnBuckets(posts, columns)
+	.filter((column) => Boolean(column.updatedAt))
+	.sort((a, b) => (b.updatedAt?.valueOf() ?? 0) - (a.updatedAt?.valueOf() ?? 0))
+	.slice(0, limit);
+
+const widgetClass = side === 'left' ? leftStyles.widget : rightStyles.widget;
+const headerClass = side === 'left' ? leftStyles.widgetTitle : rightStyles.widgetHeader;
+
+const formatDate = (date: Date) =>
+	`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+---
+
+{
+	recentColumns.length > 0 && (
+		<section class={widgetClass}>
+			<div class={headerClass}>
+				<span>{widget.title}</span>
+			</div>
+			<ul class={rows.list} role="list">
+				{recentColumns.map((column) => (
+					<li>
+						<a class={rows.item} href={`/columns/${column.slug}/`}>
+							<span class={rows.itemLabel}>{column.title}</span>
+							<span class={rows.meta}>{column.updatedAt ? formatDate(column.updatedAt) : ''}</span>
+						</a>
+					</li>
+				))}
+			</ul>
+		</section>
+	)
+}
