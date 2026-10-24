@@ -1,0 +1,14 @@
+---
+import { figure, figureFrame, figureCaption } from './blocks.css';
+
+interface Props {
+	caption?: string;
+}
+
+const { caption } = Astro.props;
+---
+
+<figure class={figure}>
+	<div class={figureFrame}><slot /></div>
+	{caption && <figcaption class={figureCaption} data-attach>{caption}</figcaption>}
+</figure>

@@ -1,0 +1,15 @@
+---
+import { ref, refDesc } from './blocks.css';
+
+interface Props {
+	href: string;
+	desc?: string;
+}
+
+const { href, desc } = Astro.props;
+---
+
+<li class={ref}>
+	<a href={href} target="_blank" rel="noreferrer"><slot /></a>
+	{desc && <p class={refDesc}>{desc}</p>}
+</li>

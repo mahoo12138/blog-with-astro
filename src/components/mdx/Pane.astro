@@ -1,0 +1,16 @@
+---
+import { pane, paneTitle, paneValue, paneBody } from './blocks.css';
+
+interface Props {
+	title: string;
+	value?: string;
+}
+
+const { title, value } = Astro.props;
+---
+
+<section class={pane}>
+	<h3 class={paneTitle}>{title}</h3>
+	{value && <p class={paneValue}>{value}</p>}
+	<div class={paneBody}><slot /></div>
+</section>

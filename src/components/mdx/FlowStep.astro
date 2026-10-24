@@ -1,0 +1,14 @@
+---
+import { flowStep, flowTitle, flowBody } from './blocks.css';
+
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class={flowStep}>
+	<b class={flowTitle}>{title}</b>
+	<span class={flowBody}><slot /></span>
+</div>

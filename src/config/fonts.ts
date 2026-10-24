@@ -52,7 +52,8 @@ export const siteFontConfig: SiteFontConfig = {
 	],
 	stacks: {
 		body: '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
-		heading: '"Noto Serif SC", "Songti SC", serif',
+		// 标题同用无衬线（2026-10 用户定调；/love 子站按自己的设计语言另用衬线，不受此影响）
+		heading: '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
 		mono: '"JetBrains Mono", Consolas, Menlo, monospace',
 	},
 	googleFontsUrl: buildGoogleFontsUrl([

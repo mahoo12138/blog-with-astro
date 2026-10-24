@@ -1,0 +1,12 @@
+---
+import { subhead } from './blocks.css';
+
+interface Props {
+	level?: 3 | 4;
+}
+
+const { level = 3 } = Astro.props;
+const Heading = (level === 4 ? 'h4' : 'h3') as any;
+---
+
+<Heading class={subhead}><slot /></Heading>

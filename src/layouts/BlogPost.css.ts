@@ -408,19 +408,9 @@ globalStyle(`${prose} .tag-plugin.grid[data-bg='card'] > *`, { background: card,
 globalStyle(`${prose} .tag-plugin.grid[data-bg] > * > :first-child`, { marginTop: 0 });
 globalStyle(`${prose} .tag-plugin.grid[data-bg] > * > :last-child`, { marginBottom: 0 });
 
-globalStyle(`${prose} .tag-plugin.tabs`, { position: 'relative', marginTop: '1rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column' });
-globalStyle(`${prose} .tag-plugin.tabs[data-align='center']`, { alignItems: 'center' });
-globalStyle(`${prose} .tag-plugin.tabs[data-align='right']`, { alignItems: 'flex-end' });
-globalStyle(`${prose} .tag-plugin.tabs .nav-tabs`, { display: 'flex', alignSelf: 'center', maxWidth: '100%', overflow: 'auto visible', whiteSpace: 'nowrap', margin: '0', padding: '8px 0', lineHeight: 1.5, position: 'relative', listStyle: 'none' });
-globalStyle(`${prose} .tag-plugin.tabs .nav-tabs::after`, { content: '', position: 'absolute', left: 0, bottom: 0, width: '100%', height: '2px', borderRadius: '2px', background: blockBorder });
-globalStyle(`${prose} .tag-plugin.tabs .tab a`, { display: 'block', cursor: 'pointer', padding: '0.25rem 0.75rem', fontSize: '0.875rem', lineHeight: 'inherit', fontWeight: 500, color: textP3, borderRadius: '4px', position: 'relative', margin: '0 2px', background: 'none' });
-globalStyle(`${prose} .tag-plugin.tabs .tab a:hover`, { color: textP1, background: blockBorder });
-globalStyle(`${prose} .tag-plugin.tabs .tab.active a`, { cursor: 'default', color: textP1, background: card, boxShadow: '0 0 0 1px rgba(18, 25, 38, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06)' });
-globalStyle(`${prose} .tag-plugin.tabs .tab.active a::after`, { content: '', zIndex: 1, position: 'absolute', background: 'var(--theme)', height: '2px', bottom: '-8px', left: '0.75rem', right: '0.75rem', borderRadius: '2px' });
-globalStyle(`${prose} .tag-plugin.tabs .tab-content`, { maxWidth: '100%', textAlign: 'justify', marginTop: '0.5rem', display: 'flex', flexDirection: 'column' });
-globalStyle(`${prose} .tag-plugin.tabs .tab-pane`, { display: 'block', maxWidth: '100%' });
-globalStyle(`${prose} .tag-plugin.tabs .tab-pane:not(.active)`, { height: 0, overflow: 'hidden' });
-
+// tabs 样式已迁至 components.css.ts（md-text 组件域）：它属于 MDX 组件样式，
+// 之前寄居在本文件会让「只有博客布局加载」的 chunk 决定生效范围 ——
+// 课时页（LessonLayout）不加载 BlogPost.css，tab-pane 隐藏规则整套失效。
 globalStyle(`${prose} .tag-plugin.image`, { marginTop: '1rem', marginBottom: '1rem', boxSizing: 'border-box' });
 globalStyle(`${prose} .tag-plugin.image .image-bg`, { textAlign: 'center', borderRadius: borderImage, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: 'auto', maxWidth: '100%' });
 globalStyle(`${prose} .tag-plugin.image img`, { display: 'block', objectFit: 'cover', borderRadius: borderImage, margin: 0 });

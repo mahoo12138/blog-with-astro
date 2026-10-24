@@ -1,0 +1,14 @@
+---
+import { formula, formulaPlain } from './blocks.css';
+
+interface Props {
+	plain?: boolean;
+	expr?: string;
+}
+
+const { plain, expr } = Astro.props;
+---
+
+<p class:list={[formula, plain && formulaPlain]} data-attach>
+	{expr}<slot />
+</p>

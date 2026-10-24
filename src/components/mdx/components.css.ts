@@ -116,6 +116,7 @@ globalStyle(`${scope} .tag-plugin.callout`, {
 	display: 'grid',
 	gridTemplateColumns: 'auto minmax(0, 1fr)',
 	gap: '0.75rem',
+	margin: `0 0 ${vars.space.xl}`,
 	padding: '1rem',
 	border: '1px solid var(--callout-border)',
 	borderLeft: '4px solid var(--callout-color)',
@@ -1586,3 +1587,78 @@ globalStyle(`${scope} .tag-plugin.photo .photo-right`, {
 		},
 	},
 });
+// —— Tabs（从 BlogPost.css.ts 迁入）——
+// tabs 是 MDX 组件，样式必须住在 md-text 组件域里跟 mdx-components 走；
+// 之前寄居 BlogPost.css.ts，非博客布局（课时页等）加载不到该 chunk，
+// tab-pane 的隐藏规则（height:0）整套失效，所有 pane 同时堆出。
+globalStyle(`${scope} .tag-plugin.tabs`, {
+	position: 'relative',
+	marginTop: '1rem',
+	marginBottom: '1rem',
+	display: 'flex',
+	flexDirection: 'column',
+});
+globalStyle(`${scope} .tag-plugin.tabs[data-align='center']`, { alignItems: 'center' });
+globalStyle(`${scope} .tag-plugin.tabs[data-align='right']`, { alignItems: 'flex-end' });
+globalStyle(`${scope} .tag-plugin.tabs .nav-tabs`, {
+	display: 'flex',
+	alignSelf: 'center',
+	maxWidth: '100%',
+	overflow: 'auto visible',
+	whiteSpace: 'nowrap',
+	margin: '0',
+	padding: '8px 0',
+	lineHeight: 1.5,
+	position: 'relative',
+	listStyle: 'none',
+});
+globalStyle(`${scope} .tag-plugin.tabs .nav-tabs::after`, {
+	content: '',
+	position: 'absolute',
+	left: 0,
+	bottom: 0,
+	width: '100%',
+	height: '2px',
+	borderRadius: '2px',
+	background: border,
+});
+globalStyle(`${scope} .tag-plugin.tabs .tab a`, {
+	display: 'block',
+	cursor: 'pointer',
+	padding: '0.25rem 0.75rem',
+	fontSize: '0.875rem',
+	lineHeight: 'inherit',
+	fontWeight: 500,
+	color: textMuted,
+	borderRadius: '4px',
+	position: 'relative',
+	margin: '0 2px',
+	background: 'none',
+});
+globalStyle(`${scope} .tag-plugin.tabs .tab a:hover`, { color: textStrong, background: border });
+globalStyle(`${scope} .tag-plugin.tabs .tab.active a`, {
+	cursor: 'default',
+	color: textStrong,
+	background: card,
+	boxShadow: '0 0 0 1px rgba(18, 25, 38, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06)',
+});
+globalStyle(`${scope} .tag-plugin.tabs .tab.active a::after`, {
+	content: '',
+	zIndex: 1,
+	position: 'absolute',
+	background: 'var(--theme)',
+	height: '2px',
+	bottom: '-8px',
+	left: '0.75rem',
+	right: '0.75rem',
+	borderRadius: '2px',
+});
+globalStyle(`${scope} .tag-plugin.tabs .tab-content`, {
+	maxWidth: '100%',
+	textAlign: 'justify',
+	marginTop: '0.5rem',
+	display: 'flex',
+	flexDirection: 'column',
+});
+globalStyle(`${scope} .tag-plugin.tabs .tab-pane`, { display: 'block', maxWidth: '100%' });
+globalStyle(`${scope} .tag-plugin.tabs .tab-pane:not(.active)`, { height: 0, overflow: 'hidden' });

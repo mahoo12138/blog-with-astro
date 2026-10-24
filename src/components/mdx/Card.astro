@@ -1,0 +1,14 @@
+---
+import { card, cardTitle } from './blocks.css';
+
+interface Props {
+	title?: string;
+}
+
+const { title } = Astro.props;
+---
+
+<section class={card}>
+	{title && <h3 class={cardTitle}>{title}</h3>}
+	<slot />
+</section>

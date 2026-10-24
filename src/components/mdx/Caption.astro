@@ -1,0 +1,13 @@
+---
+import { caption, captionAlign } from './blocks.css';
+
+interface Props {
+	align?: 'start' | 'center';
+}
+
+const { align = 'start' } = Astro.props;
+---
+
+<p class:list={[caption, align === 'center' && captionAlign.center]} data-attach>
+	<slot />
+</p>

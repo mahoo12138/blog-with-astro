@@ -48,6 +48,35 @@ export const vars = createGlobalTheme(':root', {
 		head: '0 2px 12px rgba(0, 0, 0, 0.035)',
 		card: '0 1px 3px rgba(0, 0, 0, 0.025)',
 		focus: '0 0 0 4px rgba(33, 150, 243, 0.18)',
+		float: '0 18px 55px rgba(27, 44, 69, 0.08)',
+	},
+	// 动效统一缓动与时长三档（150–240ms、不回弹）。
+	// 与 tools.css.ts 的 EASE 注释同源，新代码一律引用本组，不再各写常量。
+	motion: {
+		ease: 'cubic-bezier(0.16, 1, 0.3, 1)',
+		durationFast: '150ms',
+		durationBase: '200ms',
+		durationSlow: '240ms',
+	},
+	// 语义色调（callout / 状态徽标 / 教学强调）。bg 一律低透明度 halo，
+	// 近白底上禁止再叠近白填充 —— 反馈元素必须与底色拉开明度差。
+	tone: {
+		info: {
+			fg: '#2457d6',
+			bg: 'color-mix(in srgb, #2457d6 10%, transparent)',
+		},
+		success: {
+			fg: '#0d7f76',
+			bg: 'color-mix(in srgb, #0d7f76 10%, transparent)',
+		},
+		warning: {
+			fg: '#b4690e',
+			bg: 'color-mix(in srgb, #b4690e 10%, transparent)',
+		},
+		danger: {
+			fg: '#c23a4b',
+			bg: 'color-mix(in srgb, #c23a4b 10%, transparent)',
+		},
 	},
 	layout: {
 		content: '46rem',
@@ -82,6 +111,15 @@ const lightThemeVars = {
 	[vars.shadow.head]: '0 2px 12px rgba(0, 0, 0, 0.035)',
 	[vars.shadow.card]: '0 1px 3px rgba(0, 0, 0, 0.025)',
 	[vars.shadow.focus]: '0 0 0 4px rgba(33, 150, 243, 0.18)',
+	[vars.shadow.float]: '0 18px 55px rgba(27, 44, 69, 0.08)',
+	[vars.tone.info.fg]: '#2457d6',
+	[vars.tone.info.bg]: 'color-mix(in srgb, #2457d6 10%, transparent)',
+	[vars.tone.success.fg]: '#0d7f76',
+	[vars.tone.success.bg]: 'color-mix(in srgb, #0d7f76 10%, transparent)',
+	[vars.tone.warning.fg]: '#b4690e',
+	[vars.tone.warning.bg]: 'color-mix(in srgb, #b4690e 10%, transparent)',
+	[vars.tone.danger.fg]: '#c23a4b',
+	[vars.tone.danger.bg]: 'color-mix(in srgb, #c23a4b 10%, transparent)',
 };
 
 const darkThemeVars = {
@@ -104,6 +142,15 @@ const darkThemeVars = {
 	[vars.shadow.head]: '0 2px 12px rgba(0, 0, 0, 0.12)',
 	[vars.shadow.card]: '0 1px 3px rgba(0, 0, 0, 0.10)',
 	[vars.shadow.focus]: '0 0 0 4px rgba(126, 203, 255, 0.22)',
+	[vars.shadow.float]: '0 18px 55px rgba(0, 0, 0, 0.45)',
+	[vars.tone.info.fg]: '#8fb3f0',
+	[vars.tone.info.bg]: 'color-mix(in srgb, #8fb3f0 14%, transparent)',
+	[vars.tone.success.fg]: '#5fc4b4',
+	[vars.tone.success.bg]: 'color-mix(in srgb, #5fc4b4 14%, transparent)',
+	[vars.tone.warning.fg]: '#e0b070',
+	[vars.tone.warning.bg]: 'color-mix(in srgb, #e0b070 14%, transparent)',
+	[vars.tone.danger.fg]: '#e8949f',
+	[vars.tone.danger.bg]: 'color-mix(in srgb, #e8949f 14%, transparent)',
 };
 
 globalStyle(':root', {

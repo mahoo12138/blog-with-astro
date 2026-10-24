@@ -1,0 +1,17 @@
+---
+import { tile, tileLabel, tileTitle, tileBody } from './blocks.css';
+
+interface Props {
+	label?: string;
+	title: string;
+	tone?: 'default' | 'danger';
+}
+
+const { label, title, tone = 'default' } = Astro.props;
+---
+
+<section class={tile}>
+	{label && <span class={tileLabel[tone]}>{label}</span>}
+	<h3 class={tileTitle}>{title}</h3>
+	<div class={tileBody}><slot /></div>
+</section>

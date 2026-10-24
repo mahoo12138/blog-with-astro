@@ -1,15 +1,13 @@
 ---
+import { grid, gridCols, gridStack } from './blocks.css';
+
 interface Props {
-	bg?: 'box' | 'card' | 'none';
-	min?: string;
-	columns?: number;
-	gap?: string;
+	cols?: 2 | 3 | 4;
+	stack?: boolean;
 }
 
-const { bg, min = '240px', columns, gap = '16px' } = Astro.props;
-const template = columns ? `repeat(${columns}, minmax(0, 1fr))` : `repeat(auto-fill, minmax(${min}, 1fr))`;
+const { cols = 2, stack = false } = Astro.props;
+const colsClass = gridCols[cols];
 ---
 
-<div class="tag-plugin grid" data-bg={bg === 'none' ? undefined : bg} style={`grid-template-columns:${template};grid-gap:${gap};`}>
-	<slot />
-</div>
+<div class:list={[grid, stack ? gridStack : colsClass]}><slot /></div>

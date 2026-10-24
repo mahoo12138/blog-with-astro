@@ -51,13 +51,15 @@ const dist = path.resolve(root, args.dist ?? 'dist');
  * 这个量级由「代码块密集的教程文章有多少」决定，不是配置能压下去的，
  * 所以预算按实测基线设成「不许继续恶化」的护栏，而不是理想值。
  *
- * - TOTAL_BUDGET_MB：实测基线约 18.4MB（2026-09），留少量余量作为回归护栏
+ * - TOTAL_BUDGET_MB：实测基线约 18.4MB（2026-09）→ 20.9MB（2026-10，学苑模块上线后，
+ *   课程/组件展示页是代码块密集页，加上专栏内容继续增长）。护栏按新基线 + 余量设置，
+ *   继续以「不许无故恶化」为准。
  * - IMAGE_BUDGET_KB：单张图片硬上限，这才是真正能靠工程手段守住的线
  *
  * 注意：页面数会随内容变化（分类/标签增删、文章草稿化都会改变页数），
  * 所以这里只按体积设护栏，**不要**把具体页数写死成断言。
  */
-const BUDGET_MB = Number(args['budget-mb'] ?? 19);
+const BUDGET_MB = Number(args['budget-mb'] ?? 22);
 const IMAGE_KB = Number(args['image-kb'] ?? 200);
 
 if (!existsSync(dist)) {
@@ -278,7 +280,9 @@ for (const file of htmlFiles) {
 	const preCount = (html.match(/<pre class="astro-code/g) ?? []).length;
 	if (preCount === 0) continue;
 
-	const wrapperCount = (html.match(/<div class="code-block">/g) ?? []).length;
+	// 类名固定为 code-block，但可能带 style（rehype-code-block 会把 Shiki
+	// 主题变量提升到外壳行内样式上）——匹配类名而非整个开标签。
+	const wrapperCount = (html.match(/<div\b[^>]*\bclass="code-block"/g) ?? []).length;
 	if (wrapperCount !== preCount) {
 		unwrapped.push(`${rel}（pre ${preCount} 个 / 外壳 ${wrapperCount} 个）`);
 	}

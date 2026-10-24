@@ -152,11 +152,31 @@ function isCodeBlock(node) {
  * 不排除的话，全站 1326 个「复制」按钮会把「复制」变成每篇技术文章的
  * 搜索命中词，语言名 likewise —— 搜 JavaScript 会命中所有贴了 JS 示例的文章。
  */
+/**
+ * 把 Shiki 写在 pre 行内样式里的主题色提升到外壳上。
+ *
+ * Shiki 双主题输出形如 `style="background-color:#fff;--shiki-dark-bg:#24292e"`，
+ * 自定义属性只向下继承 —— 父级 .code-block 读不到子级 pre 上的
+ * --shiki-dark-bg，`var(--shiki-dark-bg, …)` 会永远走回退值。提升到外壳后，
+ * 外壳底色才能真正跟随文章所用的 Shiki 主题（明暗切换同色不割裂）。
+ */
+function hoistShikiThemeVars(pre) {
+	const style = pre?.properties?.style;
+	if (typeof style !== 'string' || !style) return '';
+	const out = [];
+	const lightBg = /(?:^|;)\s*background-color\s*:\s*([^;]+)/i.exec(style);
+	if (lightBg) out.push(`--shiki-light-bg:${lightBg[1].trim()}`);
+	const darkBg = /(?:^|;)\s*--shiki-dark-bg\s*:\s*([^;]+)/i.exec(style);
+	if (darkBg) out.push(`--shiki-dark-bg:${darkBg[1].trim()}`);
+	return out.join(';');
+}
+
 function wrapCodeBlock(pre, languageLabel) {
+	const shikiVars = hoistShikiThemeVars(pre);
 	return {
 		type: 'element',
 		tagName: 'div',
-		properties: { className: ['code-block'] },
+		properties: { className: ['code-block'], ...(shikiVars ? { style: shikiVars } : {}) },
 		children: [
 			{
 				type: 'element',
@@ -194,14 +214,17 @@ function transform(node) {
 
 	for (let i = 0; i < children.length; i += 1) {
 		const child = children[i];
-		if (!child || child.type !== 'element') continue;
+		if (!child) continue;
 
 		// 命中代码块就替换，不再往下递归（pre 内部只有 code/span）
-		if (child.tagName === 'pre' && isCodeBlock(child)) {
+		if (child.type === 'element' && child.tagName === 'pre' && isCodeBlock(child)) {
 			children[i] = wrapCodeBlock(child, formatLanguage(readLanguage(child)));
 			continue;
 		}
-		transform(child);
+		// 递归条件是「有 children 数组」而不是 type === 'element'：
+		// MDX 里 <div class="…"> 等 JSX 包裹在 hast 里是 mdxJsxFlowElement，
+		// 只认 element 会把嵌在 JSX 结构里的代码块整棵跳过。
+		if (Array.isArray(child.children)) transform(child);
 	}
 }
 

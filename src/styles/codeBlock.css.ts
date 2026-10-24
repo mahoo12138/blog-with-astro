@@ -39,25 +39,23 @@ globalStyle('.code-block', {
 	border: `1px solid ${vars.color.border}`,
 	// 顶部栏要盖住 pre 的圆角，否则会露出一条缝
 	overflow: 'hidden',
-	// 底色**跟随 Shiki 主题**，而不是自己挑一个 surface 色。
-	// Shiki 把主题底色放在 pre 的行内 style 里，同时暴露成
-	// --shiki-dark-bg 变量；这里直接复用，明暗切换时外壳与代码区
-	// 永远是同一个色，不会出现「上下两块颜色对不上」。
-	// 浅色回退值 #fff 对应 github-light；深色分支见下方 [data-theme] 规则。
-	background: 'var(--shiki-dark-bg, #fff)',
+	// 底色**跟随 Shiki 主题**：rehype-code-block 把 pre 行内样式里的
+	// Shiki 变量提升到外壳（--shiki-light-bg / --shiki-dark-bg）——
+	// 自定义属性只向下继承，父级读不到 pre 上的原始变量，所以必须提升。
+	// 明暗切换时外壳与代码区永远同色，不会「上下两块颜色对不上」。
+	// 回退值对应 github-light / github-dark（astro.config shikiConfig）。
+	background: 'var(--shiki-light-bg, #fff)',
 	boxShadow: vars.shadow.card,
 });
 
 /**
- * 浅色模式下外壳底色。
- * Shiki 输出的行内 style 是「浅色为 background-color、深色为 --shiki-dark-bg」，
- * 而 --shiki-dark-bg 在浅色下并不存在，所以上面的 var() 会回退到 #fff。
- * 但用户显式切到 light 主题时，系统可能是 dark，需要把 Shiki 的浅色值取回来 ——
- * 它同时也以 css 变量形式出现在 pre 的 style 里不可靠，因此这里
- * 统一用 github-light 的 #fff 兜底；若某篇文章用了别的主题，回退到 surface。
+ * 外壳底色的完整四象限：显式 light / 显式 dark / 依照系统 × 浅·深。
+ * 「依照系统」时 appearance.ts 会 removeAttribute('data-theme')，
+ * 走 :root:not([data-theme]) 的 media 分支 —— 此前缺 dark 分支，
+ * 系统深色下外壳永远回退浅色 #fff，顶栏（半透明叠色）呈现成白色。
  */
 globalStyle(':root[data-theme="light"] .code-block', {
-	background: '#fff',
+	background: 'var(--shiki-light-bg, #fff)',
 });
 
 globalStyle(':root[data-theme="dark"] .code-block', {
@@ -67,7 +65,10 @@ globalStyle(':root[data-theme="dark"] .code-block', {
 globalStyle(':root:not([data-theme]) .code-block', {
 	'@media': {
 		'(prefers-color-scheme: light)': {
-			background: '#fff',
+			background: 'var(--shiki-light-bg, #fff)',
+		},
+		'(prefers-color-scheme: dark)': {
+			background: 'var(--shiki-dark-bg, #24292e)',
 		},
 	},
 });

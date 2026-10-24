@@ -1,14 +1,30 @@
 import './mdx/components.css.ts';
+// blocks.css.ts 必须排在 components.css.ts 之后：容器 `> *` 与 callout 同为 (0,2,0) 特异性，靠源序决胜
+import './mdx/blocks.css.ts';
 
 import Audio from './mdx/Audio.astro';
 import Blockquote from './mdx/Blockquote.astro';
 import Blur from './mdx/Blur.astro';
 import Callout from './mdx/Callout.astro';
+import Card from './mdx/Card.astro';
+import Caption from './mdx/Caption.astro';
+import Flow from './mdx/Flow.astro';
+import FlowStep from './mdx/FlowStep.astro';
 import Fold from './mdx/Fold.astro';
 import Folder from './mdx/Folder.astro';
 import Folders from './mdx/Folders.astro';
+import Formula from './mdx/Formula.astro';
+import Figure from './mdx/Figure.astro';
+import Intro from './mdx/Intro.astro';
 import Label from './mdx/Label.astro';
 import Note from './mdx/Note.astro';
+import Pane from './mdx/Pane.astro';
+import Panes from './mdx/Panes.astro';
+import Ref from './mdx/Ref.astro';
+import Refs from './mdx/Refs.astro';
+import Subhead from './mdx/Subhead.astro';
+import Table from './mdx/Table.astro';
+import Tile from './mdx/Tile.astro';
 import Button from './mdx/Button.astro';
 import Banner from './mdx/Banner.astro';
 import Checkbox from './mdx/Checkbox.astro';
@@ -63,6 +79,8 @@ export {
 	Blur,
 	Button,
 	Callout,
+	Card,
+	Caption,
 	Checkbox,
 	Copy,
 	Deleted,
@@ -70,9 +88,13 @@ export {
 	Emoji,
 	Emphasis,
 	Emphasis as Emp,
+	Flow,
+	FlowStep,
 	Fold,
 	Folder,
 	Folders,
+	Formula,
+	Figure,
 	Frame,
 	Gallery,
 	GalleryImage,
@@ -80,6 +102,7 @@ export {
 	Grid,
 	Hashtag,
 	ImageCard,
+	Intro,
 	Kbd,
 	Label,
 	LinkCard,
@@ -87,6 +110,8 @@ export {
 	Note,
 	Panel,
 	PanelSegment,
+	Pane,
+	Panes,
 	Paper,
 	PaperLine,
 	PaperSection,
@@ -100,15 +125,20 @@ export {
 	Quot,
 	Radio,
 	Rating,
+	Ref,
+	Refs,
 	Reel,
 	SiteCard,
 	Sites,
 	Step,
 	Sub,
+	Subhead,
 	Sup,
 	Tab,
+	Table,
 	Tabs,
 	Terminal,
+	Tile,
 	Timeline,
 	TimeNode,
 	Title,
@@ -124,6 +154,8 @@ export const mdxComponents = {
 	Blur,
 	Button,
 	Callout,
+	Card,
+	Caption,
 	Checkbox,
 	Copy,
 	Deleted,
@@ -131,9 +163,13 @@ export const mdxComponents = {
 	Emoji,
 	Emphasis,
 	Emp: Emphasis,
+	Flow,
+	FlowStep,
 	Fold,
 	Folder,
 	Folders,
+	Formula,
+	Figure,
 	Frame,
 	Gallery,
 	GalleryImage,
@@ -141,6 +177,7 @@ export const mdxComponents = {
 	Grid,
 	Hashtag,
 	ImageCard,
+	Intro,
 	Kbd,
 	Label,
 	LinkCard,
@@ -148,6 +185,8 @@ export const mdxComponents = {
 	Note,
 	Panel,
 	PanelSegment,
+	Pane,
+	Panes,
 	Paper,
 	PaperLine,
 	PaperSection,
@@ -161,15 +200,20 @@ export const mdxComponents = {
 	Quot,
 	Radio,
 	Rating,
+	Ref,
+	Refs,
 	Reel,
 	SiteCard,
 	Sites,
 	Step,
 	Sub,
+	Subhead,
 	Sup,
 	Tab,
+	Table,
 	Tabs,
 	Terminal,
+	Tile,
 	Timeline,
 	TimeNode,
 	Title,

@@ -1,6 +1,7 @@
 ---
 import { iconSvg } from './icons';
 import { resolveTone, styleVars, translucent, type ToneName } from './utils';
+import { vars } from '../../styles/theme.css';
 
 interface Props {
 	type?: ToneName;
@@ -24,7 +25,9 @@ const accent = resolvedTone.color;
 		'--callout-color': accent,
 		'--callout-bg': translucent(accent, 10),
 		'--callout-border': translucent(accent, 24),
-		'--callout-surface': 'var(--color-surface-strong, rgba(255,255,255,0.72))',
+		// 表面色直接吃 theme token（hash 变量穿透），跟随明暗主题；
+		// 此前引用的 --color-surface-strong 全站未定义，暗色下会落回半透明白底。
+		'--callout-surface': vars.color.surfaceStrong,
 	})}
 >
 	<span class="callout-icon" set:html={iconHtml || resolvedTone.symbol}></span>
