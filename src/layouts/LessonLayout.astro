@@ -1,0 +1,155 @@
+---
+/**
+ * 课时页布局（/learn/[slug]）。
+ *
+ * 薄封装 WideShell（无右栏，课程正文沉浸式）：
+ *   lead 槽 —— 深空 hero（单列：顶部来路/eyebrow，底部标题/导语/标签/终端行；
+ *              色温按 slug 派生，四层深度 = 渐变 + 压暗 + 颗粒 + 文字）
+ *   左栏目录 —— 复用 sidebar/toc 挂件（headings 透传），正文不再重复横向锚点条
+ *   正文 —— MDX 内容（教学文字全在光 DOM，pagefind 可索引）
+ *   kit 装载 —— 裸 <script>（带属性会变 is:inline，TS import 会炸）
+ *
+ * frontmatter 之外的 hero 扩展字段经 props 传入（见 learn/[slug].astro）。
+ */
+import WideShell from './WideShell.astro';
+import * as styles from './LessonLayout.css';
+import * as lessonStyles from '../styles/lesson.css';
+
+interface Props {
+	title: string;
+	description: string;
+	/** hero 左上小字，如 A PROGRAMMER'S PERSPECTIVE */
+	eyebrow?: string;
+	/** hero 标题（可含 <em> 高亮，由 slot=hero-title 传入更自由；这里走纯文本） */
+	lead?: string;
+	tags?: string[];
+	/** hero 右侧终端 mock 的命令与输出 */
+	terminal?: { prompt: string; output: string; note?: string };
+	headings?: { depth: number; slug: string; text: string }[];
+	/** hero 标题里的高亮词（包 <em>） */
+	titleHighlight?: string;
+	prev?: { href: string; title: string };
+	next?: { href: string; title: string };
+}
+
+const {
+	title,
+	description,
+	eyebrow = 'KNOWLEDGE LESSON',
+	lead,
+	tags = [],
+	terminal,
+	headings = [],
+	titleHighlight,
+	prev,
+	next,
+} = Astro.props;
+
+// 章节导航由左栏 TOC 挂件承载（复用 sidebar/toc，与文章右栏同一套），
+// 正文不再重复一条横向锚点条 —— 全站统一「TOC 住在侧栏」。
+
+// hero 标题：高亮词包 em
+function renderTitle(text: string, highlight?: string): string[] {
+	if (!highlight || !text.includes(highlight)) return [text];
+	const i = text.indexOf(highlight);
+	return [text.slice(0, i), highlight, text.slice(i + highlight.length)];
+}
+const titleParts = renderTitle(title, titleHighlight);
+
+// 深空显影：色温由课时 slug 确定性派生（同一课时在任何设备/主题下都是同一色相）
+const lessonSlug = Astro.url.pathname.replace(/^\/learn\//, '').replace(/\/+$/, '') || 'learn';
+let hueSeed = 0;
+for (let i = 0; i < lessonSlug.length; i += 1) {
+	hueSeed = (hueSeed * 31 + lessonSlug.charCodeAt(i)) % 360;
+}
+const heroHue = 200 + (hueSeed % 60);
+const heroVars = [
+	`--hero-hue: ${heroHue}`,
+	`--hero-tint: hsl(${heroHue} 52% 19%)`,
+	`--hero-accent: hsl(${heroHue} 80% 74%)`,
+	`--hero-deep: hsl(${heroHue} 38% 8%)`,
+].join('; ');
+---
+
+<WideShell
+	title={`${title} · 学苑`}
+	description={description}
+	siteTree="learn"
+	leftbar={[{ id: 'toc', title: '本课目录' }]}
+	tocHeadings={headings}
+	mainClass={lessonStyles.lessonBody}
+>
+	<div slot="lead" class={styles.hero} style={heroVars}>
+		<div class={styles.heroInner}>
+			<div class={styles.heroTop}>
+				<a class={styles.heroBack} href="/learn/">← 学苑</a>
+				<p class={styles.heroEyebrow}>{eyebrow}</p>
+			</div>
+			<div class={styles.heroBottom}>
+				<h1 class={styles.heroTitle}>
+					{titleParts.length === 3 ? (
+						<>
+							{titleParts[0]}<em class={styles.heroTitleAccent}>{titleParts[1]}</em>{titleParts[2]}
+						</>
+					) : (
+						title
+					)}
+				</h1>
+				{lead && <p class={styles.heroLead}>{lead}</p>}
+				{
+					tags.length > 0 && (
+						<ul class={styles.heroTags}>
+							{tags.map((tag) => (
+								<li class={styles.heroTag}>{tag}</li>
+							))}
+						</ul>
+					)
+				}
+				{
+					terminal && (
+						<div class={styles.heroTerm} aria-label="终端输出示意">
+							<span class={styles.heroTermPrompt}>$</span>
+							<span class={styles.heroTermCmd}>{terminal.prompt}</span>
+							<span class={styles.heroTermOut}>→ {terminal.output}</span>
+							{terminal.note && <span class={styles.heroTermNote}>· {terminal.note}</span>}
+						</div>
+					)
+				}
+				<div class={styles.heroRule} aria-hidden="true" />
+			</div>
+		</div>
+	</div>
+
+	{/* md-text：MDX 组件（Callout/Tabs/复制按钮等）的样式作用域。
+	    这些样式是组件级的（tag-plugin/tag-inline），不带裸元素排版，
+	    不会干扰 lesson- 前缀的课时排版。 */}
+	<div class:list={[styles.content, 'md-text']}>
+		<slot />
+
+		{
+			(prev || next) && (
+				<nav class={lessonStyles.pager} aria-label="课时导航">
+					{prev ? (
+						<a class={lessonStyles.pagerLink} href={prev.href}>
+							<span class={lessonStyles.pagerDir}>← 上一课</span>
+							<span class={lessonStyles.pagerTitle}>{prev.title}</span>
+						</a>
+					) : (
+						<span />
+					)}
+					{next && (
+						<a class={lessonStyles.pagerLink} href={next.href} style="text-align:right">
+							<span class={lessonStyles.pagerDir}>下一课 →</span>
+							<span class={lessonStyles.pagerTitle}>{next.title}</span>
+						</a>
+					)}
+				</nav>
+			)
+		}
+	</div>
+</WideShell>
+
+<script>
+	// 裸 script（无任何属性）才会被 Vite 打包；带属性会变 is:inline，TS import 运行时会炸
+	import '../kit/index';
+</script>

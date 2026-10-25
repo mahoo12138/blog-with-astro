@@ -26,6 +26,11 @@ const demos = getSortedLabDemos().map((demo) => ({
 	siteTree="lab"
 	mainClass={styles.listMain}
 >
+	<nav class={styles.crumbs} aria-label="面包屑">
+		<a href="/explore/">探索</a>
+		<span aria-hidden="true"> / </span>
+		<span>{labPageConfig.title}</span>
+	</nav>
 	<h1 class={styles.detailTitle}>{labPageConfig.title}</h1>
 	<p class={styles.listIntro}>
 		{labPageConfig.description}

@@ -44,6 +44,8 @@ const next = position < demos.length - 1 ? demos[position + 1] : undefined;
 	mainClass={styles.detailMain}
 >
 	<nav class={styles.crumbs} aria-label="面包屑">
+		<a href="/explore/">探索</a>
+		<span aria-hidden="true"> / </span>
 		<a href="/lab/">{labPageConfig.title}</a>
 		<span aria-hidden="true"> / </span>
 		<span>{demo.title}</span>

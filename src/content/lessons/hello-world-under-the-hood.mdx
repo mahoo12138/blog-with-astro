@@ -1,0 +1,899 @@
+---
+title: 从 printf 到 hello world：一次程序运行的完整旅程
+description: 一行输出背后，是编译器、汇编器、链接器、运行库、操作系统装载器、虚拟内存、CPU 指令和终端设备协同完成的一条链路。全流程 18 站，可交互。
+domain: 系统
+level: 深潜
+duration: 约 45 分钟
+order: 1
+tags: [C17, x86-64, ELF, PE, 编译原理]
+hero:
+  eyebrow: A PROGRAMMER'S PERSPECTIVE · SYSTEMS LAB
+  lead: 一行输出背后，是编译器、汇编器、链接器、运行库、操作系统装载器、虚拟内存、CPU 指令和终端设备协同完成的一条链路。
+  titleHighlight: printf
+  terminal:
+    prompt: gcc hello.c -o hello && ./hello
+    output: hello world
+    note: process exited · status 0
+terms:
+  ELF: Executable and Linkable Format，Linux/Unix 常用的目标文件、可执行文件与共享库格式，包含头、节、程序头、符号与重定位等结构。
+  PE: Portable Executable，Windows 的映像文件格式；COFF 是相关的目标文件与符号格式。
+  ABI: Application Binary Interface，二进制应用程序接口。约定函数参数、返回值、寄存器、栈对齐和数据布局等机器级规则。
+  ASLR: Address Space Layout Randomization，地址空间布局随机化。随机改变映像、库、栈等区域的位置，降低地址预测的可靠性。
+  PIE: Position-Independent Executable，位置无关可执行文件。支持主程序映像在可变基址加载，常与 ASLR 配合。
+  PLT: Procedure Linkage Table，过程链接表。部分 ELF 动态链接构建用它作为外部函数调用的跳转入口。
+  GOT: Global Offset Table，全局偏移表。ELF 动态链接中保存运行时地址或相关偏移的常见表结构。
+  IAT: Import Address Table，导入地址表。PE 加载时由加载器解析并填入 DLL 导入函数地址的表。
+  CRT: C Runtime Library，C 运行库。提供标准库函数、运行时状态，以及通常先于 main 执行的启动与退出代码。
+  UCRT: Universal C Runtime，微软提供的通用 C 运行库，包含 printf 等 C 标准库函数的实现。
+  glibc: GNU C Library，Linux 上广泛使用的 C 运行库实现，提供标准 C 库函数和一些系统接口封装。
+  stdout: C 语言标准输出流。它可能连接终端、文件或管道，所以 stdout 不等于屏幕。
+  syscall: 系统调用。用户态程序请求内核提供服务的受控接口；普通库函数不必然等于系统调用。
+  RIP: 指令指针寄存器，指向当前指令流的位置。RIP 相对寻址以指令结束后的地址为基准计算目标。
+  RDI: Linux x86-64 System V ABI 中传递第一个整数或指针参数的寄存器。
+  RSP: Stack Pointer，栈指针寄存器，通常指向当前栈顶。
+  RBP: Base Pointer / Frame Pointer，基址 / 帧指针寄存器。标记当前函数的栈帧，优化构建可能省略。
+  RAX: x86-64 的通用寄存器之一，常用于返回值与临时数据。
+  ISA: Instruction Set Architecture，指令集架构。定义处理器指令、寄存器和机器级行为的程序员可见规范。
+  AST: Abstract Syntax Tree，抽象语法树。编译器用树形结构表达源代码语法关系的内部表示。
+  IR: Intermediate Representation，中间表示。源语言与目标机器指令之间的中间程序形式，便于优化和转换。
+  relocation: 重定位记录。告诉链接器要修补哪个字段、引用哪个符号、按什么规则计算新值。
+  mnemonic: 汇编助记符。机器指令的可读名称，例如 mov、lea、call、ret。
+  opcode: 操作码。机器指令编码中表示操作类别的部分，例如 x86-64 近相对 call 通常以 E8 开头。
+  displacement: 位移量。相对某个基准地址的差值；RIP 相对寻址和近相对 call 都会使用位移。
+  pagefault: 缺页异常。CPU 检测到页面访问需要内核处理时发生的异常，可能是正常的按需调页。
+  libc: C 标准库实现的常见统称；Linux 上经常指 glibc，但并非所有系统都使用它。
+  DLL: Dynamic-Link Library，动态链接库。Windows 上可由多个程序在运行时加载和共享的代码/数据模块。
+  COFF: Common Object File Format，与 Windows 工具链相关的目标文件及符号格式。
+  GCC: GNU Compiler Collection，GNU 项目的编译器工具集合，通常由驱动程序协调预处理、编译、汇编和链接。
+---
+
+## 先建立地图：一次点击编译，实际上启动了什么？
+
+这是一张静态总览图，不需要自动播放。沿着箭头从左到右、再按折行方向阅读；点击节点即可在右侧查看这一步的作用。构建阶段负责生成程序文件，运行阶段负责建立进程并执行指令。带虚线的术语可以悬停或点按查看解释。
+
+<kl-flow-map cols="3">
+<script type="application/json">{`{"steps":[
+{"node":{"title":"源代码","lines":["hello.c","人类编写程序意图"]},"kicker":"SOURCE / 源代码","title":"你写的是给人看的 C 语言","desc":"hello.c 是由字符组成的文本文件。IDE（集成开发环境，即编辑器、构建工具等集合在一起的软件）可能先保存文件，再启动 GCC、Clang 或 MSVC 等编译工具。","why":"CPU 不能直接执行 C 语句；源代码表达程序意图，后续工具负责把它翻译为当前处理器能执行的指令。","io":"输入：程序员编写的 C 文本 → 输出：hello.c 文件。","concept":"这一阶段还没有运行程序，也没有打印字符。文件后缀 .c 只是惯例；真正的内容仍是一段文本。","phase":"build"},
+{"node":{"title":"预处理","lines":["展开头文件与宏","让编译器看到完整文本"]},"kicker":"PREPROCESS / 预处理","title":"先把头文件和宏展开","desc":"预处理器处理以 # 开头的指令，例如 #include、#define 和条件编译。这里的 stdio.h 提供 printf 的函数声明，让编译器知道如何检查这次调用；它通常不会把 printf 的完整实现复制进源文件。","why":"把分散在头文件里的声明与宏整理成编译器接下来要分析的翻译单元，并在编译前决定哪些条件代码保留下来。","io":"输入：hello.c 与它包含的头文件 → 输出：预处理后的文本，常保存为 .i 文件。","concept":"头文件主要提供声明、类型和宏；声明告诉编译器某个函数如何使用，不等于函数的实现代码。","phase":"build"},
+{"node":{"title":"编译","lines":["C 语义 → 汇编 / 机器码","理解并翻译语言规则"]},"kicker":"COMPILE / 编译","title":"把 C 语言翻译成目标指令","desc":"编译器分析词法、语法和语义：检查标识符、类型与函数调用是否合理。现代编译器通常会建立 AST（抽象语法树）或 IR（中间表示），然后进行优化、寄存器分配和指令选择，输出汇编文本或直接输出机器码。","why":"CPU 不认识 printf 这样的 C 函数调用语法。编译器需要把高级语言中的含义转化为特定目标架构的指令，并决定数据如何传递。","io":"输入：预处理后的 C 文本 → 输出：汇编文本（常见后缀 .s）或机器码。","concept":"ISA（指令集架构）定义处理器能执行哪些指令；同一份 C 代码面向 x86-64 与 ARM64 时，生成的机器码通常不同。","phase":"build"},
+{"node":{"title":"汇编","lines":[".o / .obj 目标文件","编码指令并登记未决地址"]},"kicker":"ASSEMBLE / 汇编","title":"把指令助记符编码成机器字节","desc":"汇编器把 mov、call、ret 等汇编助记符编码为机器指令，生成 .o（Linux 常见）或 .obj（Windows 工具链常见）目标文件，并记录符号表和重定位条目。重定位条目相当于“这里还需要按最终地址补写”的备注。","why":"链接器还没决定所有代码和库最终放在哪里，因此汇编器需要保留外部引用的信息。例如 printf 的实现通常不在这个小目标文件里，调用地址此时可能尚未确定。","io":"输入：汇编文本 → 输出：目标文件，里面含机器码、数据、符号表和可能的重定位记录。","concept":"目标文件不等于最终可执行文件。符号表记录“名字对应什么”；重定位描述哪些地址或位移需要在后续阶段修正。","phase":"build"},
+{"node":{"title":"链接","lines":["ELF / PE 可执行映像","组合文件并解析符号"]},"kicker":"LINK / 链接","title":"组合目标文件，并解决外部名字","desc":"链接器把目标文件、启动代码和所需库组合起来，解析符号引用并应用重定位，生成可执行映像。Linux 常见 ELF（可执行与可链接文件格式）；Windows 常见 PE（可执行映像格式），相关目标文件常采用 COFF 格式。动态链接时，文件还会记录运行时需要哪些共享库或 DLL。","why":"单个目标文件只是拼图的一块：printf 的实现通常来自 C 运行库，启动入口也由工具链提供。链接器负责把这些部件连接起来，并区分哪些地址现在可确定、哪些留给运行时处理。","io":"输入：.o / .obj、启动文件、库与链接选项 → 输出：可执行文件（Linux 常见为 ELF，Windows 常见为 PE）。","concept":"符号可以是函数名或变量名；动态库是在运行时由加载机制接入的共享代码，例如 Linux 的共享对象或 Windows 的 DLL。","phase":"build"},
+{"node":{"title":"装载","lines":["建立进程虚拟地址空间","让可执行映像进入运行环境"]},"kicker":"LOAD / 装载","title":"操作系统为程序建立运行环境","desc":"用户启动可执行文件时，操作系统的程序加载机制会检查文件格式、权限与架构，建立进程的虚拟地址空间，映射程序需要的代码和数据，并准备初始栈、参数与环境信息。动态链接程序还需要加载器处理共享库依赖。","why":"磁盘上的可执行文件是一份静态文件；要执行它，操作系统必须为它建立独立的进程环境，并让 CPU 能从正确的入口取指。通常并不是把整个文件一次性复制进物理内存。","io":"输入：hello 或 hello.exe → 输出：已建立地址空间、内存映射和初始执行状态的进程。","concept":"虚拟地址空间是进程看到的地址范围，不等于实际物理内存布局。ASLR（地址空间布局随机化）会让映像、库、栈等区域的位置具有随机性。","phase":"run"},
+{"node":{"title":"运行库启动","lines":["CRT / libc","初始化后再调用 main"]},"kicker":"CRT / 运行库启动","title":"先准备环境，再进入 main","desc":"CRT 是 C Runtime（C 运行库），包含启动和退出代码及标准库运行时支持。Linux 的启动代码会接入 libc 启动流程；MSVC 控制台程序通常经 mainCRTStartup 等入口。完成必要初始化后，启动代码再按 ABI 调用你的 main。","why":"操作系统入口并不是用户写的 main。标准 I/O、运行时状态、全局初始化等工作需要有一个启动层安排好，用户代码才能按 C 程序约定运行。","io":"输入：加载器建立的初始进程状态 → 输出：初始化完成，并即将调用 main。","concept":"ABI（二进制应用程序接口）规定函数参数如何传递、哪些寄存器由谁保存、栈如何对齐以及返回值如何交接。","phase":"run"},
+{"node":{"title":"main → printf","lines":["函数调用 / ABI","按约定传递字符串地址"]},"kicker":"CALL / 函数调用","title":"main 把字符串地址交给 printf","desc":"调用 printf 时，程序传递的是字符串常量的地址，不会把整个字符串一次塞进一个寄存器。Linux x86-64 的 System V ABI 通常把第一个整数或指针参数放在 RDI；Windows x64 通常放在 RCX。具体调用序列由目标平台 ABI 决定。","why":"C 标准库函数与操作系统系统调用是不同层次。printf 负责按照格式规则组织字符、处理流与缓冲；真正写入外部目标时才可能进一步调用操作系统 I/O 接口。","io":"输入：字符串指针和调用约定要求的寄存器/栈状态 → 输出：printf 开始处理字符。","concept":"寄存器是 CPU 内部少量、速度很快的存储位置；栈帧是一次函数调用使用的一段栈空间。","phase":"run"},
+{"node":{"title":"标准输出","lines":["缓冲区 → OS I/O","把字符编码为输出字节"]},"kicker":"STDOUT / 标准输出","title":"printf 先处理字符，再将字节写出","desc":"stdout 是 C 标准 I/O 库提供的标准输出流。printf 会格式化内容，并可能先把字节放进流的缓冲区；缓冲何时刷新取决于缓冲模式和程序路径。正常退出时，运行库通常会刷新尚未写出的标准 I/O 缓冲。","why":"缓冲能够减少频繁 I/O 的开销。标准输出也不等于屏幕：它可以连到终端、重定向文件或管道。只有目标确实是终端时，人才会直接在终端窗口里看到输出。","io":"输入：printf 处理出的字符 → 输出：经流缓冲与操作系统 I/O 传递的字节。","concept":"系统调用是用户态程序请求内核服务的受控入口。Linux 常见底层写出路径会使用 write 一类系统调用；Windows 则通过 CRT 与 Windows I/O/句柄机制完成。","phase":"run"},
+{"node":{"title":"终端显示","lines":["字节 → 字符 → 字形","把输出画到屏幕上"]},"kicker":"TERMINAL / 终端","title":"终端把收到的字节画成字符","desc":"若标准输出连接到终端，字节会由终端设备/终端模拟器接收，再按照字符编码解释为文本，并将字符绘制为字形。现代英文字符的 ASCII 编码与 UTF-8 兼容。若 stdout 被重定向到文件，终端窗口就不会收到这些字节。","why":"程序产生的是字节，不是直接在显示器上绘制像素。终端模拟器负责解释输出流中的字符和控制序列，再由图形系统完成显示。","io":"输入：输出目标收到的字节，例如 hello world 对应的 11 个可见字符 → 输出：终端里的可读文字。","concept":"本例的字符串不包含换行符，所以 shell 提示符可能紧接在 hello world 后面；这不是 printf 丢失了字符，而是源代码没有要求换行。","phase":"run"},
+{"node":{"title":"进程退出","lines":["status = 0","清理运行库并报告成功"]},"kicker":"EXIT / 正常退出","title":"返回 0，向操作系统报告成功","desc":"main 返回 0 后，运行库进入正常退出路径，执行需要的清理工作（包括刷新标准 I/O 缓冲），然后把退出状态交给操作系统。父进程或终端环境可以根据退出状态判断程序是否成功。","why":"把字打出来和程序结束是两件不同的事。正确的退出路径会完成运行库约定的收尾，并让操作系统回收进程资源、记录退出状态。","io":"输入：main 的返回值 0 → 输出：进程正常结束，退出状态为 0。","concept":"退出状态 0 通常代表成功，非 0 通常用于表示错误或其他结果；这是约定，不是说所有操作系统和程序都只允许这两种情况。","phase":"run"}
+]}`}</script>
+</kl-flow-map>
+
+<Caption>读图提示：绿色是构建期（把源码制成可执行文件），灰色是运行期（把可执行文件变成正在执行的进程）。图中的箭头表示先后关系，不代表每一步都由同一个程序进程完成。</Caption>
+
+## 起点：C 源代码到底表达了什么？
+
+为了明确边界，我们使用一个足够小、但符合标准 C 程序结构的示例。最后的输出故意没有换行符。
+
+<Grid cols={2}>
+<Card>
+
+```c
+#include <stdio.h>
+
+int main(void) {
+    printf("hello world");
+    return 0;
+}
+```
+
+</Card>
+<Grid stack>
+<Tile label="01 / #include" title="头文件：声明与接口"><code>stdio.h</code> 让编译器知道 <code>printf</code> 的函数声明、参数类型和返回类型。它通常不包含 <code>printf</code> 的机器码实现。</Tile>
+<Tile label="02 / main" title="程序入口（C 语言层面）"><code>main</code> 是宿主环境中常规 C 程序的入口函数；但操作系统装载器并不是直接跳到 <code>main</code>，中间通常先运行 C 运行库的启动代码。</Tile>
+<Tile label="03 / return 0" title="正常结束的状态码"><code>return 0</code> 表示向运行环境报告成功。它不是打印动作的一部分，也不是 CPU 的“停机指令”。</Tile>
+</Grid>
+</Grid>
+
+<Callout type="warn">**细节很重要：** `printf("hello world")` 没有换行符。在常见终端环境下，标准输出通常是行缓冲的，因此这些字符可能先留在 C 运行库缓冲区中，在 `main` 正常返回、运行库执行正常退出清理时才被刷新。重定向到文件或管道时，缓冲策略可能不同。</Callout>
+
+## 点击“编译”：构建系统启动了一条工具链
+
+编辑器里的“运行”按钮通常负责组织命令、显示日志和启动进程；真正解析 C 代码的是编译器工具链，而不是 IDE 的按钮本身。
+
+<Grid cols={3}>
+<Tile label="EDITOR / IDE" title="发起构建请求">读取任务配置、工作目录、环境变量和编译参数，然后启动外部工具进程。</Tile>
+<Tile label="COMPILER DRIVER" title="工具链调度器">例如 GCC 的 <code>gcc</code> 驱动程序，按目标平台和参数调用预处理器、编译器、汇编器与链接器。</Tile>
+<Tile label="OPERATING SYSTEM" title="创建工具进程">操作系统装载编译器可执行文件、建立它的虚拟地址空间并调度 CPU 执行它；之后同样的 OS 还会执行生成的程序。</Tile>
+</Grid>
+
+<Callout type="info">**构建期与运行期：** GCC/Clang/MSVC 是生成程序的工具；`hello` / `hello.exe` 是稍后运行的程序。编译器进程退出不代表目标程序也运行过了。</Callout>
+
+<Card title="四个经典阶段：一步一个产物">
+<Caption>这是 GCC 常用的教学模型（流程图构建段的四步）。每步输入输出不同；细节已在流程图节点里，这里只留作用与产物。</Caption>
+<Table>
+<table>
+<thead><tr><th>阶段</th><th>一步作用</th><th>本例产物</th></tr></thead>
+<tbody>
+<tr><td><strong>预处理</strong> Preprocess</td><td>展开头文件、宏与条件编译，让编译器看见 <code>printf</code> 的声明</td><td><code>hello.i</code> · 预处理后的文本</td></tr>
+<tr><td><strong>编译</strong> Compile</td><td>把 C 语义翻译成目标指令（内部常经 AST / IR 与优化）</td><td><code>hello.s</code> · 汇编文本</td></tr>
+<tr><td><strong>汇编</strong> Assemble</td><td>把助记符编码成机器字节，登记符号与重定位</td><td><code>hello.o</code> · 目标文件</td></tr>
+<tr><td><strong>链接</strong> Link</td><td>解析 <code>printf</code> 等外部符号，修正地址，合成可执行映像</td><td><code>hello</code> · ELF / <code>hello.exe</code> · PE</td></tr>
+</tbody>
+</table>
+</Table>
+<Caption><code>.o / .obj</code> 已含机器码但仍带符号与重定位；只有最终可执行文件把部件组合好。阶段是概念模型，编译器也可能直接生成目标文件、不落盘中间文件。</Caption>
+<Caption>想亲自验证：<code>gcc -E</code> 停在预处理、<code>-S</code> 停在汇编文本、<code>-c</code> 停在目标文件；<code>gcc -### hello.c -o hello</code> 可查看驱动拟执行的子命令。</Caption>
+</Card>
+
+<Card title="编译器内部：从字符到指令选择">
+<Grid cols={3}>
+<Tile label="FRONT END" title="词法、语法与语义">把字符序列切成 token，按 C 文法构造语法结构，再检查类型、声明、参数匹配等语言规则。错误会以诊断信息报告。</Tile>
+<Tile label="MIDDLE END" title="中间表示 IR 与优化">编译器常把程序转换成与具体 CPU 指令相对独立的 IR，执行常量传播、死代码删除、控制流优化等。优化目标可能是速度、体积或两者平衡。</Tile>
+<Tile label="BACK END" title="指令选择与寄存器分配">把 IR 映射到目标 ISA，分配寄存器、安排指令和栈布局，最后输出汇编文本或直接输出机器码。具体内部结构取决于编译器实现。</Tile>
+</Grid>
+<Caption>C 源码 → tokens → AST → IR → 优化 → x86-64 指令 → 目标文件。AST = Abstract Syntax Tree（抽象语法树）；IR = Intermediate Representation（中间表示）；ISA = Instruction Set Architecture（指令集架构）。它们是常见编译器概念，不意味着所有编译器都按一模一样的内部阶段执行。</Caption>
+</Card>
+
+## 平台对照：Ubuntu/Linux 与 Windows 10
+
+两者拥有相似的概念链条，但工具链、目标文件格式、入口启动方式、动态库和加载器细节不同。切换平台查看对应流程。
+
+<Tabs>
+<Tab label="Ubuntu / Linux">
+<Grid cols={2}>
+<Card>
+
+```bash
+# 1. 只做预处理：输出 hello.i
+gcc -E hello.c -o hello.i
+
+# 2. 编译并输出汇编文本 hello.s
+gcc -S -O0 -masm=intel hello.c -o hello.s
+
+# 3. 汇编为可重定位目标文件 hello.o
+gcc -c -O0 hello.c -o hello.o
+
+# 4. 链接为可执行文件 hello
+gcc -O0 hello.o -o hello
+
+# 查看符号、重定位、段 / 程序头
+nm hello.o
+readelf -r hello.o
+readelf -h -l -d hello
+objdump -drwC -Mintel hello.o
+
+# 运行；本示例不含换行符
+./hello
+```
+
+</Card>
+<Grid stack>
+<Tile label="OBJECT FORMAT" title="ELF + System V ABI">常见 Ubuntu x86-64 程序使用 ELF（Executable and Linkable Format）。目标文件通常为 ELF relocatable；最终动态链接程序可能是 PIE ELF。</Tile>
+<Tile label="TOOLCHAIN" title="GCC / Clang + GNU binutils"><code>gcc</code> 是驱动程序；幕后可能涉及 <code>cc1</code>、<code>as</code>、<code>ld</code> 和启动文件。精确组合取决于发行版、安装的工具链和参数。</Tile>
+<Tile label="RUNTIME" title="glibc + ld-linux">常见动态链接程序依赖 <code>libc.so.6</code>，ELF 的 <code>.interp</code> 可指定动态加载器，如 <code>/lib64/ld-linux-x86-64.so.2</code>。</Tile>
+</Grid>
+</Grid>
+<Callout type="tip">页面里的汇编与 ELF 例子基于本地 **GCC 14.2.0 / x86-64 Linux** 的 `-O0` 构建。Ubuntu 机制相近，但不保证每个地址、指令、段偏移或默认选项相同。</Callout>
+</Tab>
+<Tab label="Windows 10 / MSVC">
+<Grid cols={2}>
+<Card>
+
+```powershell
+:: 先打开 Visual Studio Developer Command Prompt
+
+:: 预处理到 hello.i
+cl /nologo /P hello.c
+
+:: 编译到汇编列表（选项 /FA 生成汇编列表）
+cl /nologo /Od /FAcs /c hello.c
+
+:: 编译并链接为 hello.exe
+cl /nologo /W4 /Od hello.c /Fe:hello.exe
+
+:: 查看 PE 头和反汇编（安装 Visual Studio 工具）
+dumpbin /headers hello.exe
+dumpbin /imports hello.exe
+dumpbin /disasm hello.exe
+
+:: 运行
+hello.exe
+```
+
+</Card>
+<Grid stack>
+<Tile label="OBJECT FORMAT" title="COFF / PE（PE32+）">MSVC 编译器产生 COFF 目标文件 <code>.obj</code>，链接器生成 PE 可执行映像 <code>.exe</code>。Windows x64 程序通常为 PE32+。</Tile>
+<Tile label="TOOLCHAIN" title="cl.exe + link.exe"><code>cl.exe</code> 可以编译，也可以在正常构建时驱动链接器。<code>/c</code> 只编译不链接；<code>/FA</code> 生成汇编列表。</Tile>
+<Tile label="RUNTIME" title="CRT / UCRT / Windows API">默认入口一般是 CRT 提供的 <code>mainCRTStartup</code>，由它初始化运行库并调用用户的 <code>main</code>。<code>printf</code> 最终经运行库把标准输出写到当前句柄指向的目标。</Tile>
+</Grid>
+</Grid>
+<Callout type="warn">Windows 的实际调用链与汇编依编译器版本、目标架构、运行库选项而变。这里讲的是 MSVC x64 原生控制台程序的常见路径，不把某一条导入桩指令当成唯一实现。</Callout>
+</Tab>
+</Tabs>
+
+## 预处理：为什么需要 stdio.h？
+
+它处理源代码中的预处理指令，而不是把整个标准 I/O 实现“粘进”程序里。
+
+<Grid cols={2}>
+<Card title="预处理前后（概念示意）">
+
+```c
+/* hello.c */
+#include <stdio.h>
+
+int main(void) {
+    printf("hello world");
+    return 0;
+}
+```
+
+<Caption align="center">↓ 读取头文件、处理指令、删除注释等 ↓</Caption>
+
+```c
+/* hello.i · 摘录 / 示意 */
+/* 这里还会出现大量平台相关的声明 */
+extern int printf(const char *, ...);
+
+int main(void) {
+    printf("hello world");
+    return 0;
+}
+```
+
+<Caption>上面只展示概念，真正的 <code>hello.i</code> 远大于这个片段，声明细节也会因 libc、头文件和编译器而异。</Caption>
+</Card>
+<Grid stack>
+<Tile label="声明 declaration" title="让编译器知道如何调用"><code>printf</code> 的声明会告诉编译器：它返回 <code>int</code>，第一个参数是格式字符串，后面还有可变数量参数。编译器不需要知道 libc 中函数体如何实现，才能生成调用。</Tile>
+<Tile label="定义 definition" title="函数实现在哪里？">通常在 C 标准库的实现中（Linux 常见为 glibc，Windows 常见为 UCRT）。动态链接时，它不需要被复制进每个程序的机器码正文，而是在运行时解析到相应共享库。</Tile>
+<Tile label="翻译单元 translation unit" title="编译器实际看到的输入">预处理后的完整 C 源文本连同已展开的宏和头文件内容，形成该次编译的翻译单元。随后的编译阶段才进行语言语义分析与代码生成。</Tile>
+</Grid>
+</Grid>
+
+## 编译：C 语句如何变成汇编指令？
+
+不要先背汇编。先把它当作“把一个 C 语句拆成处理器能完成的小动作”的记录，再逐条看每个动作为什么出现。
+
+<Intro><strong>我们究竟在观察什么？</strong> 下面采用一次 GCC 14.2.0、x86-64 Linux、未开启优化（<code>-O0</code>）的示例输出。C 语言标准只规定程序的含义，并不规定必须生成这些指令；换编译器、优化等级或平台后，汇编可以不同，但“把字符串地址作为参数交给 <code>printf</code>”这个意图不变。</Intro>
+
+### 先认识汇编里的基本积木
+
+<Grid cols={3}>
+<Tile title="1. 指令与助记符"><code>mov</code> 表示搬运数据，<code>lea</code> 计算地址，<code>call</code> 调用函数，<code>ret</code> 返回。它们是机器指令的可读名字；CPU 最终读取的是相应的字节编码。</Tile>
+<Tile title="2. 寄存器 Register"><code>RAX</code>、<code>RDI</code>、<code>RSP</code>、<code>RBP</code> 是 CPU 内部的小型高速存储位置。它们可以暂存数据、参数、栈地址或返回值，不是内存中的变量名。</Tile>
+<Tile title="3. 操作数 Operand">例如 <code>mov rdi, rax</code> 的两个操作数都是寄存器。<code>[rip+0x123]</code> 表示按地址计算规则访问内存；<code>lea</code> 使用类似写法时，是计算有效地址而不读取那个地址里的字符串内容。</Tile>
+<Tile title="4. 标签与伪指令"><code>main:</code>、<code>.LC0:</code> 是标签，给代码或数据一个可引用的名字。<code>.text</code>、<code>.section</code>、<code>.string</code> 是给汇编器的组织指示，不是让 CPU 执行的指令。</Tile>
+<Tile title="5. 代码区与数据区"><code>.text</code> 通常放机器指令；<code>.rodata</code> 是 read-only data（只读数据）的惯用 section 名，常放字符串常量。指令与数据都是字节，但它们的用途不同。</Tile>
+<Tile title="6. 函数调用约定">调用者与被调用函数必须约好参数放在哪、返回值放在哪、哪些寄存器需要保存。这套机器级规则属于 <code>ABI</code>；本例按 Linux x86-64 System V ABI 解释。</Tile>
+</Grid>
+
+<Callout type="warn">**先别把“只读数据区”想成一种神秘硬件。** `.rodata` 首先是目标文件里一个有名字的 section（节），用于告诉汇编器和链接器“这部分是只读数据”。链接器随后通常把它放进运行时不可写的加载段。section 是组织文件内容的方式；segment（段）则描述装载器如何把内容映射进进程。它们相关，但不是同一个概念。</Callout>
+
+### 这次编译器输出的汇编
+
+```asm
+.section .rodata            # 告诉汇编器：接下来是只读常量数据
+.LC0:                       # 编译器给字符串起的内部标签
+    .string "hello world"   # 11 个可见字符 + 结尾的 NUL 终止字节
+
+.text                       # 接下来是机器指令所在的代码 section
+main:                       # 函数入口标签
+    push rbp                # 保存调用者的帧指针
+    mov  rbp, rsp           # 用当前栈顶建立本函数的帧指针
+    lea  rax, .LC0[rip]     # 算出字符串地址，放进 RAX
+    mov  rdi, rax           # 按 Linux x86-64 ABI，把第一个参数放进 RDI
+    mov  eax, 0             # 可变参数调用的 ABI 要求：AL 中向量参数数目为 0
+    call printf@PLT         # 调用 printf 的 PLT 入口
+    mov  eax, 0             # main 的返回值 0
+    pop  rbp                # 恢复调用者的帧指针
+    ret                     # 返回运行库启动代码
+```
+
+### 把 C 语句和汇编一一对上
+
+<Caption>编译器不需要让每条 C 语句对应一条汇编指令。一行 C 代码可能变成多条指令；反过来，多条 C 语句也可能被优化成一段指令。这里是便于学习的“职责对应”，不是语言规范要求的固定映射。</Caption>
+
+<Table>
+<table>
+<thead><tr><th>C 源代码 / 隐含工作</th><th>对应的汇编</th><th>这一步具体做了什么？</th></tr></thead>
+<tbody>
+<tr><td><code>"hello world"</code> 字符串常量</td><td><code>.section .rodata</code> · <code>.LC0:</code> · <code>.string "hello world"</code></td><td>给字符串分配一段数据空间，并设置内部标签 <code>.LC0</code> 方便其他指令引用。字符串末尾有一个 <code>00</code> 终止字节，它用于标记 C 字符串结束，不会作为可见字符打印。</td></tr>
+<tr><td><code>printf("hello world");</code> 第 1 步：找到参数</td><td><code>lea rax, .LC0[rip]</code></td><td>计算字符串的地址并放入 <code>RAX</code>。这里的 <code>lea</code> 是“取有效地址”，不会把 12 个字符串字节塞进寄存器。</td></tr>
+<tr><td>同一条语句第 2 步：按约定传参</td><td><code>mov rdi, rax</code></td><td>把刚算出的地址复制到 <code>RDI</code>。Linux x86-64 System V ABI 规定第一个整数或指针参数用 <code>RDI</code> 传递，所以 <code>printf</code> 收到的是“字符串在哪儿”的地址。</td></tr>
+<tr><td>同一条语句第 3 步：完成可变参数约定</td><td><code>mov eax, 0</code></td><td><code>printf</code> 是可变参数函数。System V AMD64 ABI 用 <code>AL</code> 传递本次调用使用的向量寄存器数量；本例没有向量参数，所以此处设为 0。它不是“把 hello world 清空”。</td></tr>
+<tr><td>第 4 步：真正发起函数调用</td><td><code>call printf@PLT</code></td><td><code>call</code> 保存返回位置并转移控制流。<code>@PLT</code> 表示调用会经过 ELF 动态链接常见的过程链接表入口；它不等于把 <code>printf</code> 的实现内联在 <code>main</code> 里。</td></tr>
+<tr><td><code>return 0;</code> 以及函数收尾</td><td><code>mov eax, 0</code> · <code>pop rbp</code> · <code>ret</code></td><td>把整数返回值 0 放进 <code>EAX</code>，恢复此前保存的帧指针，再返回运行库启动代码。前面的 <code>push rbp</code> / <code>mov rbp,rsp</code> 是本次未优化构建常见的函数序言，用于建立栈帧。</td></tr>
+</tbody>
+</table>
+</Table>
+
+<Intro><strong>读这段汇编时的最小心智模型：</strong> <code>.rodata</code> 保存“要打印的内容”；<code>lea</code> 找到内容所在的地址；<code>mov rdi, rax</code> 按 ABI 把地址交给函数；<code>call</code> 转到函数入口。CPU 执行的是每条指令的机器码，标签和注释只是帮助汇编器 / 人类组织和理解程序。</Intro>
+
+<Callout type="warn">**为什么 Windows 的汇编看起来会不同？** Windows x64 常用的前四个整数 / 指针参数寄存器是 `RCX`、`RDX`、`R8`、`R9`；Linux x86-64 System V 则使用 `RDI`、`RSI`、`RDX`、`RCX`、`R8`、`R9`。同一句 C 代码之所以可能生成不同指令，一部分原因就是目标平台的 ABI 不同。</Callout>
+
+<Callout type="info">**优化会改变外观。** `-O0` 下保留帧指针、把地址先放入 `RAX` 再复制到 `RDI`，是本次构建的选择。`-O2` 可能减少指令、改变寄存器分配或省略帧指针；编译器不会承诺任何固定的汇编展开。</Callout>
+
+## 汇编器：指令和字符串最终都是字节
+
+CPU 读的是内存中的二进制编码。字符串常量本身也被编码为字节；对于这个 ASCII 字符串，UTF-8 的字节与 ASCII 一致。
+
+<Card title={'字符串 "hello world" 的内存表示'}>
+<kl-byte-strip value="hello world" c-string></kl-byte-strip>
+<Panes>
+<Pane title="十六进制（Hex）" value="68 65 6c 6c 6f 20 77 6f 72 6c 64 00">
+<Caption>每两个十六进制数字表示一个 8-bit 字节。末尾的 <code>00</code> 是 C 字符串的空字符终止符，不会被 printf 作为字符输出。</Caption>
+</Pane>
+<Pane title="ASCII / UTF-8 解码" value="h e l l o ␠ w o r l d \0">
+<Caption>例如 <code>0x68</code> 对应字符 h，<code>0x20</code> 是空格。终止符告知字符串函数到此结束。</Caption>
+</Pane>
+</Panes>
+</Card>
+
+<Card title="从目标文件的字节到链接后的字节：中间到底发生了什么？">
+<Caption>先记住一个模型：<strong>汇编器「留坑 + 记便签」，链接器「按便签填坑」。</strong>下面两条指令需要写“目标离我多远”，但编译 <code>hello.o</code> 时距离根本算不出来——字符串坐哪要等链接器排座位，<code>printf</code> 干脆在另一个文件里。汇编器不猜：把要写距离的 4 个字节先留成 0（<strong>坑</strong>），再在重定位表里记一张<strong>便签</strong>（“这里有个坑，按相对某某符号的规则填”）。链接器排好座位后逐条读便签、算距离、填坑。下面沿这两条指令，把坑和便签从 <code>hello.o</code> 一路追到最终 <code>hello</code>。</Caption>
+<Flow>
+<FlowStep title="① 汇编文本"><code>lea rax, .LC0[rip]</code>：用标签指向目标，距离留给以后算</FlowStep>
+<FlowStep title="② 目标文件 .o">指令已编码；距离字段留成 0（坑），并记下重定位（便签）</FlowStep>
+<FlowStep title="③ 链接器">排定 section / 符号座位，按便签算出距离并填坑</FlowStep>
+<FlowStep title="④ 最终 ELF">两处坑已填好；GOT 等运行时地址槽仍留给加载器</FlowStep>
+</Flow>
+
+<Subhead level={4}>第一步：目标文件里到底有什么？——带坑的指令 + 便签</Subhead>
+<Caption>用 <code>objdump -drwC -Mintel hello.o</code> 看目标文件：每行是“section 内偏移、机器字节、反汇编文本”，<code>-r</code> 会把便签（重定位记录）一起打印。偏移从 <code>.text</code> 起点算起，不是运行时的内存地址。先放大看 <code>lea</code> 这 7 个字节和它的便签：</Caption>
+
+<Panes>
+<Pane title="7 字节的 lea：3 字节形式 + 4 字节坑" value="48 8d 05 · 00 00 00 00">
+<Caption>前 3 字节已经表达“RIP 相对的 lea”这种指令形式；后 4 字节是 32 位距离字段，现在是坑（全 0）。指令从偏移 <code>0x4</code> 开始，走过 3 字节形式才到坑——所以坑的偏移是 <code>0x7</code>。这正是便签里 <code>offset 0x7</code> 的来历。</Caption>
+</Pane>
+<Pane title="对应的便签：谁、在哪、怎么填" value="R_X86_64_PC32 .rodata-0x4">
+<Caption>这行不是 CPU 指令，是 objdump 顺带打印的便签：<code>0x7</code> 是坑的位置（见上一格），<code>.rodata</code> 是要相对的目标，<code>PC32</code> 是“按 32 位相对位移填”的规则，<code>-0x4</code> 是基准修正量（第二步拆解）。</Caption>
+</Pane>
+</Panes>
+
+```text
+0000000000000000 <main>:
+  0:  55                    push rbp
+  1:  48 89 e5              mov rbp,rsp
+  4:  48 8d 05 00 00 00 00  lea rax,[rip+0x0]
+  7:  R_X86_64_PC32 .rodata-0x4
+  b:  48 89 c7              mov rdi,rax
+  e:  b8 00 00 00 00        mov eax,0x0
+  13: e8 00 00 00 00        call printf
+  14: R_X86_64_PLT32 printf-0x4
+  18: b8 00 00 00 00        mov eax,0x0
+  1d: 5d                    pop rbp
+  1e: c3                    ret
+```
+
+<Table>
+<table>
+<thead><tr><th>你看到的内容</th><th>应该怎样理解</th></tr></thead>
+<tbody>
+<tr><td><code>4: 48 8d 05 00 00 00 00</code></td><td>偏移 <code>0x4</code> 起是一条 7 字节的 <code>lea</code>：前 3 字节是指令形式，后 4 字节是坑（位移字段，暂为 0）。坑从偏移 <code>0x7</code> 开始。</td></tr>
+<tr><td><code>7: R_X86_64_PC32 .rodata-0x4</code></td><td>便签，不是指令。<code>0x7</code> = 坑的位置；<code>.rodata</code> = 相对谁；<code>PC32</code> = 填法（32 位相对位移）；<code>-0x4</code> = 基准修正量。</td></tr>
+<tr><td><code>13: e8 00 00 00 00</code></td><td>同理：<code>e8</code> 是近相对 <code>call</code> 的 1 字节操作码，后 4 字节又是一个坑。<code>call 0</code> 不是真的调地址 0，只是距离还没填。</td></tr>
+<tr><td><code>14: R_X86_64_PLT32 printf-0x4</code></td><td><code>call</code> 的便签：坑在 <code>0x14</code>（<code>0x13</code> + 1 字节操作码）；<code>printf</code> 是外部符号，<code>PLT32</code> 表示按“可指向 PLT 入口”的相对位移来填。</td></tr>
+</tbody>
+</table>
+</Table>
+
+<Subhead level={4}>第二步：便签怎么写？——三个问题和一条填数公式</Subhead>
+<Caption>一张便签只回答三个问题：<strong>填哪里</strong>（offset，坑的字节位置）、<strong>相对谁</strong>（symbol，拿来算距离的目标）、<strong>怎么算</strong>（type + addend，规则和修正量）。把 <code>hello.o</code> 的两张便签集中打印：</Caption>
+
+```text
+Offset          Type               Symbol + Addend
+000000000007    R_X86_64_PC32      .rodata - 4
+000000000014    R_X86_64_PLT32     printf - 4
+```
+
+<Caption>填数规则一句人话：<strong>坑里要填的数 = 目标地址 − 下一条指令的地址</strong>。为什么是“下一条指令”？因为 x86 的 RIP 相对寻址就是以它为基准。写成公式里的字母就是 <code>S + A − P</code>：</Caption>
+
+<Figure>
+<Diagram
+  label="重定位填坑的坐标关系：P、P+4、S 与修正量 A 等于 -4"
+  width={510}
+  height={266}
+  pxPerByte={60}
+  x0={238}
+  nodes={[
+    { id: 'instr', span: [-3, 0], y: 10, h: 50, role: 'instr', title: '48 8d 05 · 指令形式（3 字节）', sub: 'lea rax, [rip+位移]' },
+    { id: 'gap', span: [0, 4], y: 10, h: 50, role: 'gap', title: '00 00 00 00 · 坑（4 字节）', sub: '待填的 32 位相对位移' },
+    { id: 'target', x: 155, y: 128, w: 200, h: 44, role: 'target', title: 'S · 目标地址', sub: '例如字符串 hello world 所在位置' },
+    { id: 'formula', x: 55, y: 194, w: 400, h: 58, role: 'formula', title: '坑里填的数 = S −（P + 4） = S + A − P', sub: 'A = −4 的唯一作用：把基准从「坑开头 P」校正到「下一条指令 P+4」' },
+  ]}
+  arrows={[
+    { from: 'gap', at: 'left', len: 16, label: 'P · 坑的第 1 字节', labelAlign: 'middle' },
+    { from: 'gap', at: 'right', len: 16, label: 'P + 4 · 下一条指令', labelAlign: 'end' },
+    { from: 'target', to: 'formula' },
+  ]}
+  notes={[
+    { at: 'canvas', y: 104, h: 18, align: 'center', text: 'x86 的 RIP 以「下一条指令」为基准 —— 不是坑的开头' },
+  ]}
+/>
+</Figure>
+
+<Formula>人话：填入 = 目标地址 − 下一条指令地址（S −（P + 4））<br />公式：PC32 → S + A − P　·　PLT32 → L + A − P（其中 A = −4）</Formula>
+<Caption>字母对照：<code>S</code> 是符号地址，<code>L</code> 是 PLT 项地址（函数调用走它），<code>P</code> 是坑的第 1 个字节的地址，<code>A = -4</code> 把基准从坑开头校正到下一条指令。坑宽 4 字节（32 位），结果就写 4 字节。注意：不同重定位类型的公式不同，不能把同一条公式套在所有便签上。</Caption>
+
+<Subhead level={4}>第三步：链接器怎样按便签填坑？</Subhead>
+<Caption>本次示例构建里，链接器把 <code>main</code> 排到 <code>0x1139</code>、字符串排到 <code>0x2004</code>，并为 <code>printf</code> 准备了 <code>0x1030</code> 处的 PLT 入口。座位定了，两张便签就能算了：</Caption>
+
+```text
+0000000000001139 <main>:
+  1139: 55                    push rbp
+  113a: 48 89 e5              mov rbp,rsp
+  113d: 48 8d 05 c0 0e 00 00  lea rax,[rip+0xec0]  # 0x2004：字符串位置
+  1144: 48 89 c7              mov rdi,rax
+  1147: b8 00 00 00 00        mov eax,0
+  114c: e8 df fe ff ff        call 0x1030 <printf@plt>
+  1151: b8 00 00 00 00        mov eax,0
+  1156: 5d                    pop rbp
+  1157: c3                    ret
+```
+
+<Panes>
+<Pane title="例子 A · 字符串的坑">
+<p>坑在 <code>0x1140</code>（<code>lea</code> 开头 <code>0x113d</code> + 3 字节形式），下一条指令在 <code>0x1144</code>。代入公式：</p>
+<Formula expr="0x2004 − 0x1144 = 0x0ec0" />
+<Caption>结果按小端序（低字节在前）写进坑：<code>c0 0e 00 00</code>。执行时 RIP = 0x1144，<code>0x1144 + 0x0ec0 = 0x2004</code>，正好落在字符串上。</Caption>
+</Pane>
+<Pane title="例子 B · printf 的坑">
+<p>目标 <code>printf@plt</code> 在 <code>0x1030</code>，下一条指令在 <code>0x1151</code>。代入公式：</p>
+<Formula expr="0x1030 − 0x1151 = −0x121" />
+<Caption>位移可正可负：这里为负，因为 PLT 排在 <code>main</code> 前面，要往回跳。<code>-0x121</code> 写进坑是 <code>df fe ff ff</code>（有符号 32 位、小端序）。执行时先落到 PLT 跳板，再由动态链接路径转到 libc 里的 printf。</Caption>
+</Pane>
+</Panes>
+
+<Subhead level={4}>第四步：哪些坑不在链接时填？——运行时动态链接</Subhead>
+<Caption><strong>链接时填的坑：</strong>字符串、<code>printf@plt</code> 这类目标在生成 <code>hello</code> 时座位已定，链接器按便签填完就不再改。</Caption>
+<Caption><strong>运行时才填的坑：</strong><code>call</code> 的目标是 PLT 跳板，而不是 libc 里 printf 的真身——真身的地址要等进程启动、共享库加载后才知道。这些坑（例如 GOT 中的函数地址槽）由动态加载器按动态链接信息补填，具体方式随链接选项与安全设置变化。</Caption>
+
+<Table>
+<table>
+<thead><tr><th>谁</th><th>什么时候</th><th>知道什么</th><th>做什么</th></tr></thead>
+<tbody>
+<tr><td>汇编器</td><td>生成 <code>hello.o</code> 时</td><td>指令形式；最终座位未知</td><td>留坑（写 0）+ 记便签</td></tr>
+<tr><td>链接器</td><td>生成 <code>hello</code> 时</td><td>映像内的座位（S、PLT 位置）</td><td>按便签填坑</td></tr>
+<tr><td>动态加载器</td><td>进程启动时</td><td>共享库加载后的真实地址</td><td>填 GOT 等运行时地址槽</td></tr>
+</tbody>
+</table>
+</Table>
+<Caption>三个角色处理的是三个时间点的地址问题：汇编时写不下的距离，链接时填映像内部的，启动时填跨共享库的。</Caption>
+<Caption>这些偏移和字节是本次 GCC 14.2.0、x86-64 Linux、<code>-O0</code> 示例构建的具体结果，不是每台机器都固定如此。PIE、ASLR、链接器和构建选项都可能改变最终显示的地址。</Caption>
+</Card>
+
+## 链接：一个目标文件如何找到 printf？
+
+编译器只知道这里需要调用名为 <code>printf</code> 的外部函数。链接器要处理这个符号，以及调用点、字符串常量和库之间的地址关系。
+
+<Card>
+<Grid cols={2}>
+<div>
+<Subhead>链接器面对的“未完成引用”</Subhead>
+
+```text
+0000000000000000 T main
+                 U printf
+```
+
+<Caption><code>T main</code> 表示 <code>main</code> 在目标文件的代码 section 中定义；<code>U printf</code> 表示 <code>printf</code> 是未定义的外部符号，需要从其他链接输入或动态库依赖中解决。</Caption>
+<Callout type="info">“未定义”在这里不是 C 编译错误：它是链接阶段有意保留的外部引用。若最终链接无法找到合适的定义或导入信息，才会出现类似 *undefined reference* / unresolved external symbol 的错误。</Callout>
+</div>
+<div>
+<Subhead>典型动态链接路径（Linux）</Subhead>
+<Figure caption="这是概念图，不代表所有构建都采用相同的 PLT/GOT 绑定策略；例如启用立即绑定、不同链接器、静态链接或优化后的调用方式时，路径可能不同。">
+<Diagram
+  label="PLT/GOT 调用关系：链接时填 call 的坑、启动时由加载器填 GOT 槽、调用时 PLT 读槽跳到 printf 真身"
+  width={440}
+  height={306}
+  nodes={[
+    { id: 'call', x: 30, y: 12, w: 380, h: 62, role: 'instr', title: 'main 里的 call 指令 · call printf@PLT', sub: '距离坑已在「链接时」填好 —— 相对位移指向 PLT 跳板' },
+    { id: 'plt', x: 14, y: 108, w: 180, h: 88, role: 'target', title: 'PLT · 过程链接表', sub: '几条跳板指令\n跳板会去读 GOT 槽里的地址' },
+    { id: 'got', x: 246, y: 108, w: 180, h: 88, role: 'gap', title: 'GOT · 全局偏移表', sub: '每个导入函数一个地址槽\nprintf 的槽「启动时」由加载器写入' },
+    { id: 'libc', x: 30, y: 238, w: 380, h: 58, role: 'target', title: 'libc.so 里的 printf 真身', sub: '共享库实现 —— 加载到哪，要等进程启动才知道' },
+  ]}
+  arrows={[
+    { from: 'call', fromX: 104, to: 'plt', toX: 104 },
+    { from: 'plt', to: 'got', dir: 'right' },
+    { from: 'got', fromX: 336, to: 'libc', toX: 336 },
+  ]}
+  notes={[
+    { x: 114, y: 86, w: 150, h: 16, align: 'start', text: '① 调用时 · 跳进 PLT' },
+    { x: 198, y: 132, w: 44, h: 14, align: 'center', text: '读槽' },
+    { x: 176, y: 210, w: 150, h: 16, align: 'end', text: '② 按槽内地址跳到真身' },
+  ]}
+/>
+</Figure>
+</div>
+</Grid>
+<Grid cols={3}>
+<Tile label="SYMBOL RESOLUTION" title="符号解析">根据符号名、绑定规则、可见性和库输入，决定 <code>printf</code> 对应的实现。</Tile>
+<Tile label="RELOCATION" title="重定位">修正指令或数据里暂未确定的地址 / 偏移。链接器把 <code>.rodata</code> 的引用和函数调用补完整。</Tile>
+<Tile label="DYNAMIC DEPENDENCY" title="动态库依赖">本次实际构建的 ELF 记录了 <code>libc.so.6</code> 依赖。共享库的实现一般在运行时由动态加载器映射、重定位。</Tile>
+</Grid>
+</Card>
+
+## 可执行文件并非“一团机器码”
+
+ELF 和 PE 都有格式头、节 / 段信息、入口点、导入或动态链接信息等元数据。操作系统和加载器依靠这些结构理解文件。
+
+<Grid cols={2}>
+<Card title="Linux：ELF 结构">
+
+```text
+Class:       ELF64
+Data:        little endian
+Type:        DYN (PIE executable)
+Machine:     x86-64
+Interpreter: /lib64/ld-linux-x86-64.so.2
+NEEDED:      libc.so.6
+```
+
+<Caption>ELF 头描述文件的基本属性。<strong>Section（节）</strong>是链接 / 调试时常用的逻辑组织（例如 <code>.text</code>、<code>.rodata</code>、<code>.symtab</code>）；<strong>Program Header（程序头）</strong>里的 <code>PT_LOAD</code> 等条目则描述运行时要映射的 segment。不要把“节”和“段”混为一谈。</Caption>
+</Card>
+<Card title="Windows：PE 结构">
+
+```text
+DOS header / DOS stub
+PE signature
+COFF File Header
+Optional Header (PE32+)
+Section Headers
+  .text  · code
+  .rdata · read-only data / imports
+  .data  · initialized data
+Import Table / IAT
+Relocation data / other directories
+```
+
+<Caption>PE Optional Header 含有入口点的 RVA（相对映像基址的地址）和数据目录。导入表说明程序依赖哪些 DLL 和符号，IAT（导入地址表）提供运行时调用导入函数的地址槽位。节名有约定意义，但具体布局由链接器决定。</Caption>
+</Card>
+</Grid>
+
+<Card title="文件最前面的几个字节：魔数（magic number）">
+<Panes>
+<Pane title="ELF 文件开头 · Linux" value="7f 45 4c 46">
+<Caption><code>0x7f</code> 后面跟着 ASCII 的 <code>E L F</code>。接下来的标识字节还会说明 32 / 64 位类别、字节序和 ELF 版本。</Caption>
+</Pane>
+<Pane title="PE 文件开头 · Windows" value="4d 5a">
+<Caption>即 ASCII <code>MZ</code>。PE 签名 <code>50 45 00 00</code> 不一定紧接在文件开头；DOS 头中的偏移字段会指向 PE 头所在位置。</Caption>
+</Pane>
+</Panes>
+<Caption>可以在 Linux 上执行 <code>xxd -l 64 hello</code> 查看文件前 64 字节；Windows 开发者命令提示符可用 <code>dumpbin /headers hello.exe</code> 读取结构化头信息。</Caption>
+</Card>
+
+## 装载：从磁盘文件到进程的虚拟地址空间
+
+可执行文件不会简单地被整个复制到一块连续的物理内存。内核与加载器根据格式信息建立虚拟内存映射，页通常会按需调入物理内存。
+
+<Card>
+<Grid cols={2}>
+<div>
+<Subhead>虚拟地址空间 · 结构示意图</Subhead>
+<Figure caption="教学示意，非按比例内存布局。hello 的 .text / .rodata 经映射进入地址空间；栈、堆、mmap 等区域由内核与运行库在装载时建立，页面按需调入。">
+<svg viewBox="0 0 440 330" width="100%" role="img" aria-label="进程虚拟地址空间结构示意：栈、mmap、堆、.data/.bss、.rodata、.text 自高地址到低地址排列，hello 文件映射进 .rodata 与 .text">
+<defs><marker id="ar5" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6Z" fill="#8193aa"></path></marker></defs>
+<text x="28" y="13" font-size="9" fill="#69717b">高地址</text>
+<rect x="28" y="20" width="232" height="42" rx="9" fill="#f1e9fe" stroke="#b99af4"></rect>
+<text x="42" y="39" font-size="11" font-weight="700" fill="#5a3d96">Stack · 栈</text>
+<text x="42" y="55" font-size="9" fill="#6d4fa8">返回地址、局部状态 · 向低地址增长 ↓</text>
+<rect x="28" y="68" width="232" height="42" rx="9" fill="#e3f5f5" stroke="#8dcacb"></rect>
+<text x="42" y="87" font-size="11" font-weight="700" fill="#135c63">mmap · 共享库与映射</text>
+<text x="42" y="103" font-size="9" fill="#347d82">libc、动态加载器、内存映射文件</text>
+<rect x="28" y="116" width="232" height="42" rx="9" fill="#fff3df" stroke="#edc27d"></rect>
+<text x="42" y="135" font-size="11" font-weight="700" fill="#87500d">Heap · 堆</text>
+<text x="42" y="151" font-size="9" fill="#a16c27">malloc 等动态分配 · 向高地址增长 ↑</text>
+<rect x="28" y="164" width="232" height="42" rx="9" fill="#e5f6ed" stroke="#8bc5a9"></rect>
+<text x="42" y="183" font-size="11" font-weight="700" fill="#166642">.data / .bss</text>
+<text x="42" y="199" font-size="9" fill="#397b5b">全局与静态可写数据</text>
+<rect x="28" y="212" width="232" height="42" rx="9" fill="#eaf0ff" stroke="#8da8e5"></rect>
+<text x="42" y="231" font-size="11" font-weight="700" fill="#1e478f">.rodata</text>
+<text x="42" y="247" font-size="9" fill="#52709f">字符串常量 hello world</text>
+<rect x="28" y="260" width="232" height="42" rx="9" fill="#eaf0ff" stroke="#8da8e5"></rect>
+<text x="42" y="279" font-size="11" font-weight="700" fill="#1e478f">.text</text>
+<text x="42" y="295" font-size="9" fill="#52709f">main 的机器指令与程序代码</text>
+<rect x="298" y="212" width="128" height="90" rx="9" fill="#f2f4f8" stroke="#c9d4e2"></rect>
+<text x="362" y="234" text-anchor="middle" font-size="11" font-weight="700" fill="#2c3e57">hello · ELF 文件</text>
+<text x="362" y="252" text-anchor="middle" font-size="9" fill="#52709f">磁盘上的可执行文件</text>
+<text x="362" y="270" text-anchor="middle" font-size="9" fill="#52709f">含 .text / .rodata 节</text>
+<text x="362" y="288" text-anchor="middle" font-size="9" fill="#52709f">经 PT_LOAD 映射进进程</text>
+<path d="M298 233 H264" stroke="#8193aa" stroke-width="1.7" marker-end="url(#ar5)"></path>
+<path d="M298 281 H264" stroke="#8193aa" stroke-width="1.7" marker-end="url(#ar5)"></path>
+<text x="279" y="261" text-anchor="middle" font-size="9" fill="#347d82">映射</text>
+<text x="28" y="318" font-size="9" fill="#69717b">低地址</text>
+<text x="425" y="318" text-anchor="end" font-size="8.5" fill="#69717b">蓝色 = hello 文件映射 · 其余 = 运行时建立</text>
+</svg>
+</Figure>
+</div>
+<Grid stack>
+<Tile label="01 / process image" title="进程映像">内核建立新进程的执行上下文与地址空间，并将可执行文件的映射和必要的运行时映射安排好。Linux 的 <code>execve</code> 会用新程序映像替换当前进程映像。</Tile>
+<Tile label="02 / virtual memory" title="虚拟地址不是物理地址">程序看到的是自己的虚拟地址。CPU 的 MMU 与页表把虚拟页映射到物理页或文件后备页；内存保护属性限制页面能否读、写或执行。</Tile>
+<Tile label="03 / demand paging" title="页面按需进入内存">可执行文件映射后，不必立即将每个字节都读到 RAM。当访问某个尚未驻留的映射页时，可能触发缺页异常，由内核完成映射 / 读入后再继续执行。</Tile>
+<Tile label="04 / ASLR + PIE" title="地址不一定每次都一样">ASLR（地址空间布局随机化）可让映像、共享库、栈等区域在不同运行中使用不同地址。PIE 让主程序映像也能被放置在不同基址附近。不要把某次反汇编地址当作固定地址。</Tile>
+<Callout type="info">**Linux 的关键差异：** 内核的 ELF 装载逻辑读取程序头并建立映射；若文件指定了 `PT_INTERP`，动态加载器（例如 `ld-linux`）会继续装载共享库、处理动态重定位，然后把控制权交给程序启动代码。</Callout>
+</Grid>
+</Grid>
+</Card>
+
+## 为什么不是直接跳进 main？运行库先搭好舞台
+
+从操作系统入口到 C 语言的 <code>main</code>，中间还有 ABI 约定、运行库初始化与进程启动代码。
+
+<Card>
+<Grid cols={4}>
+<Tile label="OS ENTRY" title="可执行映像入口">内核 / 加载器把控制权交给 ELF entry point（如 <code>_start</code> 周边启动路径），不是直接调用 C 的 <code>main</code>。</Tile>
+<Tile label="STARTUP CODE" title="初始化运行时">准备进程参数、环境、运行库状态；调用必要的初始化逻辑。</Tile>
+<Tile label="CALL MAIN" title="进入 main()">按目标平台的调用约定传递参数并执行用户代码。这个最小示例中 <code>main</code> 调用一次 <code>printf</code>。</Tile>
+<Tile label="EXIT PATH" title="正常退出清理"><code>main</code> 返回后，运行库处理退出状态并完成正常退出清理，包括刷新 C 标准 I/O 缓冲。</Tile>
+</Grid>
+<Callout type="warn">Linux 常见启动符号为 `_start`，由启动文件与 libc 启动流程协作；Windows MSVC 控制台程序常见入口为 `mainCRTStartup`。它们的具体名字与步骤会随链接方式、CRT 和启动选项变化。不要手动覆盖入口点，除非你明确接管了相应初始化责任。</Callout>
+</Card>
+
+## CPU 执行：一次函数调用在寄存器和栈上发生什么？
+
+用一条指令一步步播放 GCC 输出的 <code>main</code>。寄存器值为概念追踪，真实地址与运行时寄存器值会因每次运行和工具链而变。
+
+<Card>
+<kl-instr-stepper>
+<script type="application/json">{`{"rows":[{"addr":"+00","code":"push rbp"},{"addr":"+01","code":"mov rbp, rsp"},{"addr":"+04","code":"lea rax, [rip+字符串]"},{"addr":"+0b","code":"mov rdi, rax"},{"addr":"+0e","code":"mov eax, 0"},{"addr":"+13","code":"call printf@PLT"},{"addr":"+18","code":"mov eax, 0; … ret"}],"regs":[{"label":"RIP · 指令位置"},{"label":"RSP · 栈顶"},{"label":"RBP · 帧指针"},{"label":"RDI · 参数 1"},{"label":"RAX / EAX"},{"label":"CALL / 栈"},{"label":"printf 返回"},{"label":"退出状态"}],"steps":[{"note":"push rbp","explain":"保存调用者的帧指针到栈中。RSP（栈指针）向较低地址移动；这为本函数建立栈帧做准备。","values":["main + 00","RSP - 8","旧 RBP 地址","—","—","push 完成","—","—"]},{"note":"mov rbp, rsp","explain":"把当前栈顶作为本函数的帧指针。这里展示的是常见未优化编译形式；编译器可以在优化时省略帧指针。","values":["main + 01","当前帧","当前帧","—","—","栈帧已建立","—","—"]},{"note":"lea rax, [rip+字符串]","explain":"RIP 相对寻址算出字符串常量地址，放入 RAX。真实地址可能因 PIE / ASLR 不同而改变。","values":["main + 04","当前帧","当前帧","字符串地址","字符串地址","准备调用","—","—"]},{"note":"mov rdi, rax","explain":"按照 Linux x86-64 System V ABI，把第一个参数（字符串指针）放进 RDI。参数是地址，而非把整个字符串拷贝进寄存器。","values":["main + 0b","当前帧","当前帧","字符串地址","字符串地址","参数已就绪","—","—"]},{"note":"mov eax, 0","explain":"把 AL 清零，表示这次可变参数调用使用的向量寄存器个数为 0（本例没有浮点 / 向量参数）。","values":["main + 13","当前帧","当前帧","字符串地址","0","参数已就绪","—","—"]},{"note":"call printf@PLT","explain":"call 压入返回地址并转移控制流到 PLT 跳板；之后动态链接路径会转到 libc 里解析到的 printf。printf 内部执行远多于这里展示的指令。","values":["printf / PLT","调用现场","当前帧","字符串地址","printf 内部","返回地址已压栈","待返回","—"]},{"note":"mov eax, 0; … ret","explain":"这里的 EAX=0 是 main 的返回值。恢复栈帧后 ret 返回到运行库启动代码，正常退出路径会刷新 stdio 并报告退出状态 0。","values":["main + 18 → ret","恢复调用者","恢复前帧","字符串地址","0","返回 main 启动代码","11 个字符","0"]}],"initial":{"values":["main + 00","初始栈顶","未建立","—","—","尚未调用","—","—"],"status":"准备执行 main","explain":"先执行 push rbp：将调用者的帧指针保存到栈上。x86-64 的栈通常向较低地址增长。这个示例使用帧指针，优化构建可能省略它。"}}`}</script>
+</kl-instr-stepper>
+<Caption>表中将最后几条收在同一步，方便教学；实际调用 <code>printf</code> 会跳进链接器解析到的库代码，并执行大量运行库指令，而不只是跳一条指令。</Caption>
+</Card>
+
+## printf 到底怎样让文字出现在屏幕上？
+
+关键区别：C 标准库函数、操作系统系统调用和终端模拟器是三个不同层次。
+
+先认识下文的 `fd 1`：fd 是**文件描述符**（file descriptor）——进程里一个代表“已打开的输出目标”的小编号，内核靠它认路；`1` 号固定是标准输出（stdout）。先把它当作“输出通道 1 号”：往 fd 1 写，就是往 stdout 当前指向的地方写。
+
+<Card>
+<Grid cols={3}>
+<Tile label="LAYER 1 · C LIBRARY" title="printf 格式化与缓冲">解析格式字符串（本例没有格式占位符），把 11 个可见字符放到标准输出流 <code>stdout</code> 的缓冲区。返回值通常为成功写出的字符数，即 11。</Tile>
+<Tile label="LAYER 2 · KERNEL" title="把字节交给文件描述符 / 句柄">缓冲区刷新时，Linux 常见路径最终通过 <code>write</code> 等系统调用把字节写向文件描述符 1；Windows 的 CRT 使用 Windows I/O API 与句柄机制。实际底层调用可能因实现而异。</Tile>
+<Tile label="LAYER 3 · TERMINAL" title="终端模拟器绘制字形">如果 stdout 连接到终端，终端程序接收字节流并将字符解码为字形，更新屏幕显示。若输出被重定向，接收方可能是文件或另一个程序，不会出现终端字形。</Tile>
+</Grid>
+<Subhead>从用户程序到显示器：七个步骤</Subhead>
+<Figure caption="从 printf 到屏幕的完整路径（步骤编号见底部流程条）。缓冲何时刷新取决于缓冲模式与退出路径；字节目标由 fd 1 决定，不一定是终端。">
+<svg viewBox="0 0 880 604" width="100%" role="img" aria-label="printf 到显示器的数据路径信息图：用户程序调用 printf、字符进入进程内存中的 stdout 缓冲区、flush 时 CPU 执行 write 系统调用、内核与设备驱动把字节写入终端缓冲、终端模拟器将字节渲染成字形">
+<defs><marker id="ar8" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6Z" fill="#8193aa"></path></marker></defs>
+
+<rect x="14" y="16" width="270" height="174" rx="12" fill="#f6f2ff" stroke="#ddd3f7"></rect>
+<rect x="26" y="28" width="20" height="20" rx="5" fill="#7c6cf0"></rect>
+<text x="36" y="41.5" text-anchor="middle" font-size="8" font-weight="700" fill="#ffffff">&lt;/&gt;</text>
+<text x="54" y="37" font-size="12.5" font-weight="700" fill="#3b2f6b">用户程序</text>
+<text x="54" y="51" font-size="8.5" fill="#8a7fb5">（你的代码）</text>
+<rect x="26" y="64" width="246" height="34" rx="7" fill="#1e2a44"></rect>
+<text x="38" y="86" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="#e6edf8">printf("hello world");</text>
+<circle cx="38" cy="118" r="10" fill="#7c6cf0"></circle>
+<text x="38" y="122" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">1</text>
+<text x="54" y="112" font-size="9.5" fill="#5b5470">调用 printf()，把 11 个字符</text>
+<text x="54" y="128" font-size="9.5" fill="#5b5470">写入 stdout 缓冲区</text>
+<text x="26" y="164" font-size="8.5" fill="#8a7fb5">此时屏幕上还什么都没有</text>
+<path d="M62 190 V206" stroke="#8193aa" stroke-width="1.8" marker-end="url(#ar8)"></path>
+
+<rect x="14" y="210" width="270" height="260" rx="12" fill="#f1faf5" stroke="#cfe9da"></rect>
+<rect x="26" y="222" width="20" height="20" rx="5" fill="#34a37a"></rect>
+<text x="36" y="235.5" text-anchor="middle" font-size="8" font-weight="700" fill="#ffffff">M</text>
+<text x="54" y="231" font-size="12.5" font-weight="700" fill="#1d5c46">内存</text>
+<text x="54" y="245" font-size="8.5" fill="#5b8a76">进程的地址空间</text>
+<rect x="26" y="254" width="246" height="24" rx="6" fill="#ffffff" stroke="#d5e8dc"></rect>
+<text x="36" y="269" font-size="8.5" fill="#4a6b5a">.text · main 的机器指令</text>
+<rect x="26" y="282" width="246" height="24" rx="6" fill="#ffffff" stroke="#d5e8dc"></rect>
+<text x="36" y="297" font-size="8.5" fill="#4a6b5a">.rodata · 字符串常量</text>
+<rect x="26" y="310" width="246" height="24" rx="6" fill="#ffffff" stroke="#d5e8dc"></rect>
+<text x="36" y="325" font-size="8.5" fill="#4a6b5a">堆 / 栈 · 运行时分配</text>
+<rect x="26" y="344" width="246" height="104" rx="8" fill="#ffffff" stroke="#b7dcc9" stroke-dasharray="4 3"></rect>
+<text x="38" y="360" font-size="8.5" fill="#4a7a63">libc · stdio</text>
+<rect x="38" y="368" width="222" height="42" rx="6" fill="#f4fdf8" stroke="#a9d8c2"></rect>
+<text x="48" y="383" font-size="8" fill="#34735c">stdout 缓冲区（用户态内存）</text>
+<text x="48" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="7.5" fill="#1d5c46">68 65 6c 6c 6f 20 77 6f 72 6c 64 00</text>
+<circle cx="28" cy="374" r="9" fill="#34a37a"></circle>
+<text x="28" y="377.5" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">2</text>
+<text x="26" y="462" font-size="8.5" fill="#5b7a6c">缓冲区满 / 程序退出时才把字节交给内核</text>
+
+<rect x="316" y="16" width="164" height="128" rx="12" fill="#eef4ff" stroke="#cfdffa"></rect>
+<rect x="328" y="28" width="20" height="20" rx="5" fill="#3b82f6"></rect>
+<text x="338" y="41.5" text-anchor="middle" font-size="7" font-weight="700" fill="#ffffff">CPU</text>
+<text x="356" y="37" font-size="12.5" font-weight="700" fill="#1b3a63">CPU</text>
+<text x="356" y="51" font-size="8.5" fill="#6b8fc0">执行指令</text>
+<circle cx="338" cy="88" r="10" fill="#3b82f6"></circle>
+<text x="338" y="92" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">3</text>
+<text x="356" y="84" font-size="9.5" font-weight="700" fill="#2c3e57">执行 write() 系统调用</text>
+<text x="356" y="98" font-size="8.5" fill="#5b7086">flush 时从用户态陷入内核</text>
+<text x="356" y="112" font-size="8.5" fill="#5b7086">触发点：main 返回之后</text>
+<path d="M398 144 V160" stroke="#8193aa" stroke-width="1.8" marker-end="url(#ar8)"></path>
+
+<rect x="316" y="164" width="356" height="306" rx="12" fill="#eaf1fd" stroke="#cfdffa"></rect>
+<rect x="328" y="176" width="20" height="20" rx="5" fill="#3b82f6"></rect>
+<text x="338" y="189.5" text-anchor="middle" font-size="7" font-weight="700" fill="#ffffff">OS</text>
+<text x="356" y="185" font-size="12.5" font-weight="700" fill="#1b3a63">操作系统</text>
+<text x="356" y="199" font-size="8.5" fill="#6b8fc0">内核态</text>
+<rect x="328" y="214" width="328" height="96" rx="8" fill="#ffffff" stroke="#d7e5f7"></rect>
+<circle cx="344" cy="246" r="10" fill="#3b82f6"></circle>
+<text x="344" y="250" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">4</text>
+<text x="364" y="238" font-size="10" font-weight="700" fill="#2c3e57">处理 write() 系统调用</text>
+<text x="364" y="252" font-size="8.5" fill="#5b7086">从 stdout 缓冲区读出 11 个字节，按 fd 1</text>
+<text x="364" y="266" font-size="8.5" fill="#5b7086">找到它指向的目标设备（这里是终端）</text>
+<text x="364" y="284" font-size="8.5" fill="#1b5a8c"><tspan font-weight="700">fd</tspan> = 文件描述符：代表输出目标的编号，1 号 = 标准输出</text>
+<path d="M344 310 V324" stroke="#8193aa" stroke-width="1.8" marker-end="url(#ar8)"></path>
+<rect x="328" y="326" width="328" height="100" rx="8" fill="#ffffff" stroke="#d7e5f7"></rect>
+<circle cx="344" cy="364" r="10" fill="#3b82f6"></circle>
+<text x="344" y="368" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">5</text>
+<text x="364" y="354" font-size="10" font-weight="700" fill="#2c3e57">设备驱动</text>
+<text x="364" y="370" font-size="8.5" fill="#5b7086">字节交给终端设备驱动（tty 驱动）</text>
+<text x="364" y="384" font-size="8.5" fill="#5b7086">由它写进设备侧的缓冲，而不是直接画屏</text>
+<text x="344" y="448" font-size="8.5" fill="#6b8fc0">用户代码不能直接碰设备 —— 只能请内核代理</text>
+<text x="344" y="462" font-size="8.5" fill="#6b8fc0">这条路径对所有进程都一样</text>
+
+<path d="M272 396 H286 Q300 396 300 380 V270 Q300 258 314 258 H324" stroke="#8193aa" stroke-width="1.8" fill="none" marker-end="url(#ar8)"></path>
+<path d="M672 364 H680 Q688 364 688 350 V246 Q688 234 702 234" stroke="#8193aa" stroke-width="1.8" fill="none" marker-end="url(#ar8)"></path>
+
+<rect x="704" y="16" width="168" height="128" rx="12" fill="#f5f8fd" stroke="#dbe4f2"></rect>
+<text x="716" y="38" font-size="10" font-weight="700" fill="#41597c">操作系统的工作</text>
+<circle cx="724" cy="55" r="2.4" fill="#8193aa"></circle><text x="734" y="58" font-size="8.5" fill="#4a5a72">管理进程</text>
+<circle cx="724" cy="77" r="2.4" fill="#8193aa"></circle><text x="734" y="80" font-size="8.5" fill="#4a5a72">管理内存</text>
+<circle cx="724" cy="99" r="2.4" fill="#8193aa"></circle><text x="734" y="102" font-size="8.5" fill="#4a5a72">管理设备</text>
+<circle cx="724" cy="121" r="2.4" fill="#8193aa"></circle><text x="734" y="124" font-size="8.5" fill="#4a5a72">提供系统调用接口</text>
+
+<rect x="704" y="164" width="168" height="158" rx="12" fill="#ecf7fb" stroke="#cbe6f2"></rect>
+<rect x="716" y="176" width="20" height="20" rx="5" fill="#2a8fb3"></rect>
+<text x="726" y="189.5" text-anchor="middle" font-size="7" font-weight="700" fill="#ffffff">TTY</text>
+<text x="744" y="185" font-size="11.5" font-weight="700" fill="#12505f">终端设备驱动</text>
+<text x="744" y="199" font-size="8.5" fill="#4b8a9e">tty 驱动</text>
+<circle cx="730" cy="232" r="10" fill="#2a8fb3"></circle>
+<text x="730" y="236" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">6</text>
+<text x="748" y="226" font-size="9" font-weight="700" fill="#12505f">写入终端设备缓冲</text>
+<text x="748" y="240" font-size="8.5" fill="#4b8a9e">内核把字节交给驱动，</text>
+<text x="748" y="254" font-size="8.5" fill="#4b8a9e">驱动只管"写进去"</text>
+<text x="716" y="282" font-size="8.5" fill="#4b8a9e">终端侧条件成熟时再取走 ——</text>
+<text x="716" y="296" font-size="8.5" fill="#4b8a9e">这就是你可能感觉到的"延迟"</text>
+<path d="M788 322 V338" stroke="#8193aa" stroke-width="1.8" marker-end="url(#ar8)"></path>
+
+<rect x="704" y="342" width="168" height="128" rx="12" fill="#eff9fb" stroke="#cbe6f2"></rect>
+<rect x="716" y="354" width="20" height="20" rx="5" fill="#2a8fb3"></rect>
+<text x="726" y="367.5" text-anchor="middle" font-size="7" font-weight="700" fill="#ffffff">UI</text>
+<text x="744" y="363" font-size="11.5" font-weight="700" fill="#12505f">显示器</text>
+<text x="744" y="377" font-size="8.5" fill="#4b8a9e">终端模拟器</text>
+<rect x="716" y="386" width="144" height="56" rx="8" fill="#16233a" stroke="#26384f"></rect>
+<circle cx="728" cy="398" r="2.4" fill="#ff5f57"></circle><circle cx="737" cy="398" r="2.4" fill="#febc2e"></circle><circle cx="746" cy="398" r="2.4" fill="#28c840"></circle>
+<text x="728" y="428" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9.5" fill="#d8e5f8">hello world</text>
+<rect x="791" y="420" width="5" height="10" fill="#d8e5f8" opacity="0.7"></rect>
+<circle cx="724" cy="388" r="9" fill="#2a8fb3"></circle>
+<text x="724" y="391.5" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">7</text>
+<text x="716" y="462" font-size="8.5" fill="#4b8a9e">字节 → 字符 → 字形，逐格画到屏幕上</text>
+
+<rect x="12" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="29" cy="504" r="8.5" fill="#7c6cf0"></circle><text x="29" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">1</text><text x="43" y="500" font-size="8.5" fill="#3d4a5e">printf 写入</text><text x="43" y="514" font-size="8.5" fill="#3d4a5e">stdout 缓冲区</text>
+<rect x="134" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="151" cy="504" r="8.5" fill="#34a37a"></circle><text x="151" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">2</text><text x="165" y="500" font-size="8.5" fill="#3d4a5e">字符暂存在</text><text x="165" y="514" font-size="8.5" fill="#3d4a5e">用户态内存</text>
+<rect x="256" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="273" cy="504" r="8.5" fill="#3b82f6"></circle><text x="273" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">3</text><text x="287" y="500" font-size="8.5" fill="#3d4a5e">flush 触发</text><text x="287" y="514" font-size="8.5" fill="#3d4a5e">write() 进内核</text>
+<rect x="378" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="395" cy="504" r="8.5" fill="#e8930c"></circle><text x="395" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">4</text><text x="409" y="500" font-size="8.5" fill="#3d4a5e">内核处理</text><text x="409" y="514" font-size="8.5" fill="#3d4a5e">write，定位 fd 1</text>
+<rect x="500" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="517" cy="504" r="8.5" fill="#e8930c"></circle><text x="517" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">5</text><text x="531" y="500" font-size="8.5" fill="#3d4a5e">经 tty 驱动</text><text x="531" y="514" font-size="8.5" fill="#3d4a5e">写入终端</text>
+<rect x="622" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="639" cy="504" r="8.5" fill="#2a8fb3"></circle><text x="639" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">6</text><text x="653" y="500" font-size="8.5" fill="#3d4a5e">终端缓冲</text><text x="653" y="514" font-size="8.5" fill="#3d4a5e">接收字节</text>
+<rect x="744" y="486" width="116" height="52" rx="8" fill="#f8fafc" stroke="#dbe3ee"></rect><circle cx="761" cy="504" r="8.5" fill="#7c6cf0"></circle><text x="761" y="507.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">7</text><text x="775" y="500" font-size="8.5" fill="#3d4a5e">渲染成字形</text><text x="775" y="514" font-size="8.5" fill="#3d4a5e">显示到屏幕</text>
+
+<rect x="12" y="552" width="856" height="40" rx="9" fill="#fffdf5" stroke="#f0e4c8"></rect>
+<circle cx="34" cy="572" r="8" fill="#f6c46a"></circle>
+<text x="34" y="575.5" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">!</text>
+<text x="52" y="566" font-size="9" font-weight="700" fill="#8a6d2f">小结</text>
+<text x="52" y="580" font-size="8.5" fill="#6b6152">printf 本身并不操作显示器 —— 它只是把 11 个字符交给 stdout 缓冲区。真正让文字出现的是操作系统、设备驱动与终端模拟器。</text>
+</svg></Figure>
+
+<Grid cols={3}>
+<Tile title="为什么会有缓冲？">减少频繁进入内核的开销，按块提交数据。行缓冲流遇到换行符时一般会刷新；缓冲区满、流关闭或正常调用 <code>exit</code> 时也可能刷新。</Tile>
+<Tile title="系统调用不等于普通函数调用"><code>printf</code> 是用户态库函数，不是 Linux 系统调用。一次 <code>printf</code> 可能不触发系统调用，之后一次缓冲刷新也可能合并、拆分或走不同的底层路径。</Tile>
+<Tile title="为什么提示符可能接在后面？">程序打印的文本没有换行，所以退出后 shell 的提示符可能显示在同一行。添加换行符会改变可见效果，也通常改变行缓冲时机。</Tile>
+</Grid>
+</Card>
+
+## 把整条链路翻译成 Windows 10 的心智模型
+
+Windows 上仍然有编译、汇编、链接、运行库、装载与输出，但不能直接把 Linux 的 ELF / ld-linux / glibc 细节套上去。
+
+<Card>
+<Grid cols={2}>
+<Grid stack>
+<Tile label="A / BUILD" title="MSVC 前端与 COFF 目标文件"><code>cl.exe</code> 预处理并编译 C 代码；常见中间产物是 <code>.i</code>、汇编列表和 <code>.obj</code>。目标文件中的外部引用通过符号表与重定位记录表达。</Tile>
+<Tile label="B / LINK" title="LINK 解析导入并生成 PE">链接器把目标文件、启动库、CRT 库和导入库组合成 PE 映像。导入库通常提供链接期所需的符号 / DLL 导入描述，不必把整个 DLL 实现复制进 EXE。</Tile>
+<Tile label="C / LOAD" title="Windows Loader 映射映像与 DLL">进程创建时，Windows 的映像加载路径解释 PE 头和节表，映射可执行映像、解析 DLL 依赖和导入地址，并处理必要的重定位。底层实现会随 Windows 版本变化。</Tile>
+<Tile label="D / RUN" title="CRT 进入 main，再进入 UCRT 输出">常规控制台程序的 CRT 入口初始化运行库后调用 <code>main</code>。<code>printf</code> 经过 UCRT 的流和缓冲逻辑，将数据写往标准输出句柄；最终目标可能是控制台、文件或管道。</Tile>
+</Grid>
+<div>
+<Subhead>调用约定差异：第一个参数放在哪里？</Subhead>
+
+```asm
+; Linux x86-64 System V ABI
+lea  rdi, [rip + string]
+xor  eax, eax
+call printf@PLT
+
+; Windows x64 ABI（概念示意）
+lea  rcx, [string]
+; 调用者通常还要预留 32-byte shadow space
+call printf_import_thunk
+```
+
+<Caption>Linux System V x86-64 通常用 <code>RDI</code> 传第一个指针参数；Windows x64 通常用 <code>RCX</code>。Windows x64 调用约定要求调用者为被调函数预留 32 字节 shadow space。示意代码不代表某个 MSVC 版本的精确输出。</Caption>
+<Callout type="warn">**不要把以下概念混为一谈：** PE 的 IAT 与 ELF 的 GOT 都可以参与动态地址解析，但结构、链接器约定及加载机制不是同一种格式；Windows 的 UCRT/WinAPI 也不等于 Linux 的 glibc/系统调用接口。</Callout>
+</div>
+</Grid>
+</Card>
+
+## 如果出错，错误会在哪一阶段出现？
+
+区分编译错误、链接错误、装载错误与运行错误，定位问题会容易很多。
+
+<Grid cols={4}>
+<Tile tone="danger" label="PREPROCESS / COMPILE" title="头文件找不到"><code>stdio.h</code> 找不到；或语法 / 声明检查失败。程序通常还没有生成目标文件。</Tile>
+<Tile tone="danger" label="LINK" title="未定义引用">声明能通过编译，但最终链接找不到符号或导入库，例如 undefined reference / unresolved external。</Tile>
+<Tile tone="danger" label="LOAD" title="无法执行或缺 DLL">文件格式 / 架构不匹配、权限不允许执行、动态加载器或依赖库找不到。</Tile>
+<Tile tone="danger" label="RUNTIME" title="输出或退出异常">进程已启动，但可能因运行时错误、I/O 目标异常或退出前的异常路径而未按预期输出。</Tile>
+</Grid>
+
+## 术语速查：点名字，查看它解决的问题
+
+第一次阅读时不必背下所有缩写；先将名称与它所属的层次对应起来。
+
+<kl-glossary>
+<script type="application/json">{`{"terms":[{"key":"preprocessor","label":"预处理器 Preprocessor","desc":"预处理器处理 C 预处理指令。它会展开头文件与宏、处理条件编译，产出仍然是文本形式的翻译单元。它并不负责生成 CPU 机器码。"},{"key":"compiler","label":"编译器 Compiler","desc":"编译器理解 C 语言语义，把源程序转为目标平台代码。现代编译器常包含解析、类型检查、中间表示、优化与指令选择等内部阶段。"},{"key":"assembler","label":"汇编器 Assembler","desc":"汇编器把汇编助记符和伪指令转换成目标文件中的机器字节，同时生成符号表与重定位条目。目标文件通常还不是完整的最终可执行文件。"},{"key":"linker","label":"链接器 Linker","desc":"链接器合并多个目标文件和库，解析符号并应用重定位，生成可执行映像或共享库。静态链接和动态链接在库代码进入最终映像的时间与方式上不同。"},{"key":"abi","label":"ABI","desc":"Application Binary Interface（二进制应用程序接口）规定函数调用约定、寄存器使用、栈对齐、数据类型布局、符号命名等规则。两份机器码想要互相调用，必须遵循兼容 ABI。"},{"key":"elf","label":"ELF","desc":"Executable and Linkable Format，常见于 Linux / Unix 系统。它定义目标文件、可执行文件、共享对象和 core dump 等结构，包含头、节、程序头、符号和重定位等信息。"},{"key":"pe","label":"PE / COFF","desc":"PE（Portable Executable）是 Windows 的映像文件格式；COFF 是相关的目标文件 / 符号格式。PE 的数据目录可描述导入、导出、重定位等内容。"},{"key":"plt","label":"PLT / GOT","desc":"Procedure Linkage Table / Global Offset Table。传统 ELF 动态链接中，PLT 可提供函数调用跳板，GOT 可存放运行时目标地址。是否惰性绑定、具体指令形式取决于工具链和安全 / 链接选项。"},{"key":"iat","label":"IAT","desc":"Import Address Table。PE 映像中的导入地址表为导入函数保留地址槽位，加载器解析 DLL 导入时会填入相应地址，使程序能调用外部 DLL 函数。"},{"key":"crt","label":"CRT","desc":"C Runtime Library，C 运行库。它提供标准库函数、运行时状态和启动 / 退出代码。常规应用程序由 CRT 启动代码准备环境，再调用用户的 main。"},{"key":"syscall","label":"System Call","desc":"系统调用是用户态程序请求内核提供服务的受控接口，例如 Linux 的文件 I/O。普通库函数不必然等于系统调用；一次库调用可能调用零次、一次或多次系统调用。"},{"key":"aslr","label":"ASLR","desc":"Address Space Layout Randomization，地址空间布局随机化。它通过改变映像、库、栈等区域的位置，降低攻击者预测关键地址的可靠性。"},{"key":"pagefault","label":"Page Fault","desc":"缺页异常是 CPU 检测到页面访问需要内核处理时发生的异常。它可能是正常的按需调页，也可能因为非法访问而导致程序异常退出。"},{"key":"stdout","label":"stdout","desc":"标准输出流。在 C 中是 FILE* 形式的 stdout；在 POSIX 进程中通常关联文件描述符 1，在 Windows 中对应标准输出句柄。它可以指向终端，也可以被重定向。"},{"key":"relocation","label":"重定位 Relocation","desc":"重定位是根据最终内存布局修补指令或数据中地址相关字段的过程。目标文件常保留重定位条目，因为最终地址直到链接或装载阶段才知道。"},{"key":"section","label":"Section / 节","desc":"节（section）是目标文件中按用途组织内容的逻辑单元，例如 .text 放代码、.rodata 常放只读常量。节主要服务于编译和链接阶段。"},{"key":"segment","label":"Segment / 装载段","desc":"段（segment）描述运行时要映射到进程中的文件范围、内存范围和访问权限。ELF 加载器主要依据程序头中的可装载段建立内存映射。"},{"key":"rip","label":"RIP / 指令指针","desc":"指令指针寄存器，指向当前指令流的位置。RIP 相对寻址以指令结束后的地址为基准计算目标。"},{"key":"rdi","label":"RDI / 参数寄存器","desc":"Linux x86-64 System V ABI 中传递第一个整数或指针参数的寄存器。此例把字符串常量的地址放进 RDI。"},{"key":"mnemonic","label":"Mnemonic / 助记符","desc":"汇编助记符是机器指令的可读名字，例如 mov、lea、call 和 ret；汇编器会把它们编码为机器字节。"},{"key":"opcode","label":"Opcode / 操作码","desc":"操作码是机器指令编码中表示操作类别的部分。例如 x86-64 的近相对 call 通常以字节 E8 开头。"},{"key":"displacement","label":"Displacement / 位移","desc":"位移量是相对某个基准地址的差值。RIP 相对寻址和近相对 call 都会使用位移。"},{"key":"little","label":"Little-endian / 小端序","desc":"小端序规定多字节数值的最低有效字节放在较低地址。例如 0x12345678 在内存中的字节顺序是 78 56 34 12。"},{"key":"pie","label":"PIE","desc":"Position-Independent Executable，位置无关可执行文件。它支持主程序映像在可变基址加载，是 Linux 上配合 ASLR 的常见构建方式。"}]}`}</script>
+</kl-glossary>
+
+## 如何在自己的机器上验证？
+
+把这份页面当成路线图，实际运行工具查看真实构建产物。命令结果会随编译器、版本、架构和链接选项变化。
+
+<Grid cols={2}>
+<Card>
+
+```bash
+gcc --version
+gcc -v hello.c -o hello
+file hello
+size hello
+nm hello.o
+readelf -h -l -S -d hello
+readelf -r hello.o
+objdump -drwC -Mintel hello.o
+objdump -d -Mintel hello
+strace -e trace=execve,write,exit_group ./hello
+```
+
+</Card>
+<Card>
+
+```powershell
+cl /Bv
+cl /nologo /Od /FAcs /c hello.c
+dumpbin /headers hello.obj
+dumpbin /symbols hello.obj
+dumpbin /relocations hello.obj
+dumpbin /disasm hello.obj
+link /verbose hello.obj /out:hello.exe
+dumpbin /imports hello.exe
+dumpbin /headers hello.exe
+```
+
+</Card>
+</Grid>
+
+<Caption>Windows 部分命令需要 Visual Studio / Build Tools 的开发者命令提示符。Linux 的 <code>strace</code> 可能需要单独安装；系统调用跟踪展示的是某次运行的实际系统调用，不应将其误认为 C 语言标准保证的固定序列。</Caption>
+
+## 延伸阅读与资料来源
+
+以下资料分别覆盖程序员视角、编译工具链、对象文件格式、动态链接、I/O 缓冲与 Windows CRT/PE。页面内容是据此整理的教学说明，不是对任何一本书的逐段复述。
+
+<Refs>
+<Ref href="https://csapp.cs.cmu.edu/3e/perspective.html" desc="Bryant 与 O'Hallaron。程序表示、汇编、链接、异常控制流、虚拟内存与系统交互的主线教材。">Computer Systems: A Programmer's Perspective（CS:APP）</Ref>
+<Ref href="https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html" desc="解释 GCC 驱动程序的四阶段编译流程，以及 -E、-S、-c 等选项。">GCC 官方文档：Overall Options</Ref>
+<Ref href="https://man7.org/linux/man-pages/man5/elf.5.html" desc="ELF 头、程序头、section 与 segment 等文件格式信息。">Linux man-pages：elf(5)</Ref>
+<Ref href="https://man7.org/linux/man-pages/man8/ld.so.8.html" desc="动态链接器 / 加载器如何查找共享对象并为程序运行做准备。">Linux man-pages：ld.so(8)</Ref>
+<Ref href="https://man7.org/linux/man-pages/man2/execve.2.html" desc="进程映像替换与新程序执行入口相关的系统接口。">Linux man-pages：execve(2)</Ref>
+<Ref href="https://sourceware.org/glibc/manual/latest/html_node/Flushing-Buffers.html" desc="输出流缓冲区刷新的常见条件，包括换行、缓冲区满、关闭与正常退出。">GNU libc 手册：Flushing Buffers</Ref>
+<Ref href="https://learn.microsoft.com/zh-cn/windows/win32/debug/pe-format" desc="Windows PE/COFF 文件格式、节表、入口点、导入表和 IAT 结构。">Microsoft Learn：PE 格式</Ref>
+<Ref href="https://learn.microsoft.com/zh-cn/cpp/c-runtime-library/crt-initialization?view=msvc-170" desc="默认 CRT 启动代码如何初始化运行库并调用用户提供的 main。">Microsoft Learn：CRT 初始化</Ref>
+<Ref href="https://learn.microsoft.com/cpp/build/reference/entry-entry-point-symbol?view=msvc-170" desc="Windows 链接器入口点与使用 CRT 初始化的注意事项。">Microsoft Learn：/ENTRY</Ref>
+<Ref href="https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-160" desc="Windows x64 的参数寄存器、shadow space、栈与函数序言约定。">Microsoft Learn：x64 ABI conventions</Ref>
+<Ref href="https://refspecs.linuxfoundation.org/elf/x86_64-SysV-psABI.pdf" desc="Linux x86-64 调用约定、寄存器用途、栈布局以及可变参数函数的 ABI 规则。">System V AMD64 ABI（PDF）</Ref>
+<Ref href="https://search.worldcat.org/zh-cn/title/cheng-xu-yuan-de-zi-wo-xiu-yang-lian-jie-zhuang-zai-yu-ku/oclc/599986300" desc="俞甲子、石凡、潘爱民著，电子工业出版社。聚焦 Windows/Linux 编译、链接、装载、动态链接、运行库和系统调用。">《程序员的自我修养：链接、装载与库》</Ref>
+<Ref href="https://man7.org/linux/man-pages/man3/printf.3.html" desc="printf 的格式化输出接口、返回值与关联的标准 I/O 函数。">Linux man-pages：printf(3)</Ref>
+</Refs>
+
+<Callout type="info">**与《程序员的自我修养：链接、装载与库》的对应主题：** 目标文件格式、符号、重定位、动态链接、PLT/GOT、装载与运行库启动。建议把本页的概念段与自己编译得到的 `.o`、ELF / PE 头、重定位表交叉验证；不同版本工具链不必逐字节一致。</Callout>
+

@@ -126,7 +126,8 @@ function initializeToc() {
 	if (main) resizeObserver.observe(main);
 	const shell = widget.closest('[data-stellar-shell]');
 	const panelObserver = new MutationObserver(() => schedule());
-	if (shell) panelObserver.observe(shell, { attributes: true, attributeFilter: ['data-rightbar-open'] });
+	// 左右栏共用同一挂件：任一抽屉开合都会改变目录可视高度，需重新测量。
+	if (shell) panelObserver.observe(shell, { attributes: true, attributeFilter: ['data-rightbar-open', 'data-leftbar-open'] });
 	void document.fonts?.ready.then(() => schedule(true));
 	syncDisclosure();
 	cleanup = () => {

@@ -1,10 +1,10 @@
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
-export type MenuId = 'post' | 'columns' | 'explore' | 'lab' | 'about' | 'rss' | 'wiki' | 'notebooks';
-export type SidebarWidgetId = 'welcome' | 'recent' | 'related' | 'timeline' | 'media' | 'toc' | 'ghrepo' | 'heatmap' | 'goods-stats' | 'gallery-info' | 'gallery-albums' | 'column-posts' | 'travel-stats' | 'travel-recent' | 'archives-stats' | 'site-info' | 'lab-demos' | 'tool-catalog' | 'recent-columns';
+export type MenuId = 'post' | 'columns' | 'explore' | 'about' | 'rss' | 'wiki' | 'notebooks';
+export type SidebarWidgetId = 'welcome' | 'recent' | 'related' | 'timeline' | 'media' | 'toc' | 'ghrepo' | 'heatmap' | 'goods-stats' | 'gallery-info' | 'gallery-albums' | 'column-posts' | 'travel-stats' | 'travel-recent' | 'archives-stats' | 'site-info' | 'lab-demos' | 'tool-catalog' | 'recent-columns' | 'lesson-catalog';
 // 只保留真实存在的内容树节点：此前 wiki / notebooks / notes / note / author / error_page
 // 六个键指向不存在的内容，属于失效配置，已删除。
-export type SiteTreeKey = 'home' | 'index_blog' | 'index_topic' | 'explore' | 'gallery' | 'post' | 'topic' | 'column' | 'page' | 'travel' | 'archives' | 'lab' | 'tools';
+export type SiteTreeKey = 'home' | 'index_blog' | 'index_topic' | 'explore' | 'gallery' | 'post' | 'topic' | 'column' | 'page' | 'travel' | 'archives' | 'lab' | 'tools' | 'learn';
 
 export interface MenubarItem {
 	id: MenuId;
@@ -49,7 +49,8 @@ export const stellarConfig = {
 		url: '/',
 	},
 	menubar: {
-		columns: 5,
+		// 实验室 / 学苑已并入「探索」（见 src/config/explore.ts），顶栏只留 4 个一级入口。
+		columns: 4,
 		items: [
 			{
 				id: 'post',
@@ -71,13 +72,6 @@ export const stellarConfig = {
 				icon: 'solar:planet-bold-duotone',
 				title: '探索',
 				url: '/explore',
-			},
-			{
-				id: 'lab',
-				theme: '#9B51E0',
-				icon: 'stellar:menu-lab',
-				title: '实验室',
-				url: '/lab',
 			},
 			{
 				id: 'about',
@@ -106,7 +100,6 @@ export const stellarConfig = {
 					{ label: '分类', url: '/categories' },
 					{ label: '标签', url: '/tags' },
 					{ label: '探索', url: '/explore' },
-					{ label: '实验室', url: '/lab' },
 				],
 			},
 			{
@@ -114,6 +107,8 @@ export const stellarConfig = {
 				items: [
 					{ label: '专栏', url: '/columns' },
 					{ label: '工具箱', url: '/tools' },
+					{ label: '实验室', url: '/lab' },
+					{ label: '学苑', url: '/learn' },
 					{ label: '关于', url: '/about' },
 					{ label: 'RSS', url: '/rss.xml' },
 				],
@@ -167,6 +162,7 @@ export const stellarConfig = {
 		'site-info': { id: 'site-info', layout: 'site-info', title: '技术信息' },
 		'lab-demos': { id: 'lab-demos', layout: 'lab-demos', title: '实验目录' },
 		'tool-catalog': { id: 'tool-catalog', layout: 'tool-catalog', title: '工具分类' },
+		'lesson-catalog': { id: 'lesson-catalog', layout: 'lesson-catalog', title: '课程目录' },
 	} satisfies Record<SidebarWidgetId, SidebarWidgetConfig>,
 	siteTree: {
 		home: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['heatmap', 'site-info'] },
@@ -181,10 +177,13 @@ export const stellarConfig = {
 		column: { menuId: 'columns', leftbar: ['column-posts'], rightbar: ['toc'] },
 		travel: { menuId: 'explore', leftbar: ['travel-stats', 'travel-recent'], rightbar: null },
 		archives: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['archives-stats'] },
-		// 实验室：左栏换成「实验室简介 + demo 目录」，沿用 welcome 挂件但覆写文案
-		lab: { menuId: 'lab', leftbar: [{ id: 'welcome', title: '实验室', body: '用代码做的小实验，点击即可进入。' }, 'lab-demos'], rightbar: null },
+		// 实验室：左栏换成「实验室简介 + demo 目录」，沿用 welcome 挂件但覆写文案。
+		// 已并入探索，menuId 跟探索高亮。
+		lab: { menuId: 'explore', leftbar: [{ id: 'welcome', title: '实验室', body: '用代码做的小实验，点击即可进入。' }, 'lab-demos'], rightbar: null },
 		// 工具箱：左栏是工具分类目录（同实验室的「demo 目录」模式）
 		tools: { menuId: 'explore', leftbar: [{ id: 'welcome', title: '工具箱', body: '开箱即用的小工具，全部本地运行。' }, 'tool-catalog'], rightbar: null },
+		// 学苑：左栏是课程目录（同实验室/工具箱的目录模式），已并入探索
+		learn: { menuId: 'explore', leftbar: [{ id: 'welcome', title: '学苑', body: '一个领域，一课讲透。图文、动画、可动手。' }, 'lesson-catalog'], rightbar: null },
 		page: { menuId: 'about', leftbar: ['recent'], rightbar: ['timeline'] },
 	} satisfies Record<SiteTreeKey, SiteTreeEntry>,
 };

@@ -2,19 +2,19 @@
 import type { WidgetProps } from './types';
 import * as styles from './toc.css';
 
-const { widget, context } = Astro.props as WidgetProps;
+const { widget, context, side } = Astro.props as WidgetProps;
 const tocHeadings = (context.headings ?? []).filter((heading) => heading.depth >= 1 && heading.depth <= 6);
 const baseDepth = tocHeadings.length ? Math.min(...tocHeadings.map((heading) => heading.depth)) : 2;
 const title = widget.title || '本文目录';
 ---
 
 {tocHeadings.length > 0 && (
-	<details class={styles.widget} id="data-toc" data-toc-widget open>
+	<details class:list={[styles.widget, side === 'left' && styles.widgetLeft]} id="data-toc" data-toc-widget open>
 		<summary class={styles.header} data-toc-toggle aria-controls="article-toc-body">
 			<span class={styles.title}>{title}</span>
 			<svg class={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
 		</summary>
-		<nav id="article-toc-body" class={styles.viewport} aria-label={title} data-toc-scroll>
+		<nav id="article-toc-body" class:list={[styles.viewport, side === 'left' && styles.viewportLeft]} aria-label={title} data-toc-scroll>
 			<ol class={styles.list} role="list" data-toc-list>
 				{tocHeadings.map((heading) => (
 					<li class={styles.item} data-toc-level={heading.depth - baseDepth} style={`--toc-level:${heading.depth - baseDepth};`}>

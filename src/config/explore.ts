@@ -117,6 +117,24 @@ export const explorePageConfig: ExplorePageConfig = {
 			layout: 'default',
 			routeKind: 'file',
 		},
+		{
+			title: '实验室',
+			group: 'building',
+			description: '用代码做的小实验：可视化、物理仿真、交互式 toy',
+			href: '/lab/',
+			icon: 'lab',
+			layout: 'default',
+			routeKind: 'file',
+		},
+		{
+			title: '学苑',
+			group: 'building',
+			description: '一个领域，一课讲透。图文并茂、带动画与可动手演示的深度课程',
+			href: '/learn/',
+			icon: 'learn',
+			layout: 'default',
+			routeKind: 'file',
+		},
 	],
 };
 

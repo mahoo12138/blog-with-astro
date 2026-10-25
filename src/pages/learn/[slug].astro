@@ -1,0 +1,56 @@
+---
+/**
+ * /learn/[slug] —— 课时页。
+ * MDX 正文 + LessonLayout（hero / 章节导航 / prev-next）+ kl-* 组件自动装载。
+ */
+import type { GetStaticPaths } from 'astro';
+import { getCollection, render } from 'astro:content';
+import { mdxComponents } from '../../components/mdx-components';
+import LessonLayout from '../../layouts/LessonLayout.astro';
+
+export const getStaticPaths = (async () => {
+	const lessons = (await getCollection('lessons', (entry) => !entry.data.draft)).sort(
+		(a, b) => a.data.order - b.data.order || a.data.title.localeCompare(b.data.title),
+	);
+	return lessons.map((lesson, i) => ({
+		params: { slug: lesson.id },
+		props: {
+			lesson,
+			prev: i > 0 ? { href: `/learn/${lessons[i - 1].id}`, title: lessons[i - 1].data.title } : undefined,
+			next:
+				i < lessons.length - 1
+					? { href: `/learn/${lessons[i + 1].id}`, title: lessons[i + 1].data.title }
+					: undefined,
+		},
+	}));
+}) satisfies GetStaticPaths;
+
+const { lesson, prev, next } = Astro.props;
+const { Content, headings } = await render(lesson);
+const hero = lesson.data.hero ?? {};
+---
+
+<LessonLayout
+	title={lesson.data.title}
+	description={lesson.data.description}
+	eyebrow={hero.eyebrow}
+	lead={hero.lead}
+	titleHighlight={hero.titleHighlight}
+	tags={lesson.data.tags}
+	terminal={hero.terminal}
+	headings={headings}
+	prev={prev}
+	next={next}
+>
+	{
+		lesson.data.terms && Object.keys(lesson.data.terms).length > 0 ? (
+			<kl-term-annotate>
+				{/* 数据脚本刻意 is:inline：JSON 原样进 HTML，由 kl-term-annotate 读取 */}
+				<script is:inline type="application/json" set:html={JSON.stringify(lesson.data.terms)} />
+				<Content components={mdxComponents} />
+			</kl-term-annotate>
+		) : (
+			<Content components={mdxComponents} />
+		)
+	}
+</LessonLayout>

@@ -1,0 +1,73 @@
+---
+/**
+ * /learn —— 学苑课程索引。
+ * 集合驱动：lessons 内容集合按 domain 分组渲染卡片，不建代码注册表。
+ */
+import { getCollection } from 'astro:content';
+import { SITE_TITLE } from '../../consts';
+import WideShell from '../../layouts/WideShell.astro';
+import * as styles from '../../styles/learn.css';
+
+const lessons = (await getCollection('lessons', (entry) => !entry.data.draft)).sort(
+	(a, b) => a.data.order - b.data.order || a.data.title.localeCompare(b.data.title),
+);
+
+const groups = new Map<string, typeof lessons>();
+for (const lesson of lessons) {
+	const key = lesson.data.domain;
+	if (!groups.has(key)) groups.set(key, []);
+	groups.get(key)!.push(lesson);
+}
+---
+
+<WideShell
+	title={`学苑 · ${SITE_TITLE}`}
+	description="一个领域，一课讲透。图文并茂、带动画与可交互演示的深度课程。"
+	siteTree="learn"
+	mainClass={styles.main}
+>
+	<header class={styles.header}>
+		<nav class={styles.crumbs} aria-label="面包屑">
+			<a href="/explore/">探索</a>
+			<span aria-hidden="true"> / </span>
+			<span>学苑</span>
+		</nav>
+		<h1 class={styles.title}>学苑</h1>
+		<p class={styles.intro}>
+			一个领域，一课讲透。每课都是知识的地图：总结归纳、图文并茂、动画演示，
+			把「快速了解一个领域」变成可以动手走一遍的路径。
+		</p>
+	</header>
+
+	{
+		lessons.length === 0 ? (
+			<p class={styles.empty}>课程正在准备中。</p>
+		) : (
+			[...groups.entries()].map(([domain, items]) => (
+				<section class={styles.group}>
+					<h2 class={styles.groupTitle}>
+						<span>{domain}</span>
+						<span class={styles.groupMeta}>{items.length} 课</span>
+					</h2>
+					<div class={styles.grid}>
+						{items.map((lesson) => (
+							<a class={styles.card} href={`/learn/${lesson.id}`}>
+								<h3 class={styles.cardTitle}>{lesson.data.title}</h3>
+								<p class={styles.cardDesc}>{lesson.data.description}</p>
+								<div class={styles.cardMeta}>
+									<span class={styles.badge}>{lesson.data.level}</span>
+									{lesson.data.duration && <span>{lesson.data.duration}</span>}
+									{lesson.data.updatedDate && (
+										<span>
+											更新于 {lesson.data.updatedDate.toISOString().slice(0, 10)}
+										</span>
+									)}
+								</div>
+							</a>
+						))}
+					</div>
+				</section>
+			))
+		)
+	}
+</WideShell>

@@ -1,0 +1,68 @@
+---
+/**
+ * 课程目录挂件（左栏）。
+ * 数据直接读 lessons 内容集合，按 domain 分组；加新课只写内容文件。
+ * 排版走 sidebarRows 统一标准（16px 基线 / 行 13px / meta 0.7rem）。
+ */
+import { getCollection } from 'astro:content';
+import * as leftStyles from '../StellarLeftSidebar.css';
+import * as rightStyles from '../StellarRightSidebar.css';
+import * as rows from '../../styles/sidebarRows.css';
+import type { WidgetProps } from './types';
+
+const { widget, side, context = {} } = Astro.props as WidgetProps;
+
+const widgetClass = side === 'left' ? leftStyles.widget : rightStyles.widget;
+const headerClass = side === 'left' ? leftStyles.widgetTitle : rightStyles.widgetHeader;
+
+const lessons = (await getCollection('lessons', (entry) => !entry.data.draft)).sort(
+	(a, b) => a.data.order - b.data.order || a.data.title.localeCompare(b.data.title),
+);
+
+const groups = new Map<string, typeof lessons>();
+for (const lesson of lessons) {
+	const key = lesson.data.domain;
+	if (!groups.has(key)) groups.set(key, []);
+	groups.get(key)!.push(lesson);
+}
+
+const pathname = context.pathname ?? '';
+---
+
+<section class={widgetClass}>
+	<div class={headerClass}><span>{widget.title}</span></div>
+	{
+		lessons.length > 0 ? (
+			[...groups.entries()].map(([domain, items]) => (
+				<div class={rows.group}>
+					<h3 class={rows.groupTitle}>
+						<span>{domain}</span>
+						<span class={rows.meta}>{items.length} 课</span>
+					</h3>
+					<ul class={rows.list} role="list">
+						{items.map((lesson) => {
+							const href = `/learn/${lesson.id}`;
+							const active = pathname === href || pathname === `${href}/`;
+							return (
+								<li>
+									<a
+										class:list={[rows.item, active && rows.itemActive]}
+										href={href}
+										aria-current={active ? 'page' : undefined}
+									>
+										<span class={rows.itemLabel}>{lesson.data.title}</span>
+										<span class={rows.meta}>{lesson.data.level}</span>
+									</a>
+								</li>
+							);
+						})}
+					</ul>
+				</div>
+			))
+		) : (
+			<ul class={rows.list} role="list">
+				<li class={rows.emptyRow}>暂无课程</li>
+			</ul>
+		)
+	}
+</section>

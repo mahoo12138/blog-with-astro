@@ -1,0 +1,309 @@
+---
+import BlogPost from '../layouts/BlogPost.astro';
+import { vars } from '../styles/theme.css';
+import * as styles from '../styles/kit-page.css';
+
+/**
+ * /kit —— 设计语言活文档（noindex）。
+ * Tokens → 范式 → 组件 → Do/Don't。每个 kl-* 组件落地即挂到本页，
+ * 兼作回归目检页：改 token 后先在这里过一眼再上页面。
+ */
+
+const colorTokens: Array<{ name: string; value: string; swatch: string }> = [
+	{ name: 'accent', value: '#476b92 / #9ab5d3', swatch: vars.color.accent },
+	{ name: 'accentStrong', value: '#365b81 / #b7cde6', swatch: vars.color.accentStrong },
+	{ name: 'accentSoft', value: 'halo 8%–12%', swatch: vars.color.accentSoft },
+	{ name: 'background', value: '#fafafa / #151719', swatch: vars.color.background },
+	{ name: 'backgroundElevated', value: '#f4f4f5 / #202326', swatch: vars.color.backgroundElevated },
+	{ name: 'surface', value: '#ffffff / #1c1f22', swatch: vars.color.surface },
+	{ name: 'textStrong', value: '#202327 / …96%', swatch: vars.color.textStrong },
+	{ name: 'text', value: '#373b41 / …82%', swatch: vars.color.text },
+	{ name: 'textMuted', value: '#606770 / #b0b6be', swatch: vars.color.textMuted },
+	{ name: 'border', value: '#e8e9eb / …16%', swatch: vars.color.border },
+	{ name: 'codeBackground', value: 'blue 10% / 12%', swatch: vars.color.codeBackground },
+	{ name: 'codeText', value: 'deep blue / light', swatch: vars.color.codeText },
+];
+
+const toneTokens: Array<{ name: string; fg: string; bg: string; value: string }> = [
+	{ name: 'info', fg: vars.tone.info.fg, bg: vars.tone.info.bg, value: '#2457d6 / #8fb3f0' },
+	{ name: 'success', fg: vars.tone.success.fg, bg: vars.tone.success.bg, value: '#0d7f76 / #5fc4b4' },
+	{ name: 'warning', fg: vars.tone.warning.fg, bg: vars.tone.warning.bg, value: '#b4690e / #e0b070' },
+	{ name: 'danger', fg: vars.tone.danger.fg, bg: vars.tone.danger.bg, value: '#c23a4b / #e8949f' },
+];
+
+const spaceTokens: Array<{ name: string; value: string; width: string }> = [
+	{ name: 'space.xs', value: '0.25rem', width: vars.space.xs },
+	{ name: 'space.sm', value: '0.5rem', width: vars.space.sm },
+	{ name: 'space.md', value: '0.75rem', width: vars.space.md },
+	{ name: 'space.lg', value: '1rem', width: vars.space.lg },
+	{ name: 'space.xl', value: '1.5rem', width: vars.space.xl },
+	{ name: 'space.xxl', value: '2rem', width: vars.space.xxl },
+	{ name: 'space.xxxl', value: '3rem', width: vars.space.xxxl },
+	{ name: 'space.xxxxl', value: '4rem', width: vars.space.xxxxl },
+	{ name: 'space.section', value: '6rem', width: vars.space.section },
+];
+---
+
+<BlogPost
+	title="Kit · 设计语言"
+	description="站点基础设计语言与 kl-* 组件套件的活文档：token、范式、组件与 Do/Don't 对照。"
+	pubDate={new Date('2026-10-22')}
+	siteTree="page"
+	noindex
+>
+	<p class={styles.intro}>
+		这一页是设计语言的活文档：token 用实时色板呈现，范式给出可交互示范，组件按「演示 + 用法 + 属性表」三段式陈列。
+		规范正文见 <code>docs/design/design-language.md</code>；实现真源是 <code>src/styles/theme.css.ts</code>。
+	</p>
+
+	<section class={styles.section} id="tokens">
+		<h2 class={styles.sectionTitle}>Tokens</h2>
+		<p class={styles.sectionNote}>
+			色板直接引用 CSS 自定义属性 —— 切换明暗主题或色样时这里是实时真值。右侧为 light / dark 对照值。
+		</p>
+
+		<h3>color</h3>
+		<div class={styles.swatchGrid}>
+			{colorTokens.map((token) => (
+				<div class={styles.swatch}>
+					<div class={styles.swatchChip} style={`background: ${token.swatch}`}></div>
+					<span class={styles.swatchName}>{token.name}</span>
+					<span class={styles.swatchValue}>{token.value}</span>
+				</div>
+			))}
+		</div>
+
+		<h3>tone</h3>
+		<p class={styles.sectionNote}>语义色调。bg 一律低透明度 halo —— 反馈元素必须与底色拉开明度差。</p>
+		<div class={styles.swatchGrid}>
+			{toneTokens.map((token) => (
+				<div class={styles.swatch}>
+					<div class={styles.swatchChip} style={`background: ${token.bg}; border-color: ${token.fg}`}></div>
+					<span class={styles.swatchName}>tone.{token.name}</span>
+					<span class={styles.swatchValue}>{token.value}</span>
+				</div>
+			))}
+		</div>
+
+		<h3>space</h3>
+		<div>
+			{spaceTokens.map((token) => (
+				<div class={styles.spaceRow}>
+					<span class={styles.spaceLabel}>{token.name}</span>
+					<div class={styles.spaceBar} style={`width: ${token.width}`}></div>
+					<span class={styles.spaceLabel}>{token.value}</span>
+				</div>
+			))}
+		</div>
+
+		<h3>radius · shadow · motion</h3>
+		<div class={styles.gridTwo}>
+			<div class={styles.compDemo}>
+				<p class={styles.smallMeta}>radius.sm → pill（6 / 10 / 14 / 20 / 999px）</p>
+				<div style="display:flex; gap:12px; align-items:center;">
+					<div style={`width:52px;height:52px;background:${vars.color.accentSoft};border:1px solid ${vars.color.accent};border-radius:${vars.radius.sm}`}></div>
+					<div style={`width:52px;height:52px;background:${vars.color.accentSoft};border:1px solid ${vars.color.accent};border-radius:${vars.radius.md}`}></div>
+					<div style={`width:52px;height:52px;background:${vars.color.accentSoft};border:1px solid ${vars.color.accent};border-radius:${vars.radius.lg}`}></div>
+					<div style={`width:52px;height:52px;background:${vars.color.accentSoft};border:1px solid ${vars.color.accent};border-radius:${vars.radius.xl}`}></div>
+					<div style={`width:52px;height:52px;background:${vars.color.accentSoft};border:1px solid ${vars.color.accent};border-radius:${vars.radius.pill}`}></div>
+				</div>
+			</div>
+			<div class={styles.compDemo}>
+				<p class={styles.smallMeta}>motion.ease · durationFast/Base/Slow（150 / 200 / 240ms，不回弹）</p>
+				<div class={styles.motionDemo} title="hover 平移演示"></div>
+			</div>
+		</div>
+		<div class={styles.gridTwo}>
+			<div class={styles.compDemo}>
+				<p class={styles.smallMeta}>shadow.card（几乎不可见的悬浮）</p>
+				<div style={`padding:14px;border-radius:${vars.radius.lg};background:${vars.color.surfaceStrong};border:1px solid ${vars.color.border};box-shadow:${vars.shadow.card}`}>card</div>
+			</div>
+			<div class={styles.compDemo}>
+				<p class={styles.smallMeta}>shadow.float（hero / 悬浮件深阴影）</p>
+				<div style={`padding:14px;border-radius:${vars.radius.lg};background:${vars.color.surfaceStrong};border:1px solid ${vars.color.border};box-shadow:${vars.shadow.float}`}>float</div>
+			</div>
+		</div>
+	</section>
+
+	<section class={styles.section} id="type">
+		<h2 class={styles.sectionTitle}>排版</h2>
+		<p class={styles.sectionNote}>正文 Noto Sans SC 18/1.8；标题 Noto Sans SC（无衬线），letter-spacing −0.025em；UI 小字阶见 meta 行。</p>
+		<div>
+			<div class={styles.typeRow}><span class={styles.typeMeta}>h3 · 1.45–2rem</span><span style="font-size:1.45rem;font-family:var(--x,inherit)">把一个领域讲透</span></div>
+			<div class={styles.typeRow}><span class={styles.typeMeta}>h4 · 1.25rem</span><span style="font-size:1.25rem">章节标题示例</span></div>
+			<div class={styles.typeRow}><span class={styles.typeMeta}>body · 18px/1.8</span><span>正文示例：一行输出背后，是整条工具链与运行时的协同。</span></div>
+			<div class={styles.typeRow}><span class={styles.typeMeta}>ui-row · 13px</span><span style="font-size:13px">UI 行示例：侧栏目录条目</span></div>
+			<div class={styles.typeRow}><span class={styles.typeMeta}>meta · 0.7rem</span><span style="font-size:0.7rem;color:var(--m,inherit)">2026-10-22 · 25 分钟</span></div>
+			<div class={styles.typeRow}><span class={styles.typeMeta}>mono · tabular</span><span style={`font-family:${vars.font.mono};font-variant-numeric:tabular-nums`}>1761126000000</span></div>
+		</div>
+	</section>
+
+	<section class={styles.section} id="paradigms">
+		<h2 class={styles.sectionTitle}>范式</h2>
+		<p class={styles.sectionNote}>Card · Ghost 控件 · Sidebar Row · Tone Callout —— 四件套覆盖绝大多数界面元素。</p>
+
+		<div class={styles.paradigmGrid}>
+			<div class={styles.paradigmCard}>
+				<p class={styles.paradigmLabel}>Card</p>
+				<p style="margin:0;font-size:0.8125rem;line-height:1.8;color:var(--c,inherit)">
+					surface 底 + radius.lg + shadow.card。卡片之间靠留白分隔，不画分割线。
+				</p>
+			</div>
+
+			<div class={styles.paradigmCard}>
+				<p class={styles.paradigmLabel}>Ghost 控件</p>
+				<div style="display:flex;flex-direction:column;gap:10px;">
+					<button class={styles.ghostButton} type="button">ghost 按钮</button>
+					<input class={styles.ghostInput} type="text" placeholder="ghost 输入：聚焦出淡晕" />
+				</div>
+			</div>
+
+			<div class={styles.paradigmCard}>
+				<p class={styles.paradigmLabel}>Sidebar Row</p>
+				<div class={styles.rowDemo}>
+					<div class={styles.rowDemoItem}><span>时间戳转换</span><span class={styles.rowDemoMeta}>10-21</span></div>
+					<div class={styles.rowDemoItem}><span>未来工具</span><span class={styles.rowDemoMeta}>计划中</span></div>
+					<div class={styles.rowDemoItem}><span>另一条目</span><span class={styles.rowDemoMeta}>07-02</span></div>
+				</div>
+			</div>
+
+			<div class={styles.paradigmCard}>
+				<p class={styles.paradigmLabel}>Tone Callout</p>
+				<div class={styles.toneDemo} style={`background:${vars.tone.info.bg};border-left:3px solid ${vars.tone.info.fg};color:${vars.tone.info.fg}`}>
+					<strong>info：</strong> 提示与教学强调。
+				</div>
+				<div class={styles.toneDemo} style={`background:${vars.tone.warning.bg};border-left:3px solid ${vars.tone.warning.fg};color:${vars.tone.warning.fg}`}>
+					<strong>warning：</strong> 边界情况与注意事项。
+				</div>
+				<div class={styles.toneDemo} style={`background:${vars.tone.danger.bg};border-left:3px solid ${vars.tone.danger.fg};color:${vars.tone.danger.fg}`}>
+					<strong>danger：</strong> 错误路径与危险操作。
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class={styles.section} id="components">
+		<h2 class={styles.sectionTitle}>kl-* 组件</h2>
+		<p class={styles.sectionNote}>
+			Web Components 套件（Shadow DOM + CSS 变量透传）。数据走「光 DOM 子节点即数据」约定：
+			散文写标记、结构化数据用 <code>&lt;script type="application/json"&gt;</code> 子节点、标量走属性。
+			组件在 Phase 2 逐个落地并登记到本节。
+		</p>
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>登记表（随组件落地更新）</p>
+			<table class={styles.compTable}>
+				<thead>
+					<tr><th>标签</th><th>数据入参</th><th>能力</th></tr>
+				</thead>
+				<tbody>
+					<tr><td>kl-term</td><td>term / def 属性</td><td>行内术语弹层（hover·focus·click，Escape 关闭）</td></tr>
+					<tr><td>kl-term-annotate</td><td>dict JSON</td><td>子树术语自动注解（幂等）</td></tr>
+					<tr><td>kl-glossary</td><td>terms JSON</td><td>词目 chips + 详情面板</td></tr>
+					<tr><td>kl-stage-stepper</td><td>stages JSON</td><td>N 阶段推进演示</td></tr>
+					<tr><td>kl-byte-strip</td><td>value 属性</td><td>字符串 → 字节网格</td></tr>
+					<tr><td>kl-flow-map</td><td>steps JSON</td><td>SVG 管线图 + 详情面板</td></tr>
+					<tr><td>kl-instr-stepper</td><td>rows/regs/steps JSON</td><td>指令单步 + 寄存器状态</td></tr>
+					<tr><td>kl-memory-map</td><td>blocks JSON</td><td>canvas 内存布局动画</td></tr>
+				</tbody>
+			</table>
+		</div>
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-term / kl-term-annotate —— 行内术语弹层与自动注解</p>
+			<p>
+				显式写法：<kl-term term="ELF" def="Executable and Linkable Format，Linux 常用的目标文件、可执行文件与共享库格式。">ELF</kl-term>
+				与 <kl-term term="ABI" def="Application Binary Interface，二进制应用程序接口：函数调用、寄存器、栈对齐等机器级约定。">ABI</kl-term>
+				悬停、聚焦或点击查看解释，Escape 关闭。
+			</p>
+			<kl-term-annotate>
+				<script type="application/json">{"ASLR":"地址空间布局随机化：随机改变映像、库、栈的位置。","stdout":"C 标准输出流，可连终端、文件或管道。"}</script>
+				<p>自动注解区：这段里的 ASLR 与 stdout 会被 <code>kl-term-annotate</code> 包成术语弹层（code 内容不会被处理）。</p>
+			</kl-term-annotate>
+		</div>
+
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-glossary —— 词目 chips + 详情面板</p>
+			<kl-glossary>
+				<script type="application/json">{"terms":[{"key":"relocation","label":"relocation","desc":"重定位：根据最终内存布局修补指令或数据中地址相关字段的过程。"},{"key":"plt","label":"PLT","desc":"Procedure Linkage Table，部分 ELF 动态链接构建用它作为外部函数调用的跳转入口。"},{"key":"crt","label":"CRT","desc":"C Runtime Library，C 运行库：提供标准库函数、运行时状态和启动/退出代码。"}]}</script>
+			</kl-glossary>
+		</div>
+
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-stage-stepper —— N 阶段推进（数据驱动，任意链路教学复用）</p>
+			<kl-stage-stepper>
+				<script type="application/json">{"stages":[{"title":"调用 printf","body":"参数中的字符串指针指向只读字符串常量。","status":"printf 已进入用户态库函数","printed":""},{"title":"格式化","body":"没有格式占位符；将可见字符交给 stdout 流。","status":"stdout buffer: \"hello world\"（可能仍在缓冲）","printed":"hello world"},{"title":"刷新缓冲","body":"程序正常结束，运行库刷新 stdout。","status":"stdout buffer: flushed","printed":"hello world"}]}</script>
+			</kl-stage-stepper>
+		</div>
+
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-byte-strip —— 字符串 → 字节网格（c-string 自动追加 \\0）</p>
+			<kl-byte-strip value="hello world" c-string></kl-byte-strip>
+		</div>
+
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-flow-map —— 管线图 + 联动详情（5 节点示例，cols=3 蛇形排布）</p>
+			<kl-flow-map cols="3">
+				<script type="application/json">{"steps":[{"node":{"title":"源代码","lines":["hello.c","人类编写意图"]},"kicker":"SOURCE / 源代码","title":"你写的是给人看的 C 语言","desc":"源代码是由字符组成的文本文件，表达程序意图。","why":"CPU 不能直接执行 C 语句，需要工具链翻译。","io":"输入：C 文本 → 输出：hello.c 文件。","concept":"文件后缀只是惯例，内容仍是一段文本。","phase":"build"},{"node":{"title":"预处理","lines":["展开头文件与宏"]},"kicker":"PREPROCESS / 预处理","title":"先把头文件和宏展开","desc":"预处理器处理 # 开头的指令，产出翻译单元。","why":"编译器需要看到完整文本才能分析。","io":"输入：hello.c 与头文件 → 输出：预处理后的文本。","concept":"头文件提供声明，不等于实现。","phase":"build"},{"node":{"title":"编译","lines":["C 语义 → 机器码"]},"kicker":"COMPILE / 编译","title":"把 C 语言翻译成目标指令","desc":"编译器分析语义、优化并生成汇编或机器码。","why":"CPU 不认识 C 函数调用语法。","io":"输入：预处理后的文本 → 输出：.s 或机器码。","concept":"同一份 C 面向不同 ISA 生成不同机器码。","phase":"build"},{"node":{"title":"汇编","lines":[".o 目标文件"]},"kicker":"ASSEMBLE / 汇编","title":"把指令编码成机器字节","desc":"汇编器生成目标文件，登记符号与重定位。","why":"外部引用地址此时可能尚未确定。","io":"输入：汇编文本 → 输出：.o 目标文件。","concept":"目标文件不等于可执行文件。","phase":"build"},{"node":{"title":"链接","lines":["ELF / PE 映像"]},"kicker":"LINK / 链接","title":"组合目标文件并解决外部名字","desc":"链接器合并文件、解析符号、应用重定位。","why":"printf 的实现来自运行库，需要连接起来。","io":"输入：.o 与库 → 输出：可执行文件。","concept":"动态库在运行时接入。","phase":"build"}]}</script>
+			</kl-flow-map>
+		</div>
+
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-instr-stepper —— 指令单步 + 寄存器状态（3 步示例）</p>
+			<kl-instr-stepper>
+				<script type="application/json">{"rows":[{"addr":"main + 00","code":"push rbp"},{"addr":"main + 01","code":"mov rbp, rsp"},{"addr":"main + 18","code":"ret"}],"regs":[{"label":"RIP · 指令位置"},{"label":"RSP · 栈顶"},{"label":"RBP · 帧指针"},{"label":"RAX / EAX"}],"steps":[{"note":"push rbp","explain":"保存调用者的帧指针到栈中，RSP 向较低地址移动。","values":["main + 00","RSP - 8","未建立","—"]},{"note":"mov rbp, rsp","explain":"把当前栈顶作为本函数的帧指针。","values":["main + 01","当前帧","当前帧","—"]},{"note":"ret","explain":"恢复栈帧并返回启动代码。","values":["main + 18 → ret","恢复调用者","恢复前帧","0"]}],"initial":{"values":["main + 00","初始栈顶","未建立","—"],"status":"准备执行 main","explain":"按「单步执行」开始。x86-64 的栈通常向较低地址增长。"}}</script>
+			</kl-instr-stepper>
+		</div>
+
+		<div class={styles.compDemo}>
+			<p class={styles.smallMeta}>kl-memory-map —— canvas 内存布局动画（reduced-motion 直接终帧）</p>
+			<kl-memory-map>
+				<script type="application/json">{"blocks":[{"label":"Stack · 栈","desc":"函数返回地址、局部状态","color":"#b99af4"},{"label":"Heap · 堆","desc":"malloc 等动态分配","color":"#e9b360"},{"label":".rodata","desc":"字符串常量","color":"#70a4ff"},{"label":".text","desc":"main 的机器指令","color":"#4d9be6"}],"file":{"label":"hello","format":"ELF","sections":[".text",".rodata","PT_LOAD"]},"stages":["读取格式头","建立映射","按需访问页面"],"doneStatus":"映射完成 · 页面可按需调入","resetStatus":"文件 → 映射尚未开始"}</script>
+			</kl-memory-map>
+		</div>
+	</section>
+	<section class={styles.section} id="rules">
+		<h2 class={styles.sectionTitle}>Do / Don't</h2>
+		<div class={styles.ruleGrid}>
+			<div class={`${styles.ruleCol} ${styles.ruleDo}`}>
+				<p class={styles.ruleHead}>Do</p>
+				<ul style="margin:0;padding-inline-start:1.2em;">
+					<li>反馈元素用 accentSoft 淡晕</li>
+					<li>主结构用留白分隔</li>
+					<li>一行最多一条分隔线</li>
+					<li>ghost 输入框，聚焦出淡晕</li>
+					<li>tone.bg 用低透明度 color-mix</li>
+					<li>动效 150–240ms、motion.ease、不弹跳</li>
+				</ul>
+			</div>
+			<div class={`${styles.ruleCol} ${styles.ruleDont}`}>
+				<p class={styles.ruleHead}>Don't</p>
+				<ul style="margin:0;padding-inline-start:1.2em;">
+					<li>近白底上叠近白填充（隐形反馈）</li>
+					<li>发丝分割线切区块</li>
+					<li>带边框的填充输入盒</li>
+					<li>蓝色色块包长数字导致折行</li>
+					<li>饱和色块直接铺底</li>
+					<li>各写各的缓动曲线</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<section class={styles.section} id="hero-philosophy">
+		<h2 class={styles.sectionTitle}>深空显影（页面头哲学）</h2>
+		<p class={styles.sectionNote}>
+			文章头/课程头以暗为底、靠渐变压暗造深度、文字压底边、克制到几乎看不见的颗粒 ——
+			详见 <code>docs/design/article-banner-philosophy.md</code>。
+		</p>
+		<div class={styles.heroDarkDemo}>
+			<h3 class={styles.heroDarkTitle}>暗色 hero 示范：光是被允许溢出的一点点</h3>
+			<p class={styles.heroDarkLead}>
+				层次靠压暗，不靠描边；边界由渐变完成。亮色只出现在需要被看见的地方：标题、一枚胶囊标签、一道微光。
+			</p>
+		</div>
+	</section>
+</BlogPost>
+
+<script>
+	// 裸 script（无属性）才会被 Vite 打包；带属性会变 is:inline 导致 TS import 失效
+	import '../kit/index';
+</script>

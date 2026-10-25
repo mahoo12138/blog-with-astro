@@ -13,9 +13,11 @@ interface Props {
 	menuId?: MenuId;
 	widgets?: SidebarWidgetConfig[];
 	column?: ColumnSidebarContext;
+	/** 与右栏同源的标题锚点，供 toc 挂件渲染目录（课时页左栏用）。 */
+	headings?: { depth: number; slug: string; text: string }[];
 }
 
-const { menuId = 'post', widgets = [], column } = Astro.props;
+const { menuId = 'post', widgets = [], column, headings = [] } = Astro.props;
 const pathname = Astro.url.pathname;
 
 function isActive(id: MenuId, href: string) {
@@ -72,7 +74,7 @@ const socialItems = stellarConfig.footer.social;
 		{/* 滚动区域：仅承载侧栏挂件，与固定区之间以留白分隔。 */}
 		<div class={styles.inner}>
 			<div class={styles.widgets}>
-				<SidebarRenderer widgets={widgets} side="left" context={{ pathname, column }} />
+				<SidebarRenderer widgets={widgets} side="left" context={{ pathname, column, headings }} />
 			</div>
 		</div>
 

@@ -22,7 +22,7 @@ interface Props {
 	noindex?: boolean;
 }
 
-const { title, description, lang = 'zh-CN', mainClass, siteTree = 'page', menuId, leftbar, noindex = false } = Astro.props;
+const { title, description, lang = 'zh-CN', mainClass, siteTree = 'page', menuId, leftbar, tocHeadings = [], noindex = false } = Astro.props;
 const hasLead = Astro.slots.has('lead');
 const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 ---
@@ -41,7 +41,7 @@ const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 		</header>
 		<div class={styles.shell} data-stellar-shell>
 			<aside class={styles.left} data-pagefind-ignore>
-				<StellarLeftSidebar menuId={shellConfig.menuId} widgets={shellConfig.leftbar} />
+				<StellarLeftSidebar menuId={shellConfig.menuId} widgets={shellConfig.leftbar} headings={tocHeadings} />
 				<slot name="leftbar" />
 			</aside>
 			<main id="main-content" class={styles.mainArea} data-pagefind-body tabindex="-1">

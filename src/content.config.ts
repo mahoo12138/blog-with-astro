@@ -254,11 +254,50 @@ const residences = defineCollection({
   }),
 });
 
+// 学苑课时（/learn）：独立平铺文档，不需要 posts 的章节机制，用 glob loader。
+const lessons = defineCollection({
+  loader: glob({ base: "./src/content/lessons", pattern: "**/*.{md,mdx}" }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      description: z.string().min(1, 'description 不能为空串'),
+      /** 领域分组：'系统' | '语言' | '网络' …，索引页按此分组 */
+      domain: z.string(),
+      level: z.enum(['入门', '进阶', '深潜']).default('入门'),
+      /** 阅读时长提示，如 '约 25 分钟' */
+      duration: z.string().optional(),
+      tags: z.array(z.string()).default([]),
+      order: z.number().int().default(0),
+      pubDate: z.coerce.date().optional(),
+      // 课程 hero（LessonLayout lead 槽）扩展字段，全部可选
+      hero: z
+        .object({
+          eyebrow: z.string().optional(),
+          lead: z.string().optional(),
+          /** 标题里要高亮（包 <em>）的词 */
+          titleHighlight: z.string().optional(),
+          terminal: z
+            .object({
+              prompt: z.string(),
+              output: z.string(),
+              note: z.string().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+      // 行内术语自动注解字典：kl-term-annotate 会在正文里把匹配词包成 kl-term 弹层
+      terms: z.record(z.string(), z.string()).optional(),
+      ...publicationFields,
+      ...mediaFields(image),
+    }),
+});
+
 // 只声明 src/content/ 下真实存在数据的 collection：
 // 此前 19 个声明里有 2 个（wiki / notes）没有对应目录，属于失效配置，已删除。
 export const collections = {
   posts,
   columns,
+  lessons,
   goods,
   phones,
 	cities,

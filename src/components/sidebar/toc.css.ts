@@ -56,3 +56,9 @@ export const link = style({
 	'@media': { '(pointer: coarse)': { minHeight: '44px', paddingBlock: '10px' } },
 });
 export const text = style({ minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'normal' });
+
+// 左栏专用：贴齐 sidebarRows 的 16px 文本基线（侧栏 inner 已有内边距，不再叠加），
+// 且取消 viewport 的定高 —— 左栏本身就是滚动容器，避免「侧栏 + 目录」双滚动条，
+// 让目录随侧栏一并滚动、一次看全。右栏仍沿用上面的定高视口。
+export const widgetLeft = style({ margin: '8px 0 24px' });
+export const viewportLeft = style({ maxHeight: 'none' });
