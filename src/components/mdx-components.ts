@@ -1,12 +1,14 @@
 import './mdx/components.css.ts';
 // blocks.css.ts 必须排在 components.css.ts 之后：容器 `> *` 与 callout 同为 (0,2,0) 特异性，靠源序决胜
 import './mdx/blocks.css.ts';
+import './mdx/diagram.css.ts';
 
 import Audio from './mdx/Audio.astro';
 import Blockquote from './mdx/Blockquote.astro';
 import Blur from './mdx/Blur.astro';
 import Callout from './mdx/Callout.astro';
 import Card from './mdx/Card.astro';
+import Diagram from './mdx/Diagram.astro';
 import Caption from './mdx/Caption.astro';
 import Flow from './mdx/Flow.astro';
 import FlowStep from './mdx/FlowStep.astro';
@@ -85,6 +87,7 @@ export {
 	Copy,
 	Deleted,
 	Deleted as Del,
+	Diagram,
 	Emoji,
 	Emphasis,
 	Emphasis as Emp,
@@ -160,6 +163,7 @@ export const mdxComponents = {
 	Copy,
 	Deleted,
 	Del: Deleted,
+	Diagram,
 	Emoji,
 	Emphasis,
 	Emp: Emphasis,
