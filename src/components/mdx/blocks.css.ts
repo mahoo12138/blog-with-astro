@@ -92,10 +92,34 @@ export const grid = style({
 	alignItems: 'start',
 });
 
+/** 列数语义：桌面 N 列，窄屏逐级降到 2 列、1 列。
+ *  刻意不用 auto-fit —— auto-fit 不认识 cols，宽屏会把 6 张卡铺成 5+1 挂单，
+ *  且列宽随视口漂移导致行尾断词。确定性列数让行对齐、列宽可预期。
+ *  降级顺序：3/4 列在 laptop 下 2 列、mobile 下 1 列；2 列只在 mobile 下 1 列。 */
 export const gridCols = styleVariants({
-	2: { gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: vars.space.lg },
-	3: { gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: vars.space.md },
-	4: { gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: vars.space.sm },
+	2: {
+		gridTemplateColumns: 'repeat(2, 1fr)',
+		gap: vars.space.lg,
+		'@media': {
+			[`screen and (max-width: ${breakpoints.mobile})`]: { gridTemplateColumns: '1fr' },
+		},
+	},
+	3: {
+		gridTemplateColumns: 'repeat(3, 1fr)',
+		gap: vars.space.md,
+		'@media': {
+			[`screen and (max-width: ${breakpoints.laptop})`]: { gridTemplateColumns: 'repeat(2, 1fr)' },
+			[`screen and (max-width: ${breakpoints.mobile})`]: { gridTemplateColumns: '1fr' },
+		},
+	},
+	4: {
+		gridTemplateColumns: 'repeat(4, 1fr)',
+		gap: vars.space.sm,
+		'@media': {
+			[`screen and (max-width: ${breakpoints.laptop})`]: { gridTemplateColumns: 'repeat(2, 1fr)' },
+			[`screen and (max-width: ${breakpoints.mobile})`]: { gridTemplateColumns: '1fr' },
+		},
+	},
 });
 
 export const gridStack = style({
