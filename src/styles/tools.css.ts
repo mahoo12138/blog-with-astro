@@ -7,10 +7,10 @@ import { breakpoints, vars } from './theme.css';
  * 审美约定（与全站一致）：
  *   - 区块之间用留白分隔，不画分割线；
  *   - 控件走幽灵态 —— 常态零装饰，hover / 聚焦时浮现 accentSoft 圆角淡晕；
- *   - 动效统一 cubic-bezier(0.16, 1, 0.3, 1)，150~240ms，不弹跳。
+ *   - 动效统一 vars.motion.ease（cubic-bezier(0.16, 1, 0.3, 1)），150~240ms，不弹跳。
  */
 
-const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const EASE = vars.motion.ease;
 
 export const main = style({ width: '100%', minWidth: 0 });
 export const page = style({
