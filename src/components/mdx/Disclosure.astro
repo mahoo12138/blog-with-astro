@@ -1,0 +1,40 @@
+---
+import { disclosure, disclosureSummary, disclosureChevron, disclosureTitle, disclosureBody } from './blocks.css';
+
+/**
+ * 折叠披露（Disclosure）。
+ *
+ * 与 Fold 的分工：Fold 带着语义色（info/tip/warn…）说话，是「提示」；
+ * Disclosure 是中性的「这里还有细节」，不表达态度，颜色只吃主题 token。
+ *
+ * 行为全部交给原生 <details>：无 JS、键盘可达、内容始终在 DOM 里，
+ * pagefind 与「页内查找」都能命中被折叠的文字。
+ */
+interface Props {
+	/** 标题（纯文本） */
+	title: string;
+	/** 默认展开 */
+	open?: boolean;
+}
+
+const { title, open = false } = Astro.props;
+---
+
+<details class={disclosure} open={open}>
+	<summary class={disclosureSummary}>
+		<svg class={disclosureChevron} viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+			<path
+				d="M4.4 2.4 8 6l-3.6 3.6"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.6"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+		</svg>
+		<span class={disclosureTitle}>{title}</span>
+	</summary>
+	<div class={disclosureBody}>
+		<slot />
+	</div>
+</details>
