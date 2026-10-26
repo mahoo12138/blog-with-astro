@@ -789,13 +789,13 @@ Windows 上仍然有编译、汇编、链接、运行库、装载与输出，但
 
 <Card>
 <Grid cols={2}>
-<Grid stack>
 <Tile label="A / BUILD" title="MSVC 前端与 COFF 目标文件"><code>cl.exe</code> 预处理并编译 C 代码；常见中间产物是 <code>.i</code>、汇编列表和 <code>.obj</code>。目标文件中的外部引用通过符号表与重定位记录表达。</Tile>
 <Tile label="B / LINK" title="LINK 解析导入并生成 PE">链接器把目标文件、启动库、CRT 库和导入库组合成 PE 映像。导入库通常提供链接期所需的符号 / DLL 导入描述，不必把整个 DLL 实现复制进 EXE。</Tile>
 <Tile label="C / LOAD" title="Windows Loader 映射映像与 DLL">进程创建时，Windows 的映像加载路径解释 PE 头和节表，映射可执行映像、解析 DLL 依赖和导入地址，并处理必要的重定位。底层实现会随 Windows 版本变化。</Tile>
 <Tile label="D / RUN" title="CRT 进入 main，再进入 UCRT 输出">常规控制台程序的 CRT 入口初始化运行库后调用 <code>main</code>。<code>printf</code> 经过 UCRT 的流和缓冲逻辑，将数据写往标准输出句柄；最终目标可能是控制台、文件或管道。</Tile>
 </Grid>
-<div>
+</Card>
+
 <Subhead>调用约定差异：第一个参数放在哪里？</Subhead>
 
 ```asm
@@ -812,9 +812,6 @@ call printf_import_thunk
 
 <Caption>Linux System V x86-64 通常用 <code>RDI</code> 传第一个指针参数；Windows x64 通常用 <code>RCX</code>。Windows x64 调用约定要求调用者为被调函数预留 32 字节 shadow space。示意代码不代表某个 MSVC 版本的精确输出。</Caption>
 <Callout type="warn">**不要把以下概念混为一谈：** PE 的 IAT 与 ELF 的 GOT 都可以参与动态地址解析，但结构、链接器约定及加载机制不是同一种格式；Windows 的 UCRT/WinAPI 也不等于 Linux 的 glibc/系统调用接口。</Callout>
-</div>
-</Grid>
-</Card>
 
 ## 如果出错，错误会在哪一阶段出现？
 

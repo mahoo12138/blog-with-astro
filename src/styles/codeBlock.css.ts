@@ -25,6 +25,11 @@ const COPY_ICON =
 const CHECK_ICON =
 	"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E\")";
 
+/** 折叠栏的指示箭头（向下）。展开时由 transform 转 180°，不另存一份图标。 */
+const CHEVRON_ICON =
+	"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
+
+
 const copiedPop = keyframes({
 	'0%': { transform: 'scale(1)' },
 	'45%': { transform: 'scale(1.18)' },
@@ -44,7 +49,11 @@ globalStyle('.code-block', {
 	// 自定义属性只向下继承，父级读不到 pre 上的原始变量，所以必须提升。
 	// 明暗切换时外壳与代码区永远同色，不会「上下两块颜色对不上」。
 	// 回退值对应 github-light / github-dark（astro.config shikiConfig）。
-	background: 'var(--shiki-light-bg, #fff)',
+	//
+	// --code-block-bg 只是个中间变量：折叠渐隐（见下方 pre::after）要跟
+	// 同色渐变，直接从同一个变量取，就不必再抄一遍四象限的色值。
+	'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+	background: 'var(--code-block-bg)',
 	boxShadow: vars.shadow.card,
 });
 
@@ -55,20 +64,20 @@ globalStyle('.code-block', {
  * 系统深色下外壳永远回退浅色 #fff，顶栏（半透明叠色）呈现成白色。
  */
 globalStyle(':root[data-theme="light"] .code-block', {
-	background: 'var(--shiki-light-bg, #fff)',
+	'--code-block-bg': 'var(--shiki-light-bg, #fff)',
 });
 
 globalStyle(':root[data-theme="dark"] .code-block', {
-	background: 'var(--shiki-dark-bg, #24292e)',
+	'--code-block-bg': 'var(--shiki-dark-bg, #24292e)',
 });
 
 globalStyle(':root:not([data-theme]) .code-block', {
 	'@media': {
 		'(prefers-color-scheme: light)': {
-			background: 'var(--shiki-light-bg, #fff)',
+			'--code-block-bg': 'var(--shiki-light-bg, #fff)',
 		},
 		'(prefers-color-scheme: dark)': {
-			background: 'var(--shiki-dark-bg, #24292e)',
+			'--code-block-bg': 'var(--shiki-dark-bg, #24292e)',
 		},
 	},
 });
@@ -272,3 +281,161 @@ globalStyle('.code-block.is-copied .code-block__copy::before', {
 globalStyle('html.has-js .code-block__copy', {
 	display: 'inline-flex',
 });
+
+/* ── 超高折叠 ── */
+/**
+ * 折叠栏默认不显示：无 JS 时它点了没反应，不如不出现。
+ * 结构见 src/plugins/rehype-code-block.mjs（构建期生成）与
+ * public/js/code-block-fold.js（窄屏换行才溢出时补建）。
+ *
+ *   .code-block[data-code-fold]          这个块超出高度上限，可折叠
+ *   .code-block.is-fold-open             用户已展开
+ *   > pre                                折叠时被裁剪的那一段
+ *   > .code-block__fold                  底部折叠栏（整条可点）
+ */
+globalStyle('.code-block__fold', {
+	display: 'none',
+});
+
+/**
+ * 折叠态裁剪。
+ *
+ * 挂在 `html.has-js` 下是**无障碍底线**：脚本没跑时完全不裁剪，
+ * 读者不会遇到「代码被截断却点不开」的死路；而 has-js 由 BaseHead 的
+ * 首屏内联脚本在首次绘制前就打上，所以正常访问下第一帧就是折叠态，
+ * 不会「先整段摊开再刷地收起来」。
+ *
+ * --code-fold-h 由构建期按 astro.config 的 maxHeight 下发；回退值 420px
+ * 与 rehype-code-block.mjs 的 DEFAULT_MAX_HEIGHT 一致，只兜运行期补建的块。
+ * box-sizing 用 border-box，让「最大高度」等于肉眼看到的整块高度。
+ *
+ * position: relative 是为了让下面的渐隐能钉在裁剪后的下沿。
+ */
+globalStyle('html.has-js .code-block[data-code-fold]:not(.is-fold-open) > pre', {
+	maxHeight: 'var(--code-fold-h, 420px)',
+	boxSizing: 'border-box',
+	overflow: 'hidden',
+	position: 'relative',
+	'@media': {
+		// 打印时不该藏内容：展开全文，折叠栏也一并去掉
+		print: {
+			maxHeight: 'none',
+			overflow: 'visible',
+		},
+	},
+});
+
+/**
+ * 下沿渐隐：被裁断的那一行如果硬切，看起来像渲染坏了；
+ * 渐到外壳底色就自然得多。颜色直接取 --code-block-bg，
+ * 明暗主题与文章所用 Shiki 主题都能自动跟上，不用再写四象限。
+ *
+ * 起点用「同色 0%」而不是关键字 transparent：CSS 渐变虽按预乘 alpha
+ * 插值，但不同引擎在深色底上仍会有肉眼可辨的发灰，锁住色相最稳。
+ */
+globalStyle('html.has-js .code-block[data-code-fold]:not(.is-fold-open) > pre::after', {
+	content: '""',
+	position: 'absolute',
+	inset: 'auto 0 0 0',
+	height: '3.25rem',
+	pointerEvents: 'none',
+	background:
+		'linear-gradient(to bottom, color-mix(in srgb, var(--code-block-bg) 0%, transparent), var(--code-block-bg) 88%)',
+});
+
+/**
+ * 折叠栏本体。
+ *
+ * 视觉上刻意和顶部栏同款（同透明度叠色、同一条淡灰分隔线），
+ * 让代码块上下「封边」，中间才是内容 —— 否则底部单拎一条色带
+ * 会像贴上去的补丁。文字比顶部语言名稍大一点点（0.75rem），
+ * 因为它是可点的动作，需要比元信息更显眼。
+ */
+globalStyle('html.has-js .code-block[data-code-fold] .code-block__fold', {
+	display: 'flex',
+	alignItems: 'center',
+	justifyContent: 'center',
+	gap: '0.4rem',
+	boxSizing: 'border-box',
+	width: '100%',
+	height: '2.25rem',
+	padding: `0 ${vars.space.lg}`,
+	margin: 0,
+	border: 'none',
+	borderTop: '1px solid rgba(127, 127, 127, 0.18)',
+	backgroundColor: 'rgba(0, 0, 0, 0.04)',
+	color: 'rgba(60, 70, 85, 0.62)',
+	fontFamily: vars.font.body,
+	fontSize: '0.75rem',
+	fontWeight: 500,
+	lineHeight: 1,
+	letterSpacing: '0.04em',
+	cursor: 'pointer',
+	// 和顶部栏一致：折叠栏属于界面，复制代码时不该被一起选中
+	userSelect: 'none',
+	transition: `background-color ${vars.motion.durationFast} ${vars.motion.ease}, color ${vars.motion.durationFast} ${vars.motion.ease}`,
+	'@media': {
+		// 小屏给足点按高度，文字略收一点保持比例
+		[`screen and (max-width: ${breakpoints.mobile})`]: {
+			height: '2.5rem',
+			fontSize: '0.72rem',
+			letterSpacing: '0.03em',
+		},
+		print: {
+			display: 'none',
+		},
+	},
+});
+
+globalStyle(':root[data-theme="dark"] .code-block__fold', {
+	backgroundColor: 'rgba(255, 255, 255, 0.06)',
+	color: 'rgba(225, 228, 232, 0.58)',
+});
+
+globalStyle(':root:not([data-theme]) .code-block__fold', {
+	'@media': {
+		'(prefers-color-scheme: dark)': {
+			backgroundColor: 'rgba(255, 255, 255, 0.06)',
+			color: 'rgba(225, 228, 232, 0.58)',
+		},
+	},
+});
+
+/* hover/focus 与复制按钮同一套中性叠色，不引入站点 accent：
+ * 这层灰压在 Shiki 的两套主题底上都稳，深色下也不刺眼。 */
+globalStyle('.code-block__fold:hover', {
+	backgroundColor: 'rgba(127, 127, 127, 0.16)',
+});
+
+globalStyle('.code-block__fold:focus-visible', {
+	outline: 'none',
+	boxShadow: vars.shadow.focus,
+	// 焦点环压在长方形按钮上时，圆角要跟着收一点才不显脏
+	borderRadius: vars.radius.sm,
+});
+
+/**
+ * 指示图标：向下箭头 = 「还有内容，往下展开」；展开后转 180° 指向回收。
+ * 用 mask + currentColor 上色，按钮文字色一变图标就跟着变，
+ * 明暗两套主题不用各画一份（与复制按钮的图标同一条路线）。
+ */
+globalStyle('.code-block__fold::after', {
+	content: '""',
+	width: '0.8rem',
+	height: '0.8rem',
+	flexShrink: 0,
+	backgroundColor: 'currentColor',
+	WebkitMask: `${CHEVRON_ICON} center / contain no-repeat`,
+	mask: `${CHEVRON_ICON} center / contain no-repeat`,
+	transition: `transform ${vars.motion.durationBase} ${vars.motion.ease}`,
+	'@media': {
+		'(prefers-reduced-motion: reduce)': {
+			transition: 'none',
+		},
+	},
+});
+
+globalStyle('.code-block.is-fold-open .code-block__fold::after', {
+	transform: 'rotate(180deg)',
+});
+

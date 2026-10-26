@@ -57,14 +57,19 @@ export default defineConfig({
 		// remarkMath 无条件挂载（语法必须始终注册，见文件顶部说明）；
 		// remarkMathGate 负责把「非 mathjax 文章」的数学节点还原回原文。
 		remarkPlugins: [remarkMath, remarkMathGate, remarkContentLinks],
-		// rehypeCodeBlock 给代码块套外壳（语言标签 + 复制按钮）。
+		// rehypeCodeBlock 给代码块套外壳（语言标签 + 复制按钮 + 超高折叠栏）。
 		// 它无条件执行，且依赖 Shiki 已跑完 —— Astro 的管线里 rehypeShiki
 		// 本就在用户 rehypePlugins 之前，所以拿到的是带 data-language 的高亮结果。
 		// 详见 src/plugins/rehype-code-block.mjs 顶部注释。
 		//
+		// maxHeight 是折叠后代码区的高度上限（px）：超过它就默认收起，
+		// 底部出现「展开全部 / 收起」折叠栏。想全站放宽或收紧改这一处即可；
+		// 改了记得同步 src/styles/codeBlock.css.ts 里 --code-fold-h 的回退值
+		// （只有运行期才生成的折叠块会用到它，正常渲染的块由内联变量覆盖）。
+		//
 		// rehypeKatex 可以无条件挂载：经过 remarkMathGate 之后，只有 mathjax: true
 		// 的文章里还存在数学节点，其余文章已经没有可渲染的数学节点了。
-		rehypePlugins: [rehypeKatex, rehypeCodeBlock],
+		rehypePlugins: [rehypeKatex, [rehypeCodeBlock, { maxHeight: 420 }]],
 		shikiConfig: {
 			// 双主题（light + dark）时 Shiki 会为每个 token 输出
 			//   style="color:#xxx;--shiki-dark:#yyy"

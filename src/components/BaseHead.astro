@@ -83,6 +83,11 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
 		if (scheme !== 'blog') { root.dataset.colorScheme = scheme; root.classList.add(`theme-${scheme}`); }
 		else root.removeAttribute('data-color-scheme');
 		root.classList.toggle('dark', mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches));
+		// has-js 也在这里打上：代码块的复制按钮与「超高折叠」两处样式都挂在
+		// `html.has-js` 下（无 JS 时不裁剪、不显示无效控件）。放到首屏内联脚本里
+		// 而不是等 defer 的 code-copy.js，是为了让折叠在**第一帧**就生效，
+		// 否则长代码会先整段摊开、脚本跑完再刷地收起来。
+		root.classList.add('has-js');
 	})();
 </script>
 <script>
@@ -128,6 +133,9 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
     html.no-js 兜底（见该文件注释）。 */}
 <script src="/js/top-progress.js" defer></script>
 <script src="/js/code-copy.js" defer></script>
+{/* 超高代码块的折叠栏：构建期只做估算，这里按真实排版复核一遍
+    （详见 public/js/code-block-fold.js 顶部注释）。 */}
+<script src="/js/code-block-fold.js" defer></script>
 
 <!-- Canonical URL -->
 <link rel="canonical" href={canonicalURL} />
