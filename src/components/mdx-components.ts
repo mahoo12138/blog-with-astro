@@ -9,6 +9,7 @@ import Blur from './mdx/Blur.astro';
 import Callout from './mdx/Callout.astro';
 import Card from './mdx/Card.astro';
 import Diagram from './mdx/Diagram.astro';
+import Disclosure from './mdx/Disclosure.astro';
 import Caption from './mdx/Caption.astro';
 import Flow from './mdx/Flow.astro';
 import FlowStep from './mdx/FlowStep.astro';
@@ -88,6 +89,7 @@ export {
 	Deleted,
 	Deleted as Del,
 	Diagram,
+	Disclosure,
 	Emoji,
 	Emphasis,
 	Emphasis as Emp,
@@ -164,6 +166,7 @@ export const mdxComponents = {
 	Deleted,
 	Del: Deleted,
 	Diagram,
+	Disclosure,
 	Emoji,
 	Emphasis,
 	Emp: Emphasis,
