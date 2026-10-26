@@ -1,0 +1,240 @@
+---
+/**
+ * 学苑演示套件：指针拖尾 + 右侧贴边工具栏。
+ *
+ * 只在 /learn 与 /learn/[slug] 挂载。三层浮层默认 pointer-events: none，
+ * 页面原有的滚动、选中、链接点击全部照常；只有工具栏本身可交互，
+ * 墨迹层仅在「画笔 / 图形」工具激活期间接管指针（Esc 或再点一次即退出）。
+ *
+ * 主题色经 --pk-* 内联变量下发给 canvas（canvas 不认 CSS 变量，只能读具体色值）。
+ */
+import * as styles from './PresenterKit.css';
+import { vars } from '../../styles/theme.css';
+
+const kitStyle = [
+	`--pk-ink: ${vars.tone.info.fg}`,
+	`--pk-trail: ${vars.color.accent}`,
+	// 色板：四档借语义 tone（明暗各有一套值），紫罗兰/石墨没有对应 tone，取两种底色都读得出的固定值
+	`--pk-swatch-ink: ${vars.tone.info.fg}`,
+	`--pk-swatch-red: ${vars.tone.danger.fg}`,
+	`--pk-swatch-amber: ${vars.tone.warning.fg}`,
+	`--pk-swatch-teal: ${vars.tone.success.fg}`,
+	'--pk-swatch-violet: #7c5cd6',
+	'--pk-swatch-slate: #5b636d',
+].join('; ');
+---
+
+<div
+	class={styles.root}
+	style={kitStyle}
+	data-presenter-kit
+	data-tool="none"
+	data-draw="false"
+	data-torch="false"
+	data-open="true"
+	data-pinned="true"
+	data-pagefind-ignore
+>
+	<div class={styles.torch} data-pk-torch aria-hidden="true"></div>
+	<canvas class={styles.ink} data-pk-ink aria-hidden="true"></canvas>
+	<canvas class={styles.trail} data-pk-trail aria-hidden="true"></canvas>
+
+	<div class={styles.rail} role="toolbar" aria-label="演示工具" aria-orientation="vertical">
+		<button
+			class={styles.collapse}
+			type="button"
+			data-pk-collapse
+			aria-expanded="true"
+			aria-controls="pk-toolbody"
+			aria-label="收起演示工具"
+			data-tip="收起工具栏"
+		>
+			<svg class={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M10 6l6 6-6 6"></path>
+			</svg>
+		</button>
+
+		<div class={styles.body} id="pk-toolbody" data-pk-body>
+			<div class={styles.bodyInner}>
+				<div class={styles.group}>
+					<button
+						class={styles.tool}
+						type="button"
+						data-pk-tool="pen"
+						data-tip="画笔（B）· 按住拖动"
+						aria-pressed="false"
+					>
+						<svg class={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M4.6 19.4h3.2L19 8.2a2.26 2.26 0 0 0-3.2-3.2L4.6 16.2v3.2Z"></path>
+							<path d="M15.1 5.7l3.2 3.2"></path>
+						</svg>
+						<span class="sr-only">画笔</span>
+					</button>
+
+					<div class={styles.flyoutHost}>
+						<button
+							class={styles.tool}
+							type="button"
+							data-pk-tool="shape"
+							aria-pressed="false"
+							aria-haspopup="true"
+						>
+							<svg class={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<rect x="3.5" y="3.5" width="9.5" height="9.5" rx="2"></rect>
+								<circle cx="16" cy="16" r="4.6"></circle>
+							</svg>
+							<span class="sr-only">图形</span>
+						</button>
+						<div class={styles.flyoutShape} data-pk-shapes role="group" aria-label="选择图形">
+							<button class={styles.flyoutItem} type="button" data-pk-shape="arrow" aria-pressed="true">
+								<svg class={styles.flyoutIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M5 19 19 5"></path>
+									<path d="M19 5h-6.5"></path>
+									<path d="M19 5v6.5"></path>
+								</svg>
+								箭头
+							</button>
+							<button class={styles.flyoutItem} type="button" data-pk-shape="rect" aria-pressed="false">
+								<svg class={styles.flyoutIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<rect x="4" y="5" width="16" height="14" rx="2"></rect>
+								</svg>
+								方框
+							</button>
+							<button class={styles.flyoutItem} type="button" data-pk-shape="ellipse" aria-pressed="false">
+								<svg class={styles.flyoutIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<circle cx="12" cy="12" r="7.5"></circle>
+								</svg>
+								圆圈
+							</button>
+						</div>
+					</div>
+
+					<button
+						class={styles.tool}
+						type="button"
+						data-pk-tool="torch"
+						data-tip="手电筒（L）· 聚焦局部"
+						aria-pressed="false"
+					>
+						<svg class={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M9 3.5h6l1.2 4.2H7.8L9 3.5Z"></path>
+							<path d="M8.4 7.7h7.2v9.1a3.6 3.6 0 0 1-7.2 0V7.7Z"></path>
+							<path d="M12 14.4h.01"></path>
+						</svg>
+						<span class="sr-only">手电筒</span>
+					</button>
+				</div>
+
+				<div class={styles.spacer} aria-hidden="true"></div>
+
+				<div class={styles.group}>
+					<div class={styles.flyoutHost}>
+						<button
+							class={styles.tool}
+							type="button"
+							data-pk-color-trigger
+							data-tip="线条颜色"
+							aria-haspopup="true"
+							aria-expanded="false"
+						>
+							<span class={styles.inkDot} data-pk-dot aria-hidden="true"></span>
+							<span class="sr-only">线条颜色</span>
+						</button>
+						<div class={styles.flyoutColor} data-pk-colors role="group" aria-label="选择线条颜色">
+							<div class={styles.swatchGrid}>
+								<button class={styles.swatch} type="button" data-pk-color="ink" aria-pressed="true" aria-label="墨蓝" style="background: var(--pk-swatch-ink)"></button>
+								<button class={styles.swatch} type="button" data-pk-color="red" aria-pressed="false" aria-label="朱红" style="background: var(--pk-swatch-red)"></button>
+								<button class={styles.swatch} type="button" data-pk-color="amber" aria-pressed="false" aria-label="琥珀" style="background: var(--pk-swatch-amber)"></button>
+								<button class={styles.swatch} type="button" data-pk-color="teal" aria-pressed="false" aria-label="青绿" style="background: var(--pk-swatch-teal)"></button>
+								<button class={styles.swatch} type="button" data-pk-color="violet" aria-pressed="false" aria-label="紫罗兰" style="background: var(--pk-swatch-violet)"></button>
+								<button class={styles.swatch} type="button" data-pk-color="slate" aria-pressed="false" aria-label="石墨" style="background: var(--pk-swatch-slate)"></button>
+							</div>
+						</div>
+					</div>
+
+					<div class={styles.flyoutHost}>
+						<button
+							class={styles.tool}
+							type="button"
+							data-pk-width-trigger
+							data-tip="线条粗细"
+							aria-haspopup="true"
+							aria-expanded="false"
+						>
+							<span class={styles.triggerBar} data-pk-widthbar aria-hidden="true" style="height:4px"></span>
+							<span class="sr-only">线条粗细</span>
+						</button>
+						<div class={styles.flyoutWidth} data-pk-widths role="group" aria-label="选择线条粗细">
+							<button class={styles.flyoutItem} type="button" data-pk-width="2" aria-pressed="false">
+								<span class={styles.widthBar} style="height:2px"></span>细
+							</button>
+							<button class={styles.flyoutItem} type="button" data-pk-width="3" aria-pressed="true">
+								<span class={styles.widthBar} style="height:3px"></span>中
+							</button>
+							<button class={styles.flyoutItem} type="button" data-pk-width="5" aria-pressed="false">
+								<span class={styles.widthBar} style="height:5px"></span>粗
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div class={styles.spacer} aria-hidden="true"></div>
+
+				<div class={styles.group}>
+					<button
+						class={styles.tool}
+						type="button"
+						data-pk-undo
+						data-tip="撤销（⌘Z）"
+						data-disabled="true"
+					>
+						<svg class={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M4 9h9.5a5.5 5.5 0 0 1 0 11H8"></path>
+							<path d="M8 5 4 9l4 4"></path>
+						</svg>
+						<span class="sr-only">撤销</span>
+					</button>
+					<button
+						class={styles.tool}
+						type="button"
+						data-pk-clear
+						data-tip="清空墨迹"
+						data-disabled="true"
+					>
+						<svg class={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M5 7h14"></path>
+							<path d="M9.6 7V4.8h4.8V7"></path>
+							<path d="M6.7 7 8 19.4h8L17.3 7"></path>
+						</svg>
+						<span class="sr-only">清空</span>
+					</button>
+				</div>
+
+				<div class={styles.spacer} aria-hidden="true"></div>
+
+				<button
+					class={styles.tool}
+					type="button"
+					data-pk-pin
+					data-tip="固定在页面边缘"
+					aria-pressed="true"
+				>
+					<svg class={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M9.4 3.4h5.2l-.9 5.4 3 3.1H7.3l3-3.1-.9-5.4Z"></path>
+						<path d="M12 11.9v8.7"></path>
+					</svg>
+					<span class="sr-only">固定</span>
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<p class="sr-only" role="status" aria-live="polite" data-pk-status></p>
+</div>
+
+<script>
+	import { initPresenterKit } from '../../scripts/presenter';
+
+	initPresenterKit();
+	document.addEventListener('astro:page-load', initPresenterKit);
+</script>

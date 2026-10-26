@@ -7,6 +7,7 @@ import StellarLeftSidebar from '../components/StellarLeftSidebar.astro';
 import StellarPageFooter from '../components/StellarPageFooter.astro';
 import TopProgressBar from '../components/TopProgressBar.astro';
 import SkipLink from '../components/SkipLink.astro';
+import PresenterKit from '../components/learn/PresenterKit.astro';
 import { resolveShellConfig, type MenuId, type SidebarValue, type SiteTreeKey } from '../config/stellar';
 import * as styles from './WideShell.css';
 
@@ -20,9 +21,11 @@ interface Props {
 	leftbar?: SidebarValue;
 	tocHeadings?: { depth: number; slug: string; text: string }[];
 	noindex?: boolean;
+	/** 挂载学苑演示套件（指针拖尾 + 贴边工具栏）。fixed 浮层直挂 shell，不落进内容动画容器 */
+	presenter?: boolean;
 }
 
-const { title, description, lang = 'zh-CN', mainClass, siteTree = 'page', menuId, leftbar, tocHeadings = [], noindex = false } = Astro.props;
+const { title, description, lang = 'zh-CN', mainClass, siteTree = 'page', menuId, leftbar, tocHeadings = [], noindex = false, presenter = false } = Astro.props;
 const hasLead = Astro.slots.has('lead');
 const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 ---
@@ -57,6 +60,7 @@ const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 					<StellarIcon name="default:leftbar" class={styles.floatIcon} />
 				</button>
 			</div>
+			{presenter && <PresenterKit />}
 		</div>
 		<script is:inline>
 			(() => {
