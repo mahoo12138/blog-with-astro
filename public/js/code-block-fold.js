@@ -33,8 +33,13 @@
 	var FOOT_CLASS = 'code-block__fold';
 	var LABEL_COLLAPSED = '展开全部';
 	var LABEL_EXPANDED = '收起';
-	/** 1px 级的舍入误差不算溢出（clientHeight / scrollHeight 都是整数）。 */
-	var TOLERANCE = 2;
+	/**
+	 * 至少藏掉这么多像素才值得折。上限与行距很难正好整除，
+	 * 只超出两三像素就折叠，看起来像把最后一行削掉一层皮，
+	 * 展开也只多出那一丁点，不如让它完整显示（maxHeight 表现为软上限）。
+	 * 12px ≈ 半行（行距 27.9px），与构建期 MIN_OVERFLOW_PX 同一条规则。
+	 */
+	var MIN_OVERFLOW = 12;
 
 	/** 已经量过的块。换页是新 DOM，自然为空；resize 时手动清空重来。 */
 	var measured = new WeakSet();
@@ -104,8 +109,8 @@
 			if (!item.clipped) continue;
 
 			measured.add(item.block);
-			if (item.full - item.clipped <= TOLERANCE) {
-				// 实际并没超出上限：撤掉折叠态，别留一条点了只会抖一下的折叠栏
+			if (item.full - item.clipped < MIN_OVERFLOW) {
+				// 实际并没超出多少：撤掉折叠态，别留一条点了只会抖一下的折叠栏
 				item.block.removeAttribute(FOLD_ATTR);
 			} else {
 				ensureFooter(item.block);

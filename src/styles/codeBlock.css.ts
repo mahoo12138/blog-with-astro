@@ -49,10 +49,18 @@ globalStyle('.code-block', {
 	// 自定义属性只向下继承，父级读不到 pre 上的原始变量，所以必须提升。
 	// 明暗切换时外壳与代码区永远同色，不会「上下两块颜色对不上」。
 	// 回退值对应 github-light / github-dark（astro.config shikiConfig）。
-	//
-	// --code-block-bg 只是个中间变量：折叠渐隐（见下方 pre::after）要跟
-	// 同色渐变，直接从同一个变量取，就不必再抄一遍四象限的色值。
-	'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+	vars: {
+		// --code-block-bg 只是个中间变量：折叠渐隐（见下方 pre::after）要跟
+		// 同色渐变，直接从同一个变量取，就不必再抄一遍四象限的色值。
+		'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+		// 折叠栏的两个颜色也走变量。原因不只是复用：折叠栏的结构规则挂在
+		// `html.has-js .code-block[data-code-fold]` 这种高权重选择器下，
+		// 深色覆盖与 :hover 若直接写 color/background 会被它压住
+		// （曾经踩过：深色下折叠栏文字仍是浅色主题的深蓝，几乎看不见）。
+		// 颜色拆成低权重规则 + 继承变量后，主题与 hover 都能正常覆盖。
+		'--code-fold-surface': 'rgba(0, 0, 0, 0.04)',
+		'--code-fold-text': 'rgba(52, 62, 78, 0.8)',
+	},
 	background: 'var(--code-block-bg)',
 	boxShadow: vars.shadow.card,
 });
@@ -64,20 +72,36 @@ globalStyle('.code-block', {
  * 系统深色下外壳永远回退浅色 #fff，顶栏（半透明叠色）呈现成白色。
  */
 globalStyle(':root[data-theme="light"] .code-block', {
-	'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+	vars: {
+		'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+		'--code-fold-surface': 'rgba(0, 0, 0, 0.04)',
+		'--code-fold-text': 'rgba(52, 62, 78, 0.8)',
+	},
 });
 
 globalStyle(':root[data-theme="dark"] .code-block', {
-	'--code-block-bg': 'var(--shiki-dark-bg, #24292e)',
+	vars: {
+		'--code-block-bg': 'var(--shiki-dark-bg, #24292e)',
+		'--code-fold-surface': 'rgba(255, 255, 255, 0.06)',
+		'--code-fold-text': 'rgba(226, 230, 235, 0.7)',
+	},
 });
 
 globalStyle(':root:not([data-theme]) .code-block', {
 	'@media': {
 		'(prefers-color-scheme: light)': {
-			'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+			vars: {
+				'--code-block-bg': 'var(--shiki-light-bg, #fff)',
+				'--code-fold-surface': 'rgba(0, 0, 0, 0.04)',
+				'--code-fold-text': 'rgba(52, 62, 78, 0.8)',
+			},
 		},
 		'(prefers-color-scheme: dark)': {
-			'--code-block-bg': 'var(--shiki-dark-bg, #24292e)',
+			vars: {
+				'--code-block-bg': 'var(--shiki-dark-bg, #24292e)',
+				'--code-fold-surface': 'rgba(255, 255, 255, 0.06)',
+				'--code-fold-text': 'rgba(226, 230, 235, 0.7)',
+			},
 		},
 	},
 });
@@ -307,12 +331,15 @@ globalStyle('.code-block__fold', {
  *
  * --code-fold-h 由构建期按 astro.config 的 maxHeight 下发；回退值 420px
  * 与 rehype-code-block.mjs 的 DEFAULT_MAX_HEIGHT 一致，只兜运行期补建的块。
+ * 再套一层 min(…, 62vh)：横屏手机这类矮视口上，420px 会独占整屏，
+ * 压到六成屏高才留得住上下文。运行期量的是 CSS 算完的真实高度，
+ * 所以这层裁剪不让构建期与运行期产生分歧。
  * box-sizing 用 border-box，让「最大高度」等于肉眼看到的整块高度。
  *
  * position: relative 是为了让下面的渐隐能钉在裁剪后的下沿。
  */
 globalStyle('html.has-js .code-block[data-code-fold]:not(.is-fold-open) > pre', {
-	maxHeight: 'var(--code-fold-h, 420px)',
+	maxHeight: 'min(var(--code-fold-h, 420px), 62vh)',
 	boxSizing: 'border-box',
 	overflow: 'hidden',
 	position: 'relative',
@@ -344,12 +371,16 @@ globalStyle('html.has-js .code-block[data-code-fold]:not(.is-fold-open) > pre::a
 });
 
 /**
- * 折叠栏本体。
+ * 折叠栏本体（结构与排版）。
  *
  * 视觉上刻意和顶部栏同款（同透明度叠色、同一条淡灰分隔线），
  * 让代码块上下「封边」，中间才是内容 —— 否则底部单拎一条色带
- * 会像贴上去的补丁。文字比顶部语言名稍大一点点（0.75rem），
- * 因为它是可点的动作，需要比元信息更显眼。
+ * 会像贴上去的补丁。
+ *
+ * ⚠️ 这里只放「结构」，颜色单独写在下面那条低权重规则里：
+ * 这个选择器为了表达「只有可折叠且挂了 JS 的块才显示」带了三个复合条件，
+ * 权重高到会压住 `:root[data-theme=dark] …` 和 `…:hover` 这类正常覆盖，
+ * 颜色塞进来就会变成「深色模式下仍是浅色文字」的暗坑。
  */
 globalStyle('html.has-js .code-block[data-code-fold] .code-block__fold', {
 	display: 'flex',
@@ -358,13 +389,12 @@ globalStyle('html.has-js .code-block[data-code-fold] .code-block__fold', {
 	gap: '0.4rem',
 	boxSizing: 'border-box',
 	width: '100%',
-	height: '2.25rem',
+	// 与顶部栏（39.25px）等高的「封边」：上下两条一样厚，代码区才像被框住
+	height: '2.5rem',
 	padding: `0 ${vars.space.lg}`,
 	margin: 0,
 	border: 'none',
 	borderTop: '1px solid rgba(127, 127, 127, 0.18)',
-	backgroundColor: 'rgba(0, 0, 0, 0.04)',
-	color: 'rgba(60, 70, 85, 0.62)',
 	fontFamily: vars.font.body,
 	fontSize: '0.75rem',
 	fontWeight: 500,
@@ -373,11 +403,9 @@ globalStyle('html.has-js .code-block[data-code-fold] .code-block__fold', {
 	cursor: 'pointer',
 	// 和顶部栏一致：折叠栏属于界面，复制代码时不该被一起选中
 	userSelect: 'none',
-	transition: `background-color ${vars.motion.durationFast} ${vars.motion.ease}, color ${vars.motion.durationFast} ${vars.motion.ease}`,
 	'@media': {
-		// 小屏给足点按高度，文字略收一点保持比例
+		// 小屏文字略收一点，高度不动 —— 40px 正好是个好按的目标
 		[`screen and (max-width: ${breakpoints.mobile})`]: {
-			height: '2.5rem',
 			fontSize: '0.72rem',
 			letterSpacing: '0.03em',
 		},
@@ -387,21 +415,16 @@ globalStyle('html.has-js .code-block[data-code-fold] .code-block__fold', {
 	},
 });
 
-globalStyle(':root[data-theme="dark"] .code-block__fold', {
-	backgroundColor: 'rgba(255, 255, 255, 0.06)',
-	color: 'rgba(225, 228, 232, 0.58)',
+/* 颜色走外壳下发的变量，权重故意压低，主题与 hover 才盖得住。
+ * --code-fold-text 比顶部语言名更实一档：那是元信息，这是可点的动作；
+ * 0.8 的档位在 #f5f5f5 上约 5.5:1，深色下约 5.9:1，都过 AA。 */
+globalStyle('.code-block__fold', {
+	backgroundColor: 'var(--code-fold-surface)',
+	color: 'var(--code-fold-text)',
+	transition: `background-color ${vars.motion.durationFast} ${vars.motion.ease}, color ${vars.motion.durationFast} ${vars.motion.ease}`,
 });
 
-globalStyle(':root:not([data-theme]) .code-block__fold', {
-	'@media': {
-		'(prefers-color-scheme: dark)': {
-			backgroundColor: 'rgba(255, 255, 255, 0.06)',
-			color: 'rgba(225, 228, 232, 0.58)',
-		},
-	},
-});
-
-/* hover/focus 与复制按钮同一套中性叠色，不引入站点 accent：
+/* hover 与复制按钮同一套中性叠色，不引入站点 accent：
  * 这层灰压在 Shiki 的两套主题底上都稳，深色下也不刺眼。 */
 globalStyle('.code-block__fold:hover', {
 	backgroundColor: 'rgba(127, 127, 127, 0.16)',

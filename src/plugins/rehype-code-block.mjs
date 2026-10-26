@@ -37,10 +37,11 @@
  *    就保持完整展开 —— 绝不留下「截断了但点不开」的死路。
  *
  * 构建期只做**估算**：真实行高会随字体、浏览器缩放、窄屏换行变化，
- * 没法在构建期算准，所以判定阈值用固定行高近似，宁肯多标几个块。
- * 运行期 public/js/code-block-fold.js 会用真实 `scrollHeight` 复核：
- * 不溢出的撤掉折叠、只有窄屏换行才溢出的补上折叠（含补建折叠栏）。
- * 多标的代价只是一次不产生绘制的属性调整。
+ * 没法在构建期算准（行数 × 固定行高只是近似），所以运行期
+ * public/js/code-block-fold.js 会用真实 `scrollHeight` 复核一遍：
+ * 没超出的撤掉折叠、只有窄屏换行才超出的补上折叠（含补建折叠栏）。
+ * 估算的作用只是「让多数超高块在第一帧就已经是折叠态」，误差由复核收口，
+ * 而且这一步在浏览器绘制前完成，多标少标都不会被看见。
  */
 
 /** 语言显示名。key 一律小写；查不到时回退到首字母大写。 */
@@ -123,12 +124,18 @@ export const FOLD_LABELS = { collapsed: '展开全部', expanded: '收起' };
 /**
  * 构建期判定折叠用的近似值（对应 src/layouts/BlogPost.css.ts 与
  * src/styles/codeBlock.css.ts 里代码区的真实排版）：
- *   pre > code  font-size 0.9rem → 14.4px，line-height 1.65 → 23.76px/行
- *   pre 上下 padding 各 1rem → 32px
+ *   pre  font-size 18px、line-height 1.55 → 27.9px/行（实测行距 27.89px）
+ *   pre  上下 padding 各 1rem → 32px
  * 这两个数字只影响「要不要标 data-code-fold」，偏差由运行期复核兜住。
+ *
+ * MIN_OVERFLOW 是「至少藏掉这么多才值得折」：上限和行距很难正好整除，
+ * 若只超出两三像素就折，看起来像是把最后一行削掉一层皮，还会多出一条
+ * 「展开只多这么点」的违和感。不到半行（行距 27.9px）就不折，
+ * 让 maxHeight 表现为软上限 —— 运行期用的是同一条规则。
  */
-const LINE_HEIGHT_PX = 24;
+const LINE_HEIGHT_PX = 28;
 const CODE_PADDING_PX = 32;
+const MIN_OVERFLOW_PX = 12;
 /** 折叠高度的默认值。与 codeBlock.css.ts 里 `--code-fold-h` 的回退值保持一致。 */
 export const DEFAULT_MAX_HEIGHT = 420;
 
@@ -265,7 +272,8 @@ function foldFooterNode() {
 
 function wrapCodeBlock(pre, languageLabel, { maxHeight = DEFAULT_MAX_HEIGHT } = {}) {
 	const shikiVars = hoistShikiThemeVars(pre);
-	const foldable = countCodeLines(pre) * LINE_HEIGHT_PX + CODE_PADDING_PX > maxHeight;
+	const foldable =
+		countCodeLines(pre) * LINE_HEIGHT_PX + CODE_PADDING_PX - maxHeight >= MIN_OVERFLOW_PX;
 	const style = [
 		shikiVars,
 		// 折叠高度随块下发：站点可在 astro.config 里改一处，全站生效，
