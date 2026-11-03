@@ -31,3 +31,6 @@ skills-lock.json
 
 # 临时隔离区（确认无用后删除）
 .trash-from-public/
+
+# 性能采集脚本与原始数据（本地工具，不入库）
+.perf-audit/
