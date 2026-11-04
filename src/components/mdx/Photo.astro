@@ -1,4 +1,6 @@
 ---
+import { resolveMedia } from '../../utils/media.mjs';
+
 interface Props {
 	src: string;
 	alt?: string;
@@ -16,12 +18,14 @@ interface Props {
 const { src, alt = '', type = 'blur', brand, logo, model, focal, aperture, shutter, iso, datetime } = Astro.props;
 const exif = [focal, aperture, shutter, iso].filter(Boolean).join(' ');
 const logoText = logo ?? brand;
+// 三层来源统一解析；模糊背景用同一张图，别让两处各写一份地址
+const media = resolveMedia(src);
 ---
 
 <figure class="tag-plugin photo" data-type={type}>
-	{type === 'blur' && <div class="photo-bg" style={`background-image:url(${src});`}></div>}
+	{type === 'blur' && <div class="photo-bg" style={`background-image:url("${media.src}");`}></div>}
 	<div class="photo-image-wrap">
-		<img class="photo-image" src={src} alt={alt} loading="lazy" decoding="async" />
+		<img class="photo-image" src={media.src} alt={alt} loading="lazy" decoding="async" data-media={media.kind} />
 	</div>
 	<div class="photo-bar">
 		<div class="photo-left">

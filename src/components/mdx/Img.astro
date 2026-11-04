@@ -1,0 +1,73 @@
+---
+import { figure, figureCaption } from './blocks.css';
+import { resolveMedia } from '../../utils/media.mjs';
+
+/**
+ * 正文图片的统一入口。
+ *
+ * 大多数时候**不需要**用它：正文里直接写 Markdown 就够了，前缀会在构建期被
+ * remark 插件换成真实地址。
+ *
+ *   ![](store:images/posts/2026/a.webp)   → omni-store 里的文章配图
+ *   ![](local:brand/logo.svg)              → public/images 下的本地素材
+ *   ![](https://cdn.example.com/a.png)     → 完整外链
+ *
+ * 需要图注、预留比例、首屏优先加载时才升级成组件：
+ *
+ *   <Img src="store:images/posts/2026/a.webp" alt="…" caption="…" ratio="16/9" priority />
+ */
+interface Props {
+	/** 三种前缀之一，或完整 URL */
+	src: string;
+	alt?: string;
+	/** 图注；给了才包 <figure>，没给就是一张裸图 */
+	caption?: string;
+	width?: number | string;
+	height?: number | string;
+	/** 预留比例的简写，如 "16/9"、"3/2"。图片加载前就占好位，避免整页下移 */
+	ratio?: string;
+	loading?: 'lazy' | 'eager';
+	/** 首屏 LCP 图：eager + fetchpriority=high */
+	priority?: boolean;
+	class?: string;
+}
+
+const {
+	src,
+	alt = '',
+	caption,
+	width,
+	height,
+	ratio,
+	loading,
+	priority = false,
+	class: className,
+} = Astro.props;
+
+// 解析失败直接在构建期抛错：漏配 storeBase、写错 local 路径都不会变成线上 404。
+const media = resolveMedia(src);
+const style = ratio ? `aspect-ratio:${ratio};width:100%;object-fit:cover;` : undefined;
+
+// frontmatter 里不能写 JSX，所以属性打成一个包，下面两处分支共用。
+// decoding / fetchpriority 要收窄成字面量类型，否则 Astro 的 ImgHTMLAttributes 不接受。
+const imgAttrs = {
+	src: media.src,
+	alt,
+	width,
+	height,
+	loading: loading ?? (priority ? ('eager' as const) : ('lazy' as const)),
+	decoding: 'async' as const,
+	fetchpriority: priority ? ('high' as const) : undefined,
+	style,
+	class: className,
+};
+---
+
+{caption ? (
+	<figure class={figure}>
+		<img {...imgAttrs} data-media={media.kind} />
+		<figcaption class={figureCaption} data-attach>{caption}</figcaption>
+	</figure>
+) : (
+	<img {...imgAttrs} data-media={media.kind} />
+)}

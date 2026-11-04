@@ -1,4 +1,6 @@
 ---
+import { resolveMedia } from '../../utils/media.mjs';
+
 interface Props {
 	src: string;
 	alt?: string;
@@ -6,9 +8,11 @@ interface Props {
 }
 
 const { src, alt = '', layout = 'grid' } = Astro.props;
+// 与正文图片共用一套前缀规则（store: / local: / 完整外链）
+const media = resolveMedia(src);
 ---
 
 <div class={`${layout}-cell lazy-box`}>
-	<img src={src} alt={alt} loading="lazy" decoding="async" />
+	<img src={media.src} alt={alt} loading="lazy" decoding="async" data-media={media.kind} />
 	<div class="image-meta">{alt && <span class="image-caption">{alt}</span>}</div>
 </div>

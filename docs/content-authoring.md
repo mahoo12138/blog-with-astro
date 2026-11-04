@@ -94,7 +94,19 @@ order: 1
 [实验说明](./assets/experiment.pdf)
 ```
 
-普通 Markdown 图片保留源文件相对路径，交给 Astro 原有图片管线处理。前置数据的 `cover` 仍使用现有 Astro `image()` schema。不要对普通 MDX `<img>` 期待自动图片优化；需要优化时使用 Markdown 图片语法或 Astro 图片组件。
+文章配图有三种来源，靠 URL 前缀区分，写法在 Markdown、MDX、frontmatter 里一致（完整规则见 [图片与静态资源](./media-rules.md)）：
+
+```text
+![](https://cdn.example.com/a.png)      ← 外链，原样输出
+![](store:images/posts/2026/a.webp)     ← omni-store 静态发布空间内的相对路径
+![](local:brand/logo.svg)               ← public/images 下的本地素材
+```
+
+`store:` / `local:` 在构建期解析成真实地址：没配 `storeBase`、本地文件不存在、路径带 `..` 都会直接构建失败，不会产出断链。需要图注、预留比例或首屏优先加载时用 `<Img>` 组件；`Photo` / `ImageCard` / `GalleryImage` / `Frame` 的 `src` 也吃同一套前缀。
+
+裸相对路径（上面的 `./assets/gpio.webp`）语义不变：相对**当前内容文件**，交给 Astro 原有图片管线。前端数据的 `cover` 同样接受三种前缀，也仍然接受 `image()` 的本地导入。
+
+不要对普通 MDX `<img>` 期待自动图片优化：它的地址只有在带前缀时才会被改写，优化仍只发生在 Markdown 图片与 Astro 图片组件上。
 
 下载链接转换到 `/content-assets/columns/<专栏>/assets/<文件>`，构建结束时输出对应文件；开发服务器提供同一路径。`assets/` 是**公开资源目录**，不要在其中放凭据或私人文件。隐藏文件、符号链接以及不在允许公开类型内的代码文件不会被作为下载资源发布。
 
@@ -127,6 +139,6 @@ pnpm dev             # 本地写作预览
 
 ## 实现位置
 
-`src/content-model/catalog.mjs` 定义目录身份与校验；`loader.ts` 适配 Astro 内容加载，保留 `getCollection('posts')` / `getCollection('columns')` 的现有消费接口；`relative-links.mjs` 使用 Markdown AST 转换链接；`integration.mjs` 负责开发刷新与公开资源输出。`scripts/content-output.mjs` 解析实际 HTML 并检查链接、锚点、发布页与历史跳转。
+`src/content-model/catalog.mjs` 定义目录身份与校验；`loader.ts` 适配 Astro 内容加载，保留 `getCollection('posts')` / `getCollection('columns')` 的现有消费接口；`relative-links.mjs` 使用 Markdown AST 转换链接；`integration.mjs` 负责开发刷新与公开资源输出。`scripts/content-output.mjs` 解析实际 HTML 并检查链接、锚点、发布页与历史跳转。图片前缀的实现在 `src/config/media.mjs` / `src/utils/media.mjs` / `src/plugins/media.mjs`，详见 [图片与静态资源](./media-rules.md)。
 
 这次只改变作者的组织方式与内容处理链路，不改变此前的页面样式或阅读功能。

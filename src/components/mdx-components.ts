@@ -42,6 +42,7 @@ import GhCard from './mdx/GhCard.astro';
 import Grid from './mdx/Grid.astro';
 import Hashtag from './mdx/Hashtag.astro';
 import ImageCard from './mdx/ImageCard.astro';
+import Img from './mdx/Img.astro';
 import Kbd from './mdx/Kbd.astro';
 import LinkCard from './mdx/LinkCard.astro';
 import Mark from './mdx/Mark.astro';
@@ -107,6 +108,7 @@ export {
 	Grid,
 	Hashtag,
 	ImageCard,
+	Img,
 	Intro,
 	Kbd,
 	Label,
@@ -184,6 +186,7 @@ export const mdxComponents = {
 	Grid,
 	Hashtag,
 	ImageCard,
+	Img,
 	Intro,
 	Kbd,
 	Label,

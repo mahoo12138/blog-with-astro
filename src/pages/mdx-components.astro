@@ -22,6 +22,7 @@ import {
 	Grid,
 	Hashtag,
 	ImageCard,
+	Img,
 	Kbd,
 	Label,
 	LinkCard,
@@ -216,6 +217,7 @@ log_level: warn`}</code></pre>
 	<Tabs>
 		<Tab label="演示效果">
 			<ImageCard src={imageOne} alt="山谷与湖面" caption="普通图片组件，支持背景、留白、比例和下载。" ratio="16/9" fit="cover" />
+			<Img src={imageOne} alt="山谷与湖面" caption="Img 组件：图注走 figcaption，ratio 在图片加载前就占好位置。" ratio="16/9" />
 			<Gallery size="m" ratio="square">
 				<GalleryImage src={imageOne} alt="湖面" />
 				<GalleryImage src={imageTwo} alt="森林" />
@@ -227,6 +229,8 @@ log_level: warn`}</code></pre>
 		</Tab>
 		<Tab label="示例代码">
 			<pre><code>{`<ImageCard src="/image.jpg" caption="图片说明" ratio="16/9" fit="cover" />
+
+<Img src="store:images/posts/a.webp" alt="说明" caption="图注" ratio="16/9" priority />
 
 <Gallery size="m" ratio="square">
   <GalleryImage src="/a.jpg" alt="A" />
