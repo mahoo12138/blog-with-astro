@@ -1,4 +1,6 @@
 ---
+import { resolveMedia } from '../../utils/media.mjs';
+
 interface Props {
 	src: string;
 	alt?: string;
@@ -6,9 +8,10 @@ interface Props {
 }
 
 const { src, alt = '', type = 'iphone11' } = Astro.props;
+const media = resolveMedia(src);
 ---
 
 <div class="frame-wrap" id={type}>
-	<img src={src} alt={alt} />
+	<img src={media.src} alt={alt} loading="lazy" decoding="async" data-media={media.kind} />
 	<span class="frame" aria-hidden="true"></span>
 </div>

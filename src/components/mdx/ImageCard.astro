@@ -1,4 +1,6 @@
 ---
+import { resolveMedia } from '../../utils/media.mjs';
+
 interface Props {
 	src: string;
 	alt?: string;
@@ -20,12 +22,14 @@ const imageStyle = [
 	bg ? `--image-bg:${bg};` : '',
 	padding ? `--image-padding:${padding};` : '',
 ].join('');
+// 展示地址与下载地址必须是同一个（早期两处各写一份，改前缀时会漏）
+const media = resolveMedia(src);
 ---
 
 <figure class="tag-plugin image">
 	<div class="image-bg" style={imageStyle} data-fit={fit}>
-		<img src={src} alt={alt} loading="lazy" decoding="async" />
-		{download && <a class="image-download" href={src} download aria-label="Download image">↓</a>}
+		<img src={media.src} alt={alt} loading="lazy" decoding="async" data-media={media.kind} />
+		{download && <a class="image-download" href={media.src} download aria-label="Download image">↓</a>}
 	</div>
 	{caption && <figcaption class="image-meta"><span class="image-caption">{caption}</span></figcaption>}
 </figure>

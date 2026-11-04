@@ -1,6 +1,7 @@
 import type { ImageMetadata } from 'astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { postUrl } from '../consts';
+import { resolveMedia } from './media.mjs';
 
 type BlogPost = CollectionEntry<'posts'>;
 type ColumnEntry = CollectionEntry<'columns'>;
@@ -120,19 +121,25 @@ export function sortColumnPosts(posts: BlogPost[]) {
  *
  * Source can be either a remote URL string or a local ImageMetadata.
  * `isLocal` lets callers choose between <Image> and plain <img>.
+ *
+ * 字符串形态的 cover 与正文图片走同一套前缀规则（src/config/media.mjs）：
+ * `store:` 会拼上 omni-store 的静态发布地址，`local:` 落到 public 素材根。
+ * 两者解析后都是普通 URL，因此仍然走 <img> 分支（isLocal 只表示 ImageMetadata）。
  */
 export function resolvePostCover(post: BlogPost): ResolvedPostCover | null {
 	const coverVal = post.data.cover;
 	if (coverVal === undefined || coverVal === null) {
 		return null;
 	}
-	if (typeof coverVal === 'string' && !coverVal.trim()) {
-		return null;
+	if (typeof coverVal === 'string') {
+		const trimmed = coverVal.trim();
+		if (!trimmed) return null;
+		return { variant: 'cover', src: resolveMedia(trimmed).src, isLocal: false };
 	}
 	return {
 		variant: 'cover',
-		src: typeof coverVal === 'string' ? coverVal.trim() : coverVal,
-		isLocal: typeof coverVal !== 'string',
+		src: coverVal,
+		isLocal: true,
 	};
 }
 

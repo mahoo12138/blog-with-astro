@@ -13,6 +13,7 @@ import { defineConfig } from 'astro/config';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import { rehypeCodeBlock } from './src/plugins/rehype-code-block.mjs';
 import { remarkMathGate } from './src/plugins/remark-math-gate.mjs';
+import { rehypeImageDefaults, remarkMedia } from './src/plugins/media.mjs';
 
 // 数学公式只在 frontmatter 标了 mathjax: true 的文章里渲染。
 //
@@ -56,7 +57,11 @@ export default defineConfig({
 	markdown: {
 		// remarkMath 无条件挂载（语法必须始终注册，见文件顶部说明）；
 		// remarkMathGate 负责把「非 mathjax 文章」的数学节点还原回原文。
-		remarkPlugins: [remarkMath, remarkMathGate, remarkContentLinks],
+		//
+		// remarkMedia 负责图片的三层来源（外链 / store: / local:），必须排在
+		// remarkContentLinks 之后：后者处理「相对当前文件」的路径，前者只管带前缀的引用，
+		// 两者跑在不同的判断分支上，互不干扰。规则定义见 src/config/media.mjs。
+		remarkPlugins: [remarkMath, remarkMathGate, remarkContentLinks, remarkMedia],
 		// rehypeCodeBlock 给代码块套外壳（语言标签 + 复制按钮 + 超高折叠栏）。
 		// 它无条件执行，且依赖 Shiki 已跑完 —— Astro 的管线里 rehypeShiki
 		// 本就在用户 rehypePlugins 之前，所以拿到的是带 data-language 的高亮结果。
@@ -69,7 +74,10 @@ export default defineConfig({
 		//
 		// rehypeKatex 可以无条件挂载：经过 remarkMathGate 之后，只有 mathjax: true
 		// 的文章里还存在数学节点，其余文章已经没有可渲染的数学节点了。
-		rehypePlugins: [rehypeKatex, [rehypeCodeBlock, { maxHeight: 420 }]],
+		//
+		// rehypeImageDefaults 给正文图片补 loading/decoding（Astro 渲染 Markdown 图片
+		// 时一个都不加，等于全页 eager），并把首图抬成 eager + fetchpriority=high。
+		rehypePlugins: [rehypeKatex, [rehypeCodeBlock, { maxHeight: 420 }], rehypeImageDefaults],
 		shikiConfig: {
 			// 双主题（light + dark）时 Shiki 会为每个 token 输出
 			//   style="color:#xxx;--shiki-dark:#yyy"
