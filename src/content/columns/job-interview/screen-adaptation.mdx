@@ -1,0 +1,439 @@
+---
+title: '屏幕适配：8 道面试题，从设计稿到像素'
+description: '从 1px 边框、vw 与 rem 的选型、100vh 溢出，到 Retina 清晰度与企业大屏缩放。8 道面试题串起「设计稿像素 → CSS 像素 → 物理像素 → 观感」的完整链路，配 4 个可交互沙盘。'
+date: 2026-11-04
+order: 1
+---
+
+import ViewportRuler from '../../../components/learn/ViewportRuler.tsx';
+import PixelLens from '../../../components/learn/PixelLens.tsx';
+import BigScreenStage from '../../../components/learn/BigScreenStage.tsx';
+import BreakpointLab from '../../../components/learn/BreakpointLab.tsx';
+
+<Intro>
+	<strong>屏幕适配的题，区分度不在「用过什么方案」，而在「知不知道自己站在哪一层」。</strong>
+	同样是 375 宽的手机，设计稿上的 32px、样式表里的 2rem、屏幕上的 32 个物理点，是三种不同的东西。
+	把这三者之间的换算说清楚，1px 变粗、vw 在桌面失控、大屏缩放发虚，就都成了同一道题的变体。
+</Intro>
+
+这篇文章用 8 道面试题走完这条链路。前 6 题是移动端与通用响应式，后 2 题是企业大屏。每题先给能在面试现场说出口的结论，再拆到规范与实现；涉及空间关系的部分，都配了可以拖动、切换的沙盘。
+
+## 先把地图画出来：三次换算，一个观感
+
+在讨论任何方案之前，先记住这张图。后面所有问题，都是某一层换算出了偏差。
+
+<Diagram
+	label="设计稿像素到人眼观感之间的三次换算"
+	width={720}
+	height={200}
+	nodes={[
+		{ id: 'design', x: 0, y: 0, w: 165, h: 54, role: 'formula', title: '设计稿 750', sub: '标注 32px · 1px 线' },
+		{ id: 'css', x: 185, y: 0, w: 165, h: 54, role: 'instr', title: 'CSS 像素', sub: '视口 375 · 样式表单位' },
+		{ id: 'device', x: 370, y: 0, w: 165, h: 54, role: 'target', title: '物理像素', sub: '× DPR 2 → 750 个点' },
+		{ id: 'eye', x: 555, y: 0, w: 165, h: 54, role: 'neutral', title: '观感', sub: '粗细 · 字号 · 可点区域' },
+	]}
+	arrows={[
+		{ from: 'design', to: 'css', dir: 'right' },
+		{ from: 'css', to: 'device', dir: 'right' },
+		{ from: 'device', to: 'eye', dir: 'right' },
+	]}
+	notes={[
+		{ at: 'canvas', y: 86, h: 24, text: '① 适配策略：vw / rem / 栅格 / transform —— 决定 1 个设计像素换成几个 CSS 像素。' },
+		{ at: 'canvas', y: 114, h: 24, text: '② devicePixelRatio × 页面缩放 —— 决定 1 个 CSS 像素落在几个物理像素上。' },
+		{ at: 'canvas', y: 142, h: 24, text: '③ 观看距离：手机 30cm、大屏 3m，同一个 16px 在两处的「大小感」完全不同。' },
+	]}
+/>
+
+<Caption>
+	第一层是工程问题（选方案），第二层是设备问题（DPR），第三层是人体工学问题（字号与触控）。
+	面试里被追问「还有呢」，通常就是往上跳一层。
+</Caption>
+
+把常见设备摊开，这几层的数值关系就很具体了：
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:20%" /><col style="width:13%" /><col style="width:8%" /><col style="width:15%" /><col /></colgroup>
+<thead><tr><th>设备</th><th>物理宽度</th><th>DPR</th><th>CSS 视口宽</th><th>容易出问题的地方</th></tr></thead>
+<tbody>
+<tr><td>iPhone SE</td><td>750</td><td>2</td><td>375</td><td>375 稿以外的设计稿都要换算</td></tr>
+<tr><td>iPhone 15 Pro</td><td>1179</td><td>3</td><td>393</td><td>1px 线要覆盖 3 个物理像素</td></tr>
+<tr><td>1080p 大屏</td><td>1920</td><td>1</td><td>1920</td><td>按 1920 稿写死 px 恰好合适，换屏就崩</td></tr>
+<tr><td>4K 大屏（Windows 150%）</td><td>3840</td><td>1.5</td><td>2560</td><td>系统缩放下 1px 线的视觉粗细不一致</td></tr>
+<tr><td>MacBook 14</td><td>3024</td><td>2</td><td>1512</td><td>桌面端 vw 方案会把内容放大到失控</td></tr>
+</tbody>
+</table>
+</Table>
+
+注意最后一列：**同一个方案在不同行里会以完全不同的方式失败**。这就是为什么「你们怎么做适配」这种问题，答方案名没有意义，要答约束。
+
+## Q1 · 1px 的边框为什么看起来更粗
+
+> **面试官：** 设计稿是 750 宽（@2x 图），上面标了一条 1px 分割线。你写 `border-bottom: 1px solid`，真机上明显比稿子粗。为什么？有几种改法？
+
+**面试官在考什么：** 你知不知道 CSS 像素和物理像素是两个单位，以及「1px 问题」本质是单位不匹配，不是浏览器画错了。
+
+**先给结论。** 750 稿上的 1px 指的是 1 个**物理像素**。设备 DPR 为 2 时，1 个 CSS 像素要占 2 个物理像素，所以写 `1px` 等于把这条线放大了一倍。所谓 1px 方案，目标只有一个：让线只覆盖 1 个物理像素，也就是 0.5 个 CSS 像素。
+
+把镜头推到像素级，这件事就没有歧义了：
+
+<PixelLens client:visible />
+
+<Caption>
+	切换 DPR 与写法，看这条线实际吃掉几个物理像素格。四种写法都是真实 CSS 渲染，不是画出来的示意。
+</Caption>
+
+**四种写法的取舍。**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:21%" /><col style="width:22%" /><col style="width:12%" /><col /></colgroup>
+<thead><tr><th>写法</th><th>2× 屏实际覆盖</th><th>圆角</th><th>代价</th></tr></thead>
+<tbody>
+<tr><td><code>border: 1px</code></td><td>2 个物理像素</td><td>支持</td><td>最简单，但粗一倍</td></tr>
+<tr><td><code>border: 0.5px</code></td><td>1 个物理像素（取整）</td><td>支持</td><td>iOS 稳定，部分 Android WebView 渲染成 1px 或直接不画</td></tr>
+<tr><td>伪元素 + <code>scaleY(0.5)</code></td><td>1 个物理像素</td><td>要单独处理</td><td>多一层合成，圆角与动画要额外照顾</td></tr>
+<tr><td><code>box-shadow</code></td><td>1 个物理像素</td><td>跟随圆角</td><td>不占布局，做单边描边的表达力有限</td></tr>
+<tr><td>渐变 / <code>border-image</code></td><td>1 个物理像素</td><td>不支持</td><td>适合直线分割，不能用于卡片描边</td></tr>
+</tbody>
+</table>
+</Table>
+
+工程上更稳的写法是把「缩放比」交给变量，而不是在每个组件里写死 0.5：
+
+```css
+.hairline {
+  position: relative;
+}
+.hairline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--line-color);
+  transform: scaleY(calc(1 / var(--dpr, 1)));
+  transform-origin: bottom;
+}
+```
+
+**追问：什么情况下不用做？** 设计稿按 375（@1x）出图时，标注的 1px 就是 1 个 CSS 像素，问题不存在。1px 问题只在「按 2 倍、3 倍图标注」的流程里出现——所以先确认设计稿的基准，再决定要不要引入这套复杂度。
+
+## Q2 · vw、rem、px、scale 到底怎么选
+
+> **面试官：** 移动端适配你用什么方案？rem 加动态根字号，还是 vw？两者有什么区别？
+
+**面试官在考什么：** 你有没有意识到这两种方案在数学上是同一个东西，真正的差异在运行时机、兜底能力和可访问性。
+
+**先看数学。** 750 稿、视口宽 W：
+
+- 转 vw：`x × 100 / 750`，因为 1vw 就是 W 的 1%
+- 转 rem：`x / 75 rem`，配合根字号 `W / 10`
+
+两条式子展开后都等于 `x × W / 750`。也就是说 **`10vw` 恒等于 `1rem`**（在根字号跟着屏宽走的方案里）。所以「选哪个」不是数学问题。
+
+<ViewportRuler client:visible />
+
+<Caption>
+	拖动视口从 320 到 1440：四种方案的差距不在手机上，而在宽屏。切到「裸 px」看它在 1440 下有多小，切到 vw 看它放大成什么样。
+</Caption>
+
+**差异表。**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:18%" /><col style="width:19%" /><col style="width:19%" /><col style="width:16%" /><col /></colgroup>
+<thead><tr><th></th><th>vw</th><th>rem + JS</th><th>裸 px</th><th>transform</th></tr></thead>
+<tbody>
+<tr><td>需要 JS</td><td>否</td><td>是</td><td>否</td><td>是（算比例）</td></tr>
+<tr><td>首屏抖动</td><td>无</td><td>有（根字号晚于首帧）</td><td>无</td><td>有</td></tr>
+<tr><td>宽屏表现</td><td>线性放大，需 <code>max-width</code> 兜底</td><td>同上</td><td>不放大，页面显得空</td><td>整体放大</td></tr>
+<tr><td>用户字号设置</td><td>不影响（也是问题）</td><td>被根字号覆盖</td><td>正常</td><td>不影响</td></tr>
+<tr><td>1px 细线</td><td>一起被缩放</td><td>一起被缩放</td><td>保持</td><td>一起被缩放</td></tr>
+</tbody>
+</table>
+</Table>
+
+**可访问性是这里最容易被忽略的一层。** 用 vw 或固定 rem 给 `font-size` 赋值，等于把排版基准从「用户偏好」换成了「屏幕宽度」。视力不好的用户把浏览器默认字号调到 20px，页面却仍然按 375 宽算出一个 14px 的正文——WCAG 1.4.4 要求文本能放大到 200% 而不丢内容，这类方案天然违背。
+
+**现代答案通常是「不选」。** 布局的伸缩交给 `flex` / `grid` 加 `minmax()`、`clamp()`；只有需要严格等比缩放的营销页、活动 H5 才用 vw，并且必须配 `max-width` 与桌面降级。组件库场景则用容器查询，下一题展开。
+
+**追问：750 稿上的 1px 在 vw 方案里怎么办？** 它会被算成 `0.1333vw`，在 375 屏上是 0.5px，在 414 屏上是 0.55px——比裸 px 更不可控。所以 1px 线要单独抽出来，不要进换算管线。
+
+## Q3 · 100vh 为什么会滚出屏幕
+
+> **面试官：** 移动端给首屏写 `height: 100vh`，为什么 iOS 上会多出一条滚动条？dvh、svh、lvh 该怎么选？
+
+**先给结论。** `100vh` 对应的是「地址栏收起时」的大视口，而不是当前可视高度。地址栏展开时实际可见区域更小，`100vh` 自然就溢出了。
+
+**为什么会这样。** 移动浏览器的地址栏参与布局，但会随着滚动收起或展开。规范早期只有 `vh` 这一个静态值，浏览器把它定义成「最大可视高度」——这样布局不会因为工具栏动画而反复重排。代价就是页面在地址栏展开时被顶出屏幕。
+
+三个单位分别对应三种口径：
+
+<Grid cols={3}>
+	<Card>
+		<strong>100lvh</strong>
+
+		大视口：地址栏收起后的高度。值最大，永远不随工具栏变化。
+	</Card>
+	<Card>
+		<strong>100svh</strong>
+
+		小视口：地址栏展开时的高度。值最小，做首屏最稳，不会跳动。
+	</Card>
+	<Card>
+		<strong>100dvh</strong>
+
+		动态视口：当前的真实可视高度。随工具栏实时变化，布局会跟着重排。
+	</Card>
+</Grid>
+
+**怎么选。**
+
+- 首屏、首屏 CTA：`min-height: 100svh`。宁可底部留一点，也不要让按钮被地址栏挡住。
+- 需要「永远刚好一屏」的容器（全屏图表、全屏视频）：`100dvh`，但要接受地址栏动画期间的连续重排；长列表里慎用，可能掉帧。
+- 固定底栏、悬浮按钮：`position: fixed` 加 `padding-bottom: env(safe-area-inset-bottom)`，并且 `<meta name="viewport">` 里要写 `viewport-fit=cover`，否则安全区变量恒为 0。
+- 桌面端也有类似问题：出现横向滚动条时，`100vh` 会比可视区高出一个滚动条的高度，`100dvh` 同样能修正。
+
+**追问：为什么不是所有浏览器都支持？** `dvh` / `svh` / `lvh` 是 2022 年前后落地的（Safari 15.4、Chrome 108），老设备要留 `100vh` 的降级声明，按顺序写两行即可。
+
+## Q4 · 一个容器怎么永远保持 16:9
+
+> **面试官：** 视频容器要始终保持 16:9，除了 `aspect-ratio` 还有别的写法吗？各自的坑是什么？
+
+**结论：** 旧方案的原理是「`padding-top` 的百分比基于**包含块宽度**」，所以 `56.25%` 能算出 16:9；新方案直接用 `aspect-ratio`，但会被显式的 `height` 或 `min-height` 覆盖。
+
+```css
+/* 现代写法 */
+.ratio {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+
+/* 需要兼容老浏览器时 */
+@supports not (aspect-ratio: 16 / 9) {
+  .ratio {
+    position: relative;
+    height: 0;
+    padding-top: 56.25%;
+  }
+  .ratio > * {
+    position: absolute;
+    inset: 0;
+  }
+}
+```
+
+**几个真实的坑：**
+
+1. `aspect-ratio` 只在「两个方向里有一个未确定」时起作用。同时写了 `height: 300px`，比例就失效了。
+2. `min-height` 会直接压过比例算出的高度，常见于「卡片至少 200px 高」的需求。
+3. `padding-top` 方案要求容器 `height: 0` 且子元素绝对定位，内容一旦要参与文档流就会塌。
+4. 图片用 `aspect-ratio` 主要是**占位**防 CLS，真实比例仍由图片自身决定，要配 `object-fit`。
+
+## Q5 · 断点怎么定，媒体查询和容器查询差在哪
+
+> **面试官：** 你的响应式断点是怎么定的？组件库里的卡片，应该用媒体查询还是容器查询？
+
+**先给结论：** 断点按**内容**断，不按设备断；组件查**容器**，页面骨架查**视口**。
+
+**为什么按内容断。** 设备宽度是无穷的，但一个布局「开始难看」的宽度是有限的。做法是把视口从窄往宽拖，记下卡片挤成一行、标题折行、表格开始横向滚动的那几个宽度——那就是断点。iPhone 的 390、393、430 只是巧合，不是依据。
+
+这个差别在组件复用时最致命：同一个卡片，放在 1200px 的主栏里很宽松，放进 280px 的侧栏就会挤爆——但视口一直是 1440，媒体查询什么都不会发生。
+
+<BreakpointLab client:visible />
+
+<Caption>
+	拖动容器宽度。上面那张卡用 @container，下面那张用 @media；视口没变，所以只有第一张会换布局。
+</Caption>
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:17%" /><col style="width:25%" /><col style="width:26%" /><col /></colgroup>
+<thead><tr><th></th><th><code>@media</code></th><th><code>@container</code></th><th>JS + ResizeObserver</th></tr></thead>
+<tbody>
+<tr><td>参照物</td><td>视口</td><td>最近的容器祖先</td><td>任意元素</td></tr>
+<tr><td>组件复用</td><td>失效（只看窗口）</td><td>正确</td><td>正确</td></tr>
+<tr><td>前置声明</td><td>无</td><td><code>container-type</code></td><td>ref + 观察器</td></tr>
+<tr><td>首屏抖动</td><td>无</td><td>无</td><td>可能有一帧</td></tr>
+<tr><td>兼容性</td><td>全部</td><td>Chrome 105+ / Safari 16+</td><td>全部</td></tr>
+</tbody>
+</table>
+</Table>
+
+**`container-type: inline-size` 不是没有代价。** 它给容器加上了 inline 方向的尺寸包含：容器的宽度不再由内容撑开，绝对定位子元素的包含块也会变。所以别随手给 `body` 或大布局容器加，只在真正需要响应式的组件外壳上加。
+
+**追问：容器查询能查自己吗？** 不能。`@container` 永远查询最近的**祖先**容器，所以一个组件想根据自身宽度变化，必须由父级声明 `container-type`。
+
+## Q6 · Retina 上图片和 canvas 为什么还是糊
+
+> **面试官：** 同一张 2 倍图，在 3 倍屏手机上为什么还是发虚？canvas 画出来的东西为什么总是模糊？
+
+**先给结论：** 位图有自己的分辨率，CSS 只负责把它**显示**成多大；两者不匹配就会重采样。canvas 更特殊——它有「位图尺寸」和「显示尺寸」两套尺寸，只设一套必然糊。
+
+**图片：让浏览器自己选。** `srcset` + `sizes` 把「布局宽度」和「候选分辨率」都告诉浏览器，由它按 DPR 和网络状况挑：
+
+```html
+<img
+  src="cover-800.jpg"
+  srcset="cover-800.jpg 800w, cover-1600.jpg 1600w, cover-2400.jpg 2400w"
+  sizes="(min-width: 768px) 50vw, 100vw"
+  width="800"
+  height="450"
+  alt=""
+/>
+```
+
+`sizes` 写错是常见事故：写成 `100vw` 但实际只占半屏，浏览器就会选一张两倍大的图，白付流量。
+
+**canvas：位图尺寸必须是显示尺寸乘 DPR。**
+
+```js
+function fitCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return ctx;
+}
+```
+
+现在的 `ctx` 坐标系已经回到 CSS 像素，按设计稿标注值画就行。
+
+**四个细节：**
+
+1. 修改 `canvas.width` 会清空画布并重置全部上下文状态，必须重画。
+2. 只改位图尺寸不改 CSS 尺寸，画面会被拉伸；只改 CSS 尺寸不改位图，画面会被放大——两种都糊。
+3. 用户把窗口从 2× 屏拖到 1× 屏时 DPR 会变，要监听 `resize` 或用 `matchMedia('(resolution: 2dppx)')` 重建。
+4. 图表库通常有自己的 DPR 处理，容器尺寸变化后必须显式 `resize()`，否则它还在按旧尺寸的位图渲染。
+
+## Q7 · 企业大屏投到 4K、超宽、竖屏上怎么办
+
+> **面试官：** 一块 1920×1080 的运营大屏，要投到 4K、21:9 拼接屏和竖屏上，你的适配方案是什么？
+
+**面试官在考什么：** 你会不会先问约束。大屏适配没有通用解，只有「画布是否固定、比例是否可控、有没有需要精确坐标的交互」这三问的答案。
+
+<BigScreenStage client:visible />
+
+<Caption>
+	切换策略与屏幕比例。注意「等比缩放」下圆环仍然是正圆但会出现黑边，「拉伸铺满」没有黑边但圆环变成椭圆。
+</Caption>
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:14%" /><col style="width:30%" /><col style="width:20%" /><col /></colgroup>
+<thead><tr><th>策略</th><th>做法</th><th>优点</th><th>代价</th></tr></thead>
+<tbody>
+<tr><td>等比缩放</td><td>固定 1920×1080，整层 <code>transform: scale</code></td><td>像素级还原，改一处全对</td><td>黑边、非整数缩放发虚、坐标与 canvas 不跟随</td></tr>
+<tr><td>拉伸铺满</td><td>宽高各 100%</td><td>没有黑边</td><td>图形变形，字号不随屏变</td></tr>
+<tr><td>弹性重排</td><td>栅格 + <code>clamp()</code> + <code>ResizeObserver</code></td><td>不变形、不留白</td><td>每个模块都要写响应式规则</td></tr>
+</tbody>
+</table>
+</Table>
+
+**生产环境通常是混合的：**
+
+- 外层保底：等比缩放，保证 16:9 拼接屏上像素级还原。
+- 内部弹性：图表、列表、地图用 `ResizeObserver` 跟随容器，自己重算尺寸。
+- 极端比例：超宽或竖屏不再硬缩，用断点直接换布局（4 列变 6 列、地图换到主位），否则 9:16 屏上会缩成一条。
+
+**4K 的两个陷阱。** 一是系统缩放：Windows 设 150% 时，3840 的物理宽度对应的 CSS 视口只有 2560，设计稿 1920 仍然放得下，但 1px 线在物理上是 1.5 像素，看起来会「忽粗忽细」。二是 DPR 不是固定的整数值，用 `window.devicePixelRatio` 做乘法时不要假设它是 2。
+
+## Q8 · transform: scale 有哪些坑
+
+> **面试官：** 你说用 scale 适配大屏，具体有哪些坑？怎么绕过？
+
+**先给结论：** `transform` 只改绘制，不改布局。任何依赖布局尺寸的东西——滚动高度、fixed 定位、canvas 位图、鼠标坐标——都不会跟着缩放。
+
+**基本骨架：**
+
+```css
+.viewport {
+  position: relative;
+  overflow: hidden;
+}
+.stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: center center;
+}
+```
+
+```js
+const DESIGN = { width: 1920, height: 1080 };
+
+function fit(stage) {
+  const parent = stage.parentElement;
+  const scale = Math.min(
+    parent.clientWidth / DESIGN.width,
+    parent.clientHeight / DESIGN.height,
+  );
+  stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+```
+
+**六个真实的坑：**
+
+1. **文字发虚。** 非整数缩放（0.66×）时，浏览器先按原尺寸栅格化字体纹理，再整体重采样，14px 的字实际渲染成 9.24px 的字形位图。整数倍或 0.5 倍最安全，但比例通常由屏幕决定，控制不了。
+2. **固定定位逃逸。** 下拉菜单、Tooltip、Modal 一旦挂到 `body`，就不在缩放层里，坐标按视口算，位置会偏。要么挂进缩放容器，要么手动乘 `scale`。
+3. **canvas 不会跟着清晰。** 位图被拉伸，只是变大不是变清楚。必须用 `ResizeObserver` 重设位图尺寸，并把 `devicePixelRatio × scale` 一起算进去。
+4. **鼠标坐标要换算。** 在 canvas 里做拾取、绘制、拖拽时，`clientX` 是视口坐标，要减偏移再除 `scale`。
+5. **1px 线会消失。** 0.4 个物理像素的线会被舍入掉，窄边框在某些缩放下直接看不见。
+6. **滚动计算错位。** 虚拟列表按 `scrollHeight` 估算可见条数，但缩放后的视觉高度和布局高度不是一回事。
+
+**什么时候可以接受这些坑？** 屏幕比例固定、内容以展示为主、没有画布交互——这三点同时成立时，scale 是最省事的方案。只要有地图、绘制、拖拽这类交互，就该换弹性布局。
+
+## 一页速查
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:26%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>场景</th><th>推荐</th><th>避免</th></tr></thead>
+<tbody>
+<tr><td>移动端营销页 / 活动 H5</td><td>vw + <code>max-width</code> + 桌面降级</td><td>纯 rem + JS、无兜底的 vw</td></tr>
+<tr><td>后台、组件库</td><td>flex/grid + 容器查询</td><td>用视口断点写组件内部布局</td></tr>
+<tr><td>严格等比的设计还原</td><td>单一换算管线（vw 或 rem，二选一）</td><td>三套单位混用</td></tr>
+<tr><td>企业大屏（固定画布）</td><td>外层等比 + 内部 <code>ResizeObserver</code></td><td>直接 scale <code>body</code></td></tr>
+<tr><td>全屏首屏</td><td><code>100svh</code>，需要贴合时 <code>100dvh</code></td><td>裸 <code>100vh</code></td></tr>
+<tr><td>1px 细线</td><td>伪元素 + <code>scaleY(1/dpr)</code>，0.5px 作降级</td><td>把设计稿的 1px 直接写成 CSS 1px</td></tr>
+<tr><td>高清 canvas</td><td>位图尺寸 = 显示尺寸 × DPR</td><td>只改 CSS 宽高</td></tr>
+<tr><td>响应式图片</td><td><code>srcset</code> + 准确的 <code>sizes</code></td><td>只放一张 2x 图</td></tr>
+</tbody>
+</table>
+</Table>
+
+**30 秒版本的口头回答：**
+
+> 适配分三层。第一层是设计稿到 CSS 像素，用栅格加 `clamp()` 做弹性，只有严格等比的页面才上 vw，并且一定配 `max-width`；第二层是 CSS 像素到物理像素，由 DPR 决定，1px 线、图片 `srcset`、canvas 位图都在这一层处理；第三层是观看距离，决定字号和触控目标的最小尺寸。大屏另说：画布固定就外层等比、内部用 `ResizeObserver`，有画布交互就不能 scale。
+
+## 面试官可能继续追问
+
+<Disclosure title="为什么不用 zoom 代替 transform: scale？">
+	`zoom` 会参与布局计算（相当于改了整个盒模型的比例），历史上各浏览器实现不一致，Firefox 直到 2024 年才支持。它不会产生 transform 那样的合成层，文字更清晰，但 `zoom` 后的 `getBoundingClientRect`、滚动位置、fixed 定位仍然会让人意外。做新项目可以用，做兼容性要求高的老项目仍然建议 scale 或弹性布局。
+</Disclosure>
+
+<Disclosure title="DPR 是 3 的手机上，1px 线真的只能做到 1/3 像素吗？">
+	不能。物理上最小就是 1 个设备像素，也就是 1/3 个 CSS 像素。再细的线只能靠颜色变淡（降低不透明度）来「看起来更细」，这是设计上的妥协，不是技术上还能再分。
+</Disclosure>
+
+<Disclosure title="vw 方案在桌面端失控，除了 max-width 还有别的兜底吗？">
+	可以，但要组合：给根容器设 `max-width` 并居中；用媒体查询在 768 以上切回固定字号；或者干脆只在移动端启用 vw 换算（构建时按断点生成两套样式）。最省事的仍然是「不用 vw 做全站基准」。
+</Disclosure>
+
+<Disclosure title="容器查询能不能替代媒体查询？">
+	不能。容器查询解决的是「组件不知道自己会被放多宽」，页面骨架（导航折叠、主栏与侧栏切换）仍然要看视口。两者是分工，不是替代。
+</Disclosure>
+
+## 参考
+
+- [MDN：CSS 值与单位](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_Values_and_Units)
+- [MDN：devicePixelRatio](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/devicePixelRatio)
+- [MDN：容器查询](https://developer.mozilla.org/zh-CN/docs/Web/CSS/CSS_containment/Container_queries)
+- [web.dev：视口单位与移动端布局](https://web.dev/blog/viewport-units)
+- [WCAG 1.4.4：调整文本大小](https://www.w3.org/WAI/WCAG21/Understanding/resize-text.html)
