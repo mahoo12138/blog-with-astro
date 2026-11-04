@@ -384,8 +384,16 @@ if (brokenRedirects.length) {
 const blogFeedFirstPage = path.join(dist, 'posts', 'index.html');
 if (existsSync(blogFeedFirstPage)) {
 	const html = await readFile(blogFeedFirstPage, 'utf8');
+	/*
+	 * 只断言 main 区域。侧栏「热力图」会按日期链到当天的任意文章（含专栏章节），
+	 * 它是时间序列入口，不是博客流；把它算进来会让断言随「今天有没有写章节」误报，
+	 * 而真正要守的是「feed 列表不被同一个专栏刷屏」。
+	 */
+	const mainStart = html.indexOf('id="main-content"');
+	const mainEnd = html.indexOf('</main>', mainStart + 1);
+	const feedHtml = mainStart >= 0 && mainEnd > mainStart ? html.slice(mainStart, mainEnd) : html;
 	const chapterLinks = new Set(
-		[...html.matchAll(/href="\/columns\/[^/"]+\/[^/"]+\/"/g)].map((m) => m[0]),
+		[...feedHtml.matchAll(/href="\/columns\/[^/"]+\/[^/"]+\/"/g)].map((m) => m[0]),
 	);
 	if (chapterLinks.size > 1) {
 		failures.push(
