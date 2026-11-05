@@ -89,6 +89,8 @@ export const input = style({
 	selectors: {
 		'&::placeholder': { color: vars.color.textMeta },
 		'&::-webkit-search-cancel-button': { appearance: 'none' },
+		// 模态搜索的焦点由整行底线（inputRow）表达，不铺控件级淡晕。
+		'&:focus-visible': { outline: 'none', backgroundColor: 'transparent' },
 	},
 });
 

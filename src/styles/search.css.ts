@@ -63,9 +63,10 @@ export const input = style({
 	fontSize: '0.95rem',
 	outline: 'none',
 	selectors: {
+		// 焦点底衬由全局输入控件规则统一给出（theme.css.ts），这里只染边框，
+		// 不再叠 4px 外光晕 —— 那在视觉上就是一圈外框。
 		'&:focus': {
 			borderColor: vars.color.accent,
-			boxShadow: vars.shadow.focus,
 		},
 		'&::placeholder': {
 			color: vars.color.textMeta,

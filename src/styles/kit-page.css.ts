@@ -1,5 +1,5 @@
 import { style, globalStyle } from '@vanilla-extract/css';
-import { vars, breakpoints } from './theme.css';
+import { vars, breakpoints, fieldFocusWash } from './theme.css';
 
 /**
  * /kit 展示页样式 —— 设计语言活文档。
@@ -174,13 +174,16 @@ export const ghostInput = style({
 		'&::placeholder': {
 			color: vars.color.textMeta,
 		},
-		'&:hover, &:focus': {
+		'&:hover': {
 			background: vars.color.accentSoft,
+		},
+		// 全站标准：输入控件不画外框，焦点由底衬表达。
+		'&:focus': {
+			background: fieldFocusWash,
 			outline: 'none',
 		},
 		'&:focus-visible': {
-			outline: `2px solid ${vars.color.accentStrong}`,
-			outlineOffset: '2px',
+			outline: 'none',
 		},
 	},
 });

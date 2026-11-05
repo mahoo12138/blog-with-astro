@@ -286,10 +286,27 @@ globalStyle('a:hover', {
 	color: vars.color.accent,
 });
 
-globalStyle(':where(a, button, input, textarea, select, summary, [tabindex]):focus-visible', {
+/**
+ * 输入控件的焦点语言：不画外框，用同色相淡晕取代（与评论区一致）。
+ * 只对文本类控件生效，勾选 / 滑块 / 取色 / 文件仍保留浏览器原生焦点环。
+ */
+export const fieldFocusWash = `color-mix(in srgb, ${vars.color.accent} 14%, transparent)`;
+
+globalStyle(':where(a, button, summary, [tabindex]):focus-visible', {
 	outline: `2px solid ${vars.color.accentStrong}`,
 	outlineOffset: '3px',
 });
+
+// 元素选择器 (0,0,1) 让这条略高于组件基础类 (0,1,0)，能接管默认底色；
+// 组件的 :focus 规则 (0,2,0) 仍可按自身设计覆盖（如工具栏、模态搜索行）。
+// 只针对文本类控件：勾选 / 滑块 / 取色 / 文件 / 按钮型 input 保留原生焦点环。
+globalStyle(
+	'input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"])):focus-visible, textarea:focus-visible, select:focus-visible',
+	{
+		outline: 'none',
+		backgroundColor: fieldFocusWash,
+	},
+);
 globalStyle(':where(h1, h2, h3, h4, h5, h6, [id])', { scrollMarginTop: '80px' });
 globalStyle('html', { '@media': { '(prefers-reduced-motion: reduce)': { scrollBehavior: 'auto' } } });
 globalStyle('*, *::before, *::after', {

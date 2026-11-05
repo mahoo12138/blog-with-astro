@@ -1,5 +1,5 @@
 import { globalStyle, style } from '@vanilla-extract/css';
-import { breakpoints, vars } from './theme.css';
+import { breakpoints, fieldFocusWash, vars } from './theme.css';
 
 /**
  * 工具箱（/tools）页面样式。
@@ -224,8 +224,8 @@ export const input = style({
 	selectors: {
 		'&::placeholder': { color: vars.color.textMeta, fontFamily: vars.font.body },
 		'&:hover': { background: vars.color.accentSoft },
-		// 聚焦反馈用色彩淡晕 + 全站统一 focus ring，不画描边盒子
-		'&:focus': { background: vars.color.accentSoft },
+		// 全站标准：焦点用底衬表达，不画外框（与 comments / 搜索页同一语言）。
+		'&:focus': { background: fieldFocusWash },
 	},
 });
 
