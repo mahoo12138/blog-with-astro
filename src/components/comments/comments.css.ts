@@ -15,6 +15,10 @@ import { breakpoints, vars } from '../../styles/theme.css';
 
 const ghostTransition = `background ${vars.motion.durationFast} ${vars.motion.ease}, color ${vars.motion.durationFast} ${vars.motion.ease}, box-shadow ${vars.motion.durationBase} ${vars.motion.ease}`;
 
+// 焦点不画外框：用同色相、略浓于 accentSoft(8%) 的底衬表达。
+// 键盘焦点需要比 hover 更可感知，故取 13%，但不引入任何线条。
+const focusWash = `color-mix(in srgb, ${vars.color.accent} 13%, transparent)`;
+
 export const section = style({
 	margin: `${vars.space.xxl} ${vars.space.lg} ${vars.space.xxxxl}`,
 	fontFamily: vars.font.body,
@@ -171,11 +175,14 @@ export const input = style({
 	color: vars.color.text,
 	font: 'inherit',
 	fontSize: '0.82rem',
+	outline: 'none',
 	transition: ghostTransition,
 	selectors: {
 		'&::placeholder': { color: vars.color.textMeta, opacity: 0.85 },
 		'&:hover': { background: vars.color.accentSoft },
-		'&:focus': { background: vars.color.accentSoft },
+		'&:focus': { background: focusWash },
+		// 全局 :focus-visible 会给表单控件画 2px 外框，这里按幽灵输入语言改由底衬表达。
+		'&:focus-visible': { outline: 'none' },
 	},
 });
 
@@ -186,7 +193,7 @@ export const composer = style({
 	transition: ghostTransition,
 	selectors: {
 		'&:hover': { background: vars.color.accentSoft },
-		'&:focus-within': { background: vars.color.accentSoft },
+		'&:focus-within': { background: focusWash },
 	},
 });
 
@@ -211,6 +218,8 @@ export const textarea = style({
 	outline: 'none',
 	selectors: {
 		'&::placeholder': { color: vars.color.textMeta, opacity: 0.85 },
+		// 覆盖全局 :focus-visible 的 2px 外框（同特异性靠源序不可靠，显式提权）。
+		'&:focus-visible': { outline: 'none' },
 	},
 });
 
