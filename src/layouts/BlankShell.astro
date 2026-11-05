@@ -9,15 +9,17 @@ interface Props {
 	description: string;
 	lang?: string;
 	noindex?: boolean;
+	/** 页面级字体样式表（如 /love 的衬线字体），全站默认不加载 */
+	extraFonts?: string[];
 }
 
-const { title, description, lang = 'zh-CN', noindex = false } = Astro.props;
+const { title, description, lang = 'zh-CN', noindex = false, extraFonts } = Astro.props;
 ---
 
 <!doctype html>
 <html lang={lang}>
 	<head>
-		<BaseHead title={title} description={description} noindex={noindex} />
+		<BaseHead title={title} description={description} noindex={noindex} extraFonts={extraFonts} />
 	</head>
 	<body class={styles.body}>
 		<TopProgressBar />

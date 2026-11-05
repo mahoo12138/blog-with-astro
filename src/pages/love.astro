@@ -4,6 +4,9 @@ import { getExploreInternalItemByHref } from "../config/explore";
 // 页面级元数据（纪念日 / 情书 / 那首歌 / 双人头像）已抽到 config/love.ts，
 // 这里只负责拉 collection 与拼装。头像的图片管线压缩也由该模块负责。
 import { loveMeta } from "../config/love";
+// 衬线字体只在 /love 按需加载：全站已改系统字体栈（见 config/fonts.ts），
+// 不放回全局，避免每个页面白付 92KB 的 Serif CSS。
+import { siteFontConfig } from "../config/fonts";
 import ExploreShell from "../layouts/ExploreShell.astro";
 
 // Presentational Astro components
@@ -87,7 +90,7 @@ const wishesEntries = sortById(wishes).map((e) => ({ id: e.id, ...e.data }));
 const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }));
 ---
 
-<ExploreShell item={item} noindex>
+<ExploreShell item={item} noindex extraFonts={[siteFontConfig.serifFontsUrl]}>
   <div class="love-root" data-season={currentSeason} id="love-root" data-pagefind-ignore>
     {/* 粒子背景：fixed 全屏常驻，但内部已有 IO / visibilitychange / reduced-motion 降级，
         仅在进入视口且标签页可见时才跑 RAF，故可以用 client:visible 延后 React 运行时。
@@ -371,7 +374,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
       margin-bottom: 2.5rem;
     }
     .love-root .sh h2 {
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: 20px;
       font-weight: 600;
       white-space: nowrap;
@@ -445,7 +448,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
       gap: 4px;
     }
     .love-root .cd-n {
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: clamp(40px, 9vw, 72px);
       font-weight: 600;
       color: var(--gw2);
@@ -459,7 +462,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
       color: var(--txh);
     }
     .love-root .cd-dot {
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: 36px;
       color: var(--bd);
       margin-bottom: 6px;
@@ -496,7 +499,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
       color: var(--txm);
     }
     .love-root .cdr .n {
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: 24px;
       font-weight: 600;
       color: var(--gw2);
@@ -532,7 +535,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
       margin-bottom: 8px;
     }
     .love-root .sc3-n {
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: 22px;
       font-weight: 600;
       color: var(--gw2);
@@ -814,7 +817,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
     .love-root .cal-wkday {
       font-size: 13px;
       color: var(--gw);
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       transition: color 0.7s;
     }
     .love-root .cal-date-stage {
@@ -832,7 +835,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
     .love-root .cal-date-frame::before,
     .love-root .cal-date-frame::after {
       position: absolute;
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: 18px;
       color: var(--bds);
       transition: color 0.7s;
@@ -914,7 +917,7 @@ const calendarEntries = sortById(calendar).map((e) => ({ id: e.id, ...e.data }))
       transition: transform 0.35s;
     }
     .love-root .cal-ev-tt {
-      font-family: "Noto Serif SC", serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", Georgia, serif;
       font-size: 20px;
       font-weight: 600;
       color: var(--gw2);

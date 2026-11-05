@@ -23,9 +23,11 @@ interface Props {
 	noindex?: boolean;
 	/** 挂载学苑演示套件（指针拖尾 + 贴边工具栏）。fixed 浮层直挂 shell，不落进内容动画容器 */
 	presenter?: boolean;
+	/** 页面级字体样式表（默认不加载，见 config/fonts.ts） */
+	extraFonts?: string[];
 }
 
-const { title, description, lang = 'zh-CN', mainClass, siteTree = 'page', menuId, leftbar, tocHeadings = [], noindex = false, presenter = false } = Astro.props;
+const { title, description, lang = 'zh-CN', mainClass, siteTree = 'page', menuId, leftbar, tocHeadings = [], noindex = false, presenter = false, extraFonts } = Astro.props;
 const hasLead = Astro.slots.has('lead');
 const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 ---
@@ -33,7 +35,7 @@ const shellConfig = resolveShellConfig(siteTree, { menuId, leftbar });
 <!doctype html>
 <html lang={lang}>
 	<head>
-		<BaseHead title={title} description={description} noindex={noindex} />
+		<BaseHead title={title} description={description} noindex={noindex} extraFonts={extraFonts} />
 	</head>
 	<body class={styles.body}>
 		<TopProgressBar />
