@@ -1,131 +1,87 @@
 ---
-import 'artalk/Artalk.css';
-
-const server = import.meta.env.ARTALK_SERVER ?? '';
-const site = import.meta.env.ARTALK_SITE ?? '';
-const enabled = Boolean(server && site);
+/**
+ * ArtalkComments —— 站点自建的 Artalk 评论区（替代官方 SDK 的 UI）。
+ *
+ * 集成方式：SSR 只输出配置 data-* 与两行骨架，浏览器侧由
+ * `./comments/client.ts` 注入完整界面（裸 <script>，进入视口 600px 才发请求）。
+ * 挂载点保持不变：BlogPost.astro 与 about.astro 仍按原样传 pageKey / pageTitle。
+ *
+ * 把完整表单放进共享 JS chunk 而不是 128 份 HTML：评论区挂在所有文章页，
+ * 每页复制 3.4KB 表单会让 dist 多出 ~430KB，直接顶破 audit:dist 的 22MB 预算。
+ *
+ * 配置真源是 src/config/comments.ts；默认值已指向
+ * https://artalk.mahoo12138.cn/ 与站点名 "Mahoo Space"，可用 .env 覆盖。
+ * `mode="counts"` 只输出一个隐藏配置节点，用于列表页批量补全
+ * `<span data-comment-count="/post/x/"></span>` 的评论数。
+ */
+import { commentsConfig } from '../config/comments';
+import * as css from './comments/comments.css';
 
 interface Props {
 	pageKey?: string;
 	pageTitle?: string;
+	mode?: 'full' | 'counts';
 }
 
-const { pageKey, pageTitle } = Astro.props;
+const { pageKey, pageTitle, mode = 'full' } = Astro.props;
+const enabled = commentsConfig.enabled;
+const key = pageKey ?? Astro.url.pathname;
 ---
 
-{enabled && (
-	<section class="artalk-section" data-pagefind-ignore>
-		<div
-			id="artalk"
-			class="artalk-mount"
-			data-server={server}
-			data-site={site}
-			data-page-key={pageKey ?? ''}
-			data-page-title={pageTitle ?? ''}
-		></div>
-		<script>
-			type ArtalkInstance = { destroy: () => void; setDarkMode: (d: boolean) => void };
-			let instance: ArtalkInstance | null = null;
-			let ArtalkMod: typeof import('artalk') | null = null;
-			let observer: IntersectionObserver | null = null;
-			let themeObserver: MutationObserver | null = null;
+{enabled && mode === 'counts' && (
+	<div
+		hidden
+		data-pagefind-ignore
+		data-comments-root
+		data-mode="counts"
+		data-server={commentsConfig.apiBase}
+		data-site={commentsConfig.site}
+		data-page-key={key}
+		data-page-title={pageTitle ?? ''}
+		data-timeout={commentsConfig.timeout}
+	></div>
+)}
 
-			const teardown = () => {
-				themeObserver?.disconnect();
-				themeObserver = null;
-				observer?.disconnect();
-				observer = null;
-				try { instance?.destroy(); } catch {}
-				instance = null;
-				ArtalkMod = null;
-			};
-
-			// 评论区接近视口再 dynamic import Artalk：
-			// 一篇长文章如果用户只看前半部分，这次网络 / 解析 / 初始化开销就完全省掉了。
-			const initArtalk = async () => {
-				const mount = document.getElementById('artalk') as HTMLElement | null;
-				if (!mount || instance) return;
-
-				if (!ArtalkMod) ArtalkMod = await import('artalk');
-				const Artalk = ArtalkMod.default;
-
-				const root = document.documentElement;
-				const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-				const resolveDark = () => {
-					const theme = root.getAttribute('data-theme');
-					if (theme === 'dark') return true;
-					if (theme === 'light') return false;
-					return darkQuery.matches;
-				};
-
-				instance = Artalk.init({
-					el: '#artalk',
-					pageKey: mount.dataset.pageKey || location.pathname,
-					pageTitle: mount.dataset.pageTitle || document.title,
-					server: mount.dataset.server!,
-					site: mount.dataset.site!,
-					darkMode: resolveDark(),
-					locale: 'zh-CN',
-				});
-
-				const applyDark = () => {
-					try { instance?.setDarkMode(resolveDark()); } catch {}
-				};
-				themeObserver = new MutationObserver(applyDark);
-				themeObserver.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
-				darkQuery.addEventListener('change', applyDark);
-			};
-
-			const setup = () => {
-				const mount = document.getElementById('artalk') as HTMLElement | null;
-				if (!mount) return;
-
-				// 每次页面加载注册一次清理（下一次 swap 触发）
-				document.addEventListener('astro:before-swap', teardown, { once: true });
-
-				// 评论区距离视口 600px 内再触发懒加载
-				if (!observer) {
-					observer = new IntersectionObserver(
-						(entries) => {
-							if (entries[0]?.isIntersecting) {
-								observer?.disconnect();
-								observer = null;
-								void initArtalk();
-							}
-						},
-						{ rootMargin: '600px' },
-					);
-					observer.observe(mount);
-				}
-			};
-
-			document.addEventListener('astro:page-load', setup);
-		</script>
+{enabled && mode === 'full' && (
+	<section
+		class={css.section}
+		data-pagefind-ignore
+		data-comments-root
+		data-mode="full"
+		data-server={commentsConfig.apiBase}
+		data-site={commentsConfig.site}
+		data-page-key={key}
+		data-page-title={pageTitle ?? ''}
+		data-page-size={commentsConfig.pageSize}
+		data-nest-max={commentsConfig.nestMax}
+		data-emoticons={commentsConfig.emoticons === false ? 'false' : commentsConfig.emoticons}
+		data-no-comment={commentsConfig.noComment}
+		data-placeholder={commentsConfig.placeholder}
+		data-timeout={commentsConfig.timeout}
+		aria-label="评论区"
+	>
+		<div class={css.list} data-role="list" aria-busy="true" aria-live="polite">
+			<div class={css.skeletonRow} aria-hidden="true">
+				<div class={css.skeletonAvatar}></div>
+				<div class={css.skeletonBody}>
+					<div class={css.skeletonLine} style="width:38%"></div>
+					<div class={css.skeletonLine} style="width:92%"></div>
+					<div class={css.skeletonLine} style="width:70%"></div>
+				</div>
+			</div>
+			<div class={css.skeletonRow} aria-hidden="true">
+				<div class={css.skeletonAvatar}></div>
+				<div class={css.skeletonBody}>
+					<div class={css.skeletonLine} style="width:28%"></div>
+					<div class={css.skeletonLine} style="width:86%"></div>
+				</div>
+			</div>
+		</div>
 	</section>
 )}
 
-<style>
-	.artalk-section {
-		margin: 1.5rem 1rem 2rem;
-		padding: 1.25rem 1.25rem 0.5rem;
-		border-radius: 16px;
-		background: rgba(255, 255, 255, 0.62);
-		border: 1px solid rgba(18, 25, 38, 0.08);
-	}
-
-	:global(:root[data-theme='dark']) .artalk-section {
-		background: rgba(18, 27, 40, 0.6);
-		border-color: rgba(148, 163, 184, 0.16);
-	}
-
-	@media (prefers-color-scheme: dark) {
-		:global(:root:not([data-theme='light'])) .artalk-section {
-			background: rgba(18, 27, 40, 0.6);
-			border-color: rgba(148, 163, 184, 0.16);
-		}
-	}
-
-	.artalk-mount {
-		min-height: 120px;
-	}
-</style>
+<script>
+	// 裸 script（不带任何属性）：由 Vite 打包，内部 TS import 才能正常运行。
+	// 自执行 + astro:page-load 重挂、astro:before-swap 销毁的逻辑都在 client.ts 里。
+	import './comments/client';
+</script>

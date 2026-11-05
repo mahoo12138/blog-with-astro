@@ -11,6 +11,7 @@ import { remarkContentLinks } from './src/content-model/relative-links.mjs';
 import { contentStructure } from './src/content-model/integration.mjs';
 import { defineConfig } from 'astro/config';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
+import { loadEnv } from 'vite';
 import { rehypeCodeBlock } from './src/plugins/rehype-code-block.mjs';
 import { remarkMathGate } from './src/plugins/remark-math-gate.mjs';
 import { rehypeImageDefaults, remarkMedia } from './src/plugins/media.mjs';
@@ -25,6 +26,15 @@ import { rehypeImageDefaults, remarkMedia } from './src/plugins/media.mjs';
 //
 // 正确做法：语法无条件注册（remarkMath），再由 remarkMathGate 在解析之后按 frontmatter
 // 决定保留还是把数学节点还原成原文。详见 src/plugins/remark-math-gate.mjs 顶部注释。
+
+// Artalk 后端 CORS 只放行线上域名，本地 dev 直接请求会被浏览器拦下。
+// 这里把 /artalk-api 反代到后端；src/config/comments.ts 在 DEV 时把 API 基址
+// 换成这个同源前缀，生产构建仍使用绝对地址。build/preview 不使用 vite.server。
+const devEnv = loadEnv(process.env.NODE_ENV === 'production' ? 'production' : 'development', process.cwd(), '');
+const artalkServer = (devEnv.ARTALK_SERVER || 'https://artalk.mahoo12138.cn').replace(/\/+$/, '');
+const artalkProxyKey = devEnv.ARTALK_DEV_PROXY && !/^[01]$/.test(devEnv.ARTALK_DEV_PROXY)
+	? devEnv.ARTALK_DEV_PROXY
+	: '/artalk-api';
 
 // Derive aliases lazily from the same content graph as the loaders.
 // Filesystem relocation must not change existing canonical routes or index old redirect pages.
@@ -111,5 +121,14 @@ export default defineConfig({
 	// 注：astro.config 在命令解析前求值，这里通过 argv 区分 dev 与其余命令。
 	vite: {
 		plugins: [vanillaExtractPlugin({ identifiers: process.argv[2] === 'dev' ? 'debug' : 'short' })],
+		server: {
+			proxy: {
+				[artalkProxyKey]: {
+					target: artalkServer,
+					changeOrigin: true,
+					rewrite: (path) => path.startsWith(artalkProxyKey) ? path.slice(artalkProxyKey.length) || '/' : path,
+				},
+			},
+		},
 	},
 });
