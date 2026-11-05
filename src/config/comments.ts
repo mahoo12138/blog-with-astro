@@ -13,7 +13,7 @@
 
 export const COMMENTS_DEFAULT_SERVER = 'https://artalk.mahoo12138.cn';
 /** 后端「站点管理」里注册的名字，必须完全一致；实测该地址已注册此站点。 */
-export const COMMENTS_DEFAULT_SITE = 'Mahoo Space';
+export const COMMENTS_DEFAULT_SITE = 'MahooSpace';
 
 /** 开发态同源代理前缀：绕开浏览器跨域（后端 CORS 只放行线上域名）。 */
 export const COMMENTS_DEV_PROXY = '/artalk-api';
