@@ -28,7 +28,6 @@
     "@astrojs/sitemap": "^3.7.2",
     "@vanilla-extract/css": "^1.20.1",
     "@vanilla-extract/vite-plugin": "^5.2.2",
-    "artalk": "^2.9.1",
     "astro": "^6.3.3",
     "astro-pagefind": "^2.0.0",
     "chinese-days": "^1.5.9",
