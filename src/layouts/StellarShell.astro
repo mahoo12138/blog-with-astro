@@ -31,9 +31,11 @@ interface Props {
 	tocHeadings?: { depth: number; slug: string; text: string }[];
 	column?: ColumnSidebarContext;
 	noindex?: boolean;
+	/** 页面级字体样式表（默认不加载，见 config/fonts.ts） */
+	extraFonts?: string[];
 }
 
-const { title, description, lang = 'zh-CN', image, type, publishedTime, modifiedTime, mainClass, contentWidth = 'reading', siteTree = 'page', menuId, leftbar, rightbar, tocHeadings = [], column, noindex = false } = Astro.props;
+const { title, description, lang = 'zh-CN', image, type, publishedTime, modifiedTime, mainClass, contentWidth = 'reading', siteTree = 'page', menuId, leftbar, rightbar, tocHeadings = [], column, noindex = false, extraFonts } = Astro.props;
 const hasHero = Astro.slots.has('hero');
 const hasLead = Astro.slots.has('lead');
 const hasLeftbar = Astro.slots.has('leftbar');
@@ -46,7 +48,7 @@ const expandContent = contentWidth === 'wide' && !hasRightbarContent;
 <!doctype html>
 <html lang={lang}>
 	<head>
-		<BaseHead title={title} description={description} image={image} type={type} publishedTime={publishedTime} modifiedTime={modifiedTime} noindex={noindex} />
+		<BaseHead title={title} description={description} image={image} type={type} publishedTime={publishedTime} modifiedTime={modifiedTime} noindex={noindex} extraFonts={extraFonts} />
 	</head>
 	<body class={styles.body}>
 		<TopProgressBar />

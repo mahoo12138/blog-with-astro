@@ -1,5 +1,6 @@
 ---
 import { getExploreInternalItemByHref } from '../config/explore';
+import { siteFontConfig } from '../config/fonts';
 import ExploreShell from '../layouts/ExploreShell.astro';
 import { loadGalleryPhotos } from '../lib/immich';
 import * as styles from '../styles/gallery.css';
@@ -28,7 +29,7 @@ function formatDate(input?: string): string {
 }
 ---
 
-<ExploreShell item={item} siteTree="gallery">
+<ExploreShell item={item} siteTree="gallery" extraFonts={[siteFontConfig.serifFontsUrl]}>
 	<section class={styles.pageRoot}>
 		<header class={styles.header}>
 			<div>

@@ -17,9 +17,11 @@ interface Props {
   siteTree?: SiteTreeKey;
   /** 私人 / 内部页面：阻止搜索引擎收录 */
   noindex?: boolean;
+  /** 页面级字体样式表（如 /love 的衬线字体；全站默认只加载 mono） */
+  extraFonts?: string[];
 }
 
-const { item, rightbar, siteTree, noindex = false } = Astro.props;
+const { item, rightbar, siteTree, noindex = false, extraFonts } = Astro.props;
 const shells = {
   default: StellarShell,
   wide: WideShell,
@@ -28,13 +30,14 @@ const shells = {
 const ShellLayout = shells[item.layout] ?? StellarShell;
 const shellProps =
   item.layout === "blank"
-    ? { title: `${item.title} · ${SITE_TITLE}`, description: item.description, noindex }
+    ? { title: `${item.title} · ${SITE_TITLE}`, description: item.description, noindex, extraFonts }
     : {
         title: `${item.title} · ${SITE_TITLE}`,
         description: item.description,
         siteTree: (siteTree ?? "explore") as SiteTreeKey,
         mainClass: styles.pageMain,
         noindex,
+        extraFonts,
         ...(rightbar !== undefined ? { rightbar } : {}),
       };
 ---
