@@ -1,5 +1,5 @@
 import { globalStyle, keyframes } from '@vanilla-extract/css';
-import { breakpoints, vars } from '../../styles/theme.css';
+import { breakpoints, fieldFocusWash, vars } from '../../styles/theme.css';
 
 const scope = '.md-text';
 const block = vars.color.surfaceMuted;
@@ -800,6 +800,13 @@ globalStyle(`${scope} .tag-plugin.private .private-input`, {
 	borderRadius: '8px',
 	background: vars.color.surfaceStrong,
 	color: textStrong,
+});
+
+// 输入控件的焦点标准：不画外框，淡晕 + 边框染色。
+globalStyle(`${scope} .tag-plugin.private .private-input:focus-visible`, {
+	outline: 'none',
+	backgroundColor: fieldFocusWash,
+	borderColor: vars.color.accentStrong,
 });
 
 globalStyle(`${scope} .tag-plugin.private .private-button`, {
