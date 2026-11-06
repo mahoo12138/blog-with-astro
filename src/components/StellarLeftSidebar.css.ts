@@ -1,4 +1,4 @@
-import { globalStyle, style } from "@vanilla-extract/css";
+import { createVar, globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "../styles/theme.css";
 
 const gapMargin = "16px";
@@ -9,9 +9,7 @@ const borderBar = "6px";
 // 与 StellarShell 的 left/right 吸顶偏移同源（top/marginTop = vars.space.xxl）：
 // 吸顶后容器上下留白对称，footer 钉底、挂件内部滚动与底部区域不受影响。
 const sidebarHeight = `calc(100dvh - 2 * ${vars.space.xxl})`;
-const bgA20 = vars.color.surfaceMuted;
 const bgA50 = vars.color.surface;
-const bgA100 = vars.color.surfaceStrong;
 const textP1 = vars.color.text;
 const textP2 = vars.color.textMuted;
 const textP3 = vars.color.textMeta;
@@ -98,6 +96,25 @@ export const menuGrid = style({
   zIndex: 1,
 });
 
+/**
+ * 菜单磁贴的底色只由「当前主题」决定，四项保持同一色：
+ *  - 中性底 = 卡片色掺一点前景墨色，保证任何主题下都与页面拉开明度差
+ *    （原先直接用 surfaceMuted / surfaceStrong，在博客默认浅色里与页面同色，
+ *    磁贴整块隐形，选中项尤其看不见）；
+ *  - 再掺一点主题主色：六套配色取各自的 --primary，博客默认取雾蓝 accent，
+ *    于是切换配色主题时这里会跟着换色相，而不是一串写死的固定色。
+ * 配置里的 --menu-theme 是四个入口各自的固定十六进制色，与主题系统无关，
+ * **不要**用它染底色 —— 那会让主题切换在这一块完全失去意义。
+ */
+// 注意 default.css 在 :root 上也定义了 --primary（经典黑白的中性色），
+// 所以不能写 var(--primary, accent) 指望回退：博客默认主题会误吃到黑色。
+// 按 data-color-scheme 分流：六套配色用各自的 --primary，博客默认用雾蓝 accent。
+const menuAccent = createVar();
+globalStyle(":root", { vars: { [menuAccent]: vars.color.accent } });
+globalStyle(':root[data-color-scheme]', { vars: { [menuAccent]: "var(--primary)" } });
+const menuSurface = (ink: number, tint: number) =>
+  `color-mix(in srgb, ${menuAccent} ${tint}%, color-mix(in srgb, ${vars.color.textStrong} ${ink}%, ${vars.color.surfaceStrong}))`;
+
 export const menuLink = style({
   display: "flex",
   flexDirection: "column",
@@ -108,17 +125,21 @@ export const menuLink = style({
   minHeight: "58px",
   gap: "5px",
   borderRadius: borderBar,
-  background: bgA20,
-  color: textP3,
+  // 常态刻意比选中态轻得多：只留一点墨色 + 一点主题色相，磁贴与页面能分开
+  // 又不压过顶带的头像和站名。
+  background: menuSurface(5, 6),
+  // 11px 标签沿用正文色，任何主题下都留足 AA 余量（原先 textMeta 在近白底只有 4.4:1）。
+  color: textP1,
   fontSize: "15px",
   fontWeight: 500,
   lineHeight: 1.2,
   textAlign: "center",
   position: "relative",
+  transition: `background-color ${vars.motion.durationFast} ${vars.motion.ease}, color ${vars.motion.durationFast} ${vars.motion.ease}`,
   selectors: {
+    // 悬停只比常态重一档，别从很浅的底突然跳到选中态的深度。
     "&:hover": {
-      color: textP1,
-      background: bgA100,
+      background: menuSurface(8, 10),
     },
     "&:focus-visible": {
       outline: "none",
@@ -127,13 +148,21 @@ export const menuLink = style({
   },
 });
 
+// 掺三成前景墨色：个别配色主题（如 Ocean Breeze 浅色）的 accentStrong 偏亮，
+// 直接用在染过色的磁贴上会掉到 AA 以下；深色主题里则相反地被提亮。
+const menuActiveText = `color-mix(in srgb, ${vars.color.accentStrong} 65%, ${vars.color.textStrong})`;
+
 export const menuActive = style({
-  color: vars.color.accentStrong,
-  background: bgA100,
+  color: menuActiveText,
+  // 选中不再退回等于页面底色的 surfaceStrong，而是在同一层底上加深；
+  // 深度只比悬停高一档 —— 辨识主要交给文字色与下划线，不要把整块压重。
+  background: menuSurface(9, 12),
   boxShadow: "none",
   selectors: {
+    // 悬停只加强底色，选中项的文字色相不丢。
+    "&:hover": { color: menuActiveText, background: menuSurface(11, 14) },
     "&::after": {
-      content: "",
+      content: '""',
       position: "absolute",
       width: "16px",
       height: "2px",
@@ -172,18 +201,6 @@ export const menuIconTone = style({
 });
 
 export const menuText = style({ fontSize: "11px", lineHeight: 1.4, whiteSpace: "nowrap" });
-
-export const menuLabel = style({
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  padding: 0,
-  margin: "-1px",
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-});
 
 export const widgets = style({
   position: "relative",
@@ -276,37 +293,6 @@ export const socialLink = style({
   },
   "@media": { "(pointer: coarse)": { width: "44px", height: "44px" } },
 });
-export const themeToggle = style({ cursor: "pointer" });
-export const themeStatusIcon = style({ display: "none" });
-
-export const themeStatusSystem = style({
-  display: "block",
-  selectors: {
-    [`${themeToggle}[data-theme-mode='light'] &`]: {
-      display: "none",
-    },
-    [`${themeToggle}[data-theme-mode='dark'] &`]: {
-      display: "none",
-    },
-  },
-});
-
-export const themeStatusLight = style({
-  selectors: {
-    [`${themeToggle}[data-theme-mode='light'] &`]: {
-      display: "block",
-    },
-  },
-});
-
-export const themeStatusDark = style({
-  selectors: {
-    [`${themeToggle}[data-theme-mode='dark'] &`]: {
-      display: "block",
-    },
-  },
-});
-
 export const socialIcon = style({
   width: "18px",
   height: "18px",

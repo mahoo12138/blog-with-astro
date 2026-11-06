@@ -31,6 +31,7 @@ function isActive(id: MenuId, href: string) {
 }
 
 const socialItems = stellarConfig.footer.social;
+const isExternal = (url: string) => /^https?:\/\//.test(url);
 ---
 
 <div class={styles.root}>
@@ -62,7 +63,7 @@ const socialItems = stellarConfig.footer.social;
 			<nav class={styles.menuGrid} style={`--menubar-columns: ${stellarConfig.menubar.columns};`} aria-label="Primary">
 				{
 					stellarConfig.menubar.items.map((item) => (
-						<a class:list={[styles.menuLink, isActive(item.id, item.url) && styles.menuActive]} style={`--menu-theme: ${item.theme};`} href={item.url} title={item.title} aria-label={item.title} aria-current={isActive(item.id, item.url) ? 'page' : undefined}>
+						<a class:list={[styles.menuLink, isActive(item.id, item.url) && styles.menuActive]} href={item.url} title={item.title} aria-label={item.title} aria-current={isActive(item.id, item.url) ? 'page' : undefined}>
 							<StellarIcon name={item.icon} class={styles.menuIcon} />
 							<span class={styles.menuText}>{item.title}</span>
 						</a>
@@ -83,33 +84,21 @@ const socialItems = stellarConfig.footer.social;
 			<div class={styles.socialWrap}>
 				{
 					socialItems.map((item) => (
-						<a class={styles.socialLink} href={item.url} title={item.title} aria-label={item.title}>
+						<a
+							class={styles.socialLink}
+							href={item.url}
+							title={item.title}
+							aria-label={item.title}
+							target={isExternal(item.url) ? '_blank' : undefined}
+							rel={isExternal(item.url) ? 'noopener noreferrer' : undefined}
+						>
 							<StellarIcon name={item.icon} class={styles.socialIcon} />
 						</a>
 					))
 				}
-				<button class:list={[styles.socialLink, styles.themeToggle]} type="button" data-theme-cycler data-theme-mode="system" title="主题：跟随系统，点击切换" aria-label="主题：跟随系统，点击切换">
-					<svg class:list={[styles.socialIcon, styles.themeStatusIcon, styles.themeStatusSystem]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-						<rect x="3.75" y="4.75" width="16.5" height="11.5" rx="2"></rect>
-						<path d="M9 19.25h6"></path>
-						<path d="M12 16.25v3"></path>
-					</svg>
-					<svg class:list={[styles.socialIcon, styles.themeStatusIcon, styles.themeStatusLight]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-						<circle cx="12" cy="12" r="4.2"></circle>
-						<path d="M12 2.5v2.5"></path>
-						<path d="M12 19v2.5"></path>
-						<path d="M4.93 4.93l1.77 1.77"></path>
-						<path d="M17.3 17.3l1.77 1.77"></path>
-						<path d="M2.5 12h2.5"></path>
-						<path d="M19 12h2.5"></path>
-						<path d="M4.93 19.07l1.77-1.77"></path>
-						<path d="M17.3 6.7l1.77-1.77"></path>
-					</svg>
-					<svg class:list={[styles.socialIcon, styles.themeStatusIcon, styles.themeStatusDark]} viewBox="0 0 24 24" fill="currentColor">
-						<path d="M14.5 3.5a1 1 0 0 1 1.22 1.24 7.8 7.8 0 1 0 3.54 9.54 1 1 0 0 1 1.87.73A9.8 9.8 0 1 1 13.76 2.28a1 1 0 0 1 .74 1.22Z"></path>
-					</svg>
-					<span class={styles.menuLabel}>主题设置</span>
-				</button>
+				{/* 明暗循环的不可见逻辑载体：⌘K 命令面板的「浅色/深色/跟随系统」会 click 它，
+				    appearance.ts 负责持久化与状态同步；视觉上不再占一个图标位。 */}
+				<button hidden type="button" data-theme-cycler data-theme-mode="system" tabindex="-1" aria-hidden="true"></button>
 			</div>
 			<AppearanceButton variant="toolbar" />
 			</div>
