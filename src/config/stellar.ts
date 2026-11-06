@@ -121,6 +121,8 @@ export const stellarConfig = {
 				],
 			},
 		] satisfies FooterSitemapGroup[],
+		// 「关于 / 专栏」与顶部四个一级入口重复，已从底栏移除；
+		// 底栏只留 RSS 与友链接力「开往」，明暗切换并入外观设置面板。
 		social: [
 			{
 				title: 'RSS',
@@ -128,14 +130,9 @@ export const stellarConfig = {
 				icon: 'default:rss',
 			},
 			{
-				title: 'About',
-				url: '/about',
-				icon: 'stellar:menu-about',
-			},
-			{
-				title: 'Columns',
-				url: '/columns',
-				icon: 'stellar:menu-columns',
+				title: '开往-友链接力',
+				url: 'https://www.travellings.cn/go.html',
+				icon: 'default:train',
 			},
 		] satisfies FooterSocialItem[],
 	},
