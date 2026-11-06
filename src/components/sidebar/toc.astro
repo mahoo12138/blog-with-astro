@@ -1,33 +1,55 @@
 ---
 import type { WidgetProps } from './types';
 import * as styles from './toc.css';
+import { commentsConfig } from '../../config/comments';
 
 const { widget, context, side } = Astro.props as WidgetProps;
 const tocHeadings = (context.headings ?? []).filter((heading) => heading.depth >= 1 && heading.depth <= 6);
 const baseDepth = tocHeadings.length ? Math.min(...tocHeadings.map((heading) => heading.depth)) : 2;
 const title = widget.title || '本文目录';
+// 评论关闭时只剩「回到顶部」，不渲染与不存在的评论区对话的入口。
+const discussionEnabled = commentsConfig.enabled;
+// 左栏（课时页）的目录随侧栏整体滚动，外边距与右栏不同。
+const isLeft = side === 'left';
 ---
 
 {tocHeadings.length > 0 && (
-	<details class:list={[styles.widget, side === 'left' && styles.widgetLeft]} id="data-toc" data-toc-widget open>
-		<summary class={styles.header} data-toc-toggle aria-controls="article-toc-body">
-			<span class={styles.title}>{title}</span>
-			<svg class={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
-		</summary>
-		<nav id="article-toc-body" class:list={[styles.viewport, side === 'left' && styles.viewportLeft]} aria-label={title} data-toc-scroll>
-			<ol class={styles.list} role="list" data-toc-list>
-				{tocHeadings.map((heading) => (
-					<li class={styles.item} data-toc-level={heading.depth - baseDepth} style={`--toc-level:${heading.depth - baseDepth};`}>
-						<a class={styles.link} href={`#${encodeURIComponent(heading.slug)}`} data-toc-link>
-							<span class={styles.text}>{heading.text}</span>
-						</a>
-					</li>
-				))}
-			</ol>
+	<div class:list={[styles.wrap, isLeft && styles.wrapLeft]}>
+		<details class={styles.widget} id="data-toc" data-toc-widget open>
+			<summary class={styles.header} data-toc-toggle aria-controls="article-toc-body">
+				<span class={styles.title}>{title}</span>
+				<svg class={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+			</summary>
+			<nav id="article-toc-body" class:list={[styles.viewport, isLeft && styles.viewportLeft]} aria-label={title} data-toc-scroll>
+				<ol class={styles.list} role="list" data-toc-list>
+					{tocHeadings.map((heading) => (
+						<li class={styles.item} data-toc-level={heading.depth - baseDepth} style={`--toc-level:${heading.depth - baseDepth};`}>
+							<a class={styles.link} href={`#${encodeURIComponent(heading.slug)}`} data-toc-link>
+								<span class={styles.text}>{heading.text}</span>
+							</a>
+						</li>
+					))}
+				</ol>
+			</nav>
+		</details>
+		<nav class={styles.actions} aria-label="页面操作" data-page-actions hidden>
+			<button class={styles.action} type="button" data-page-action="top">
+				<span class={styles.actionIcon} aria-hidden="true">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6" /><path d="m6 12 6-6 6 6" /></svg>
+				</span>
+				<span class={styles.actionLabel}>回到顶部</span>
+			</button>
+			<button class={styles.action} type="button" data-page-action="discuss" hidden={!discussionEnabled}>
+				<span class={styles.actionIcon} aria-hidden="true">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" /></svg>
+				</span>
+				<span class={styles.actionLabel}>参与讨论</span>
+			</button>
 		</nav>
-	</details>
+	</div>
 )}
 
 <script>
 	import '../../scripts/toc';
+	import '../../scripts/page-actions';
 </script>
