@@ -1,11 +1,13 @@
-import { globalStyle, style } from '@vanilla-extract/css';
+import { globalStyle, keyframes, style } from '@vanilla-extract/css';
 import { vars } from '../../styles/theme.css';
 
 // 目录是阅读导航，不是选项卡。仅用一条细轨道与当前章节标记表达位置。
+// 外边距交给 wrap：目录下方还要挂「回到顶部 / 参与讨论」，两者共享同一组留白。
 export const widget = style({
-	minWidth: 0, margin: '8px 12px 28px 16px', padding: 0,
+	minWidth: 0, margin: 0, padding: 0,
 	color: vars.color.textMuted,
 });
+export const wrap = style({ margin: '8px 12px 28px 16px', minWidth: 0 });
 export const header = style({
 	display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
 	minHeight: '40px', margin: '0 0 10px', padding: '4px 0',
@@ -60,5 +62,50 @@ export const text = style({ minWidth: 0, whiteSpace: 'normal', overflowWrap: 'an
 // 左栏专用：贴齐 sidebarRows 的 16px 文本基线（侧栏 inner 已有内边距，不再叠加），
 // 且取消 viewport 的定高 —— 左栏本身就是滚动容器，避免「侧栏 + 目录」双滚动条，
 // 让目录随侧栏一并滚动、一次看全。右栏仍沿用上面的定高视口。
-export const widgetLeft = style({ margin: '8px 0 24px' });
+export const wrapLeft = style({ margin: '8px 0 24px' });
 export const viewportLeft = style({ maxHeight: 'none' });
+
+/**
+ * 目录下方的页面操作（滚动超过 30% 才出现）。
+ * 行沿用 sidebarRows 的 6px/16px 节奏，但左缩进改为对齐目录轨道：
+ * 图标落在轨道上，文字与一级目录项同一列，读起来仍属于同一块。
+ */
+const actionIn = keyframes({
+	from: { opacity: 0, transform: 'translateY(-3px)' },
+	to: { opacity: 1, transform: 'none' },
+});
+
+export const actions = style({
+	display: 'flex', flexDirection: 'column', gap: '2px',
+	margin: '14px 0 0', paddingTop: '10px',
+	borderTop: `1px solid ${vars.color.border}`,
+	animation: `${actionIn} ${vars.motion.durationBase} ${vars.motion.ease} both`,
+	selectors: { '&[hidden]': { display: 'none' } },
+	'@media': { '(prefers-reduced-motion: reduce)': { animation: 'none' } },
+});
+
+export const action = style({
+	display: 'flex', alignItems: 'center', gap: '10px',
+	padding: '5px 8px', minHeight: '30px',
+	border: 0, borderRadius: '6px', background: 'transparent',
+	fontFamily: vars.font.body, fontSize: '0.8125rem', lineHeight: 1.6,
+	color: vars.color.textMuted, textAlign: 'left', cursor: 'pointer',
+	transition: `background ${vars.motion.durationFast} ${vars.motion.ease}, color ${vars.motion.durationFast} ${vars.motion.ease}`,
+	selectors: {
+		'&:hover': { background: vars.color.accentSoft, color: vars.color.accentStrong },
+		'&:focus-visible': { outline: `2px solid ${vars.color.accentStrong}`, outlineOffset: '1px' },
+		'&[hidden]': { display: 'none' },
+	},
+	'@media': { '(pointer: coarse)': { minHeight: '40px' } },
+});
+
+export const actionIcon = style({
+	display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+	width: '20px', height: '20px', flexShrink: 0, borderRadius: '5px',
+	background: vars.color.backgroundElevated, color: vars.color.textMeta,
+	transition: `color ${vars.motion.durationFast} ${vars.motion.ease}`,
+	selectors: { [`${action}:hover &`]: { color: vars.color.accentStrong } },
+});
+globalStyle(`${actionIcon} > svg`, { width: '13px', height: '13px' });
+
+export const actionLabel = style({ minWidth: 0, whiteSpace: 'nowrap' });
