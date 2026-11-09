@@ -66,28 +66,27 @@ export const countNumber = style({
 export const actions = style({
 	display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 16px',
 });
+// 这一行的两个入口是同一组导航词，不是一个「主按钮 + 次按钮」对：
+// 共用一个色、同一套间距、同一套 hover / 聚焦反馈，不做视觉分级。
+// 语义只由文字和箭头方向承担 —— ↓ 跳到页内目录，→ 离页进入第一章。
+// 同排已有 header 的 borderBottom，因此常态零装饰，反馈只用 accentSoft 淡晕、不用线条。
 const actionBase = style({
 	display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-	minHeight: '44px', fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5,
+	minHeight: '44px', padding: '8px 10px',
+	fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5,
 	whiteSpace: 'nowrap', textDecoration: 'none', borderRadius: '6px',
+	color: vars.color.textMuted,
 	transition: 'color 200ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms cubic-bezier(0.16, 1, 0.3, 1)',
 	selectors: {
+		'&:hover': { background: vars.color.accentSoft, color: vars.color.accentStrong },
 		'&:focus-visible': {
 			background: vars.color.accentSoft,
+			color: vars.color.accentStrong,
 			outline: `2px solid ${vars.color.accentStrong}`,
 			outlineOffset: '3px',
 		},
 	},
 });
-export const directoryLink = style([actionBase, {
-	padding: '8px 0', color: vars.color.textMuted,
-	selectors: { '&:hover': { color: vars.color.accentStrong, textDecoration: 'underline', textUnderlineOffset: '4px' } },
-}]);
-// 幽灵态：常态只有文字 + 箭头，靠 accent 浓度与「浏览目录」区分主次；
-// hover / 键盘聚焦才浮现圆角淡晕底衬。同排已有 header 的 borderBottom，
-// 再描一圈边框会让一条水平线上出现第二条线，也和站点其它入口的语言不一致。
-export const readLink = style([actionBase, {
-	padding: '8px 12px', color: vars.color.accentStrong,
-	selectors: { '&:hover': { background: vars.color.accentSoft } },
-}]);
+export const directoryLink = actionBase;
+export const readLink = actionBase;
 export const actionIcon = style({ width: '15px', height: '15px', flexShrink: 0 });
