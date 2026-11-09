@@ -70,15 +70,24 @@ const actionBase = style({
 	display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
 	minHeight: '44px', fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5,
 	whiteSpace: 'nowrap', textDecoration: 'none', borderRadius: '6px',
-	transition: 'color 150ms ease, border-color 150ms ease, background 150ms ease',
-	selectors: { '&:focus-visible': { outline: `2px solid ${vars.color.accentStrong}`, outlineOffset: '3px' } },
+	transition: 'color 200ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+	selectors: {
+		'&:focus-visible': {
+			background: vars.color.accentSoft,
+			outline: `2px solid ${vars.color.accentStrong}`,
+			outlineOffset: '3px',
+		},
+	},
 });
 export const directoryLink = style([actionBase, {
 	padding: '8px 0', color: vars.color.textMuted,
 	selectors: { '&:hover': { color: vars.color.accentStrong, textDecoration: 'underline', textUnderlineOffset: '4px' } },
 }]);
+// 幽灵态：常态只有文字 + 箭头，靠 accent 浓度与「浏览目录」区分主次；
+// hover / 键盘聚焦才浮现圆角淡晕底衬。同排已有 header 的 borderBottom，
+// 再描一圈边框会让一条水平线上出现第二条线，也和站点其它入口的语言不一致。
 export const readLink = style([actionBase, {
-	padding: '8px 14px', border: `1px solid ${vars.color.borderStrong}`, color: vars.color.accentStrong,
-	selectors: { '&:hover': { background: vars.color.accentSoft, borderColor: vars.color.accentStrong, color: vars.color.accentStrong } },
+	padding: '8px 12px', color: vars.color.accentStrong,
+	selectors: { '&:hover': { background: vars.color.accentSoft } },
 }]);
 export const actionIcon = style({ width: '15px', height: '15px', flexShrink: 0 });
