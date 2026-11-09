@@ -32,6 +32,8 @@ globalStyle(`${dialog}::backdrop`, { background: 'rgba(15, 18, 22, 0.35)' });
 export const header = style({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '4px' });
 export const title = style({ fontFamily: vars.font.body, fontSize: '1.15rem', fontWeight: 650, lineHeight: 1.5, margin: 0, letterSpacing: 0 });
 export const subtitle = style({ color: vars.color.textMuted, fontSize: '0.82rem', margin: '0 0 22px', lineHeight: 1.7 });
+// 季节提示是纯说明文字：不垫淡晕底衬、不加边框，避免读成一个可点击控件。
+export const seasonHint = style({ color: vars.color.textMuted, fontSize: '0.72rem', lineHeight: 1.6, margin: '-2px 0 10px' });
 export const closeButton = style({
 	width: '36px', height: '36px', display: 'grid', placeItems: 'center', flexShrink: 0,
 	border: 0, background: 'transparent', color: vars.color.textMuted, borderRadius: '6px', cursor: 'pointer',
@@ -59,6 +61,7 @@ export const radio = style({ margin: 0, width: '14px', height: '14px', flexShrin
 globalStyle(`${schemeOption} ${radio}`, { marginTop: '3px' });
 export const label = style({ fontSize: '0.8rem', fontWeight: 600, minWidth: 0, color: vars.color.textStrong });
 export const description = style({ display: 'block', color: vars.color.textMuted, fontSize: '0.72rem', fontWeight: 400 });
+export const seasonTag = style({ marginLeft: '6px', color: vars.color.accentStrong, fontSize: '0.66rem', fontWeight: 500, whiteSpace: 'nowrap' });
 export const swatches = style({ display: 'flex', gridColumn: '2', alignItems: 'center', gap: '4px', width: '100%', marginTop: '2px' });
 export const swatch = style({ width: '18px', height: '18px', border: '1px solid rgba(128, 128, 128, 0.3)', borderRadius: '50%', background: 'var(--swatch-light)' });
 globalStyle(`:root[data-theme="dark"] ${swatch}`, { background: 'var(--swatch-dark)' });

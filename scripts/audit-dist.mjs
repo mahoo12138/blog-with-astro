@@ -2,7 +2,7 @@
 /**
  * 构建产物体检脚本：对 dist/ 做正面断言，把「改坏了也不会报错、只会悄悄退化」的约定固定下来。
  *
- * 目前 11 组断言：
+ * 目前 12 组断言：
  *   1. 站内链接可达性（扫描 dist HTML 内部 href，断言目标存在）
  *   2. 图片体积预算（单文件不超过 200KB）
  *   3. dist 总量预算
@@ -14,7 +14,8 @@
  *   8. 内容卫生断言（分类词表口径、文件名不可见字符、已发布空正文）
  *   9. 模板泄漏断言（`{expr}` 不得作为字面文本出现在 HTML 里）
  *  10. 数学渲染断言（标了 mathjax 的必须渲染出 KaTeX；没标的不得出现 KaTeX）
- *  11. 报告
+ *  11. 季节默认配色断言（首屏脚本按运行期月份逐月取色、用户显式选择优先）
+ *  12. 报告
  *
  * 每加一条断言都应做**有效性自检**：人为制造一次违规、确认审计真的报错，再还原。
  * 否则很容易写出「永远通过」的假护栏（本项目已实测过若干次这种自检）。
@@ -28,6 +29,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { getContentCatalog } from '../src/content-model/catalog.mjs';
 import { MAX_COLUMN_UPDATES } from '../src/config/feed.mjs';
@@ -483,10 +485,12 @@ if (existsSync(rssPath)) {
 /**
  * 四条「改坏了不报错、只会悄悄退化」的内容约定，都是实际踩过的坑：
  *
- *   a) 分类词表只能有约定的三种，且必须按**文章体裁**划分。
+ *   a) 分类词表只收约定的四类，按**文章体裁 / 写作视角**划分；主题一律走 tags。
  *      历史上有 7 种，其中 5 种只有 1–3 篇，还有「前端」这种按主题划分的误用
  *      （主题应该走 tags —— `前端` 作为标签本来就有近 20 篇）。
- *      分类一乱，分类页就退化成一堆零星条目。专栏的分类同样受此约束。
+ *      「技术思考」收观点、思辨、行业趋势类长文（2026-11 加入）；新增分类前先确认
+ *      已有或计划中的同类文章足够撑起一个分类页，避免它退化成一堆零星条目。
+ *      专栏的分类同样受此约束。
  *
  *   b) 文章文件名不得含不可见字符。曾出现结尾带零宽空格 (U+200B) 的文件：
  *      Astro 的 glob loader 会把 id 里的零宽空格剥掉，所以线上 URL 完全正常，
@@ -500,7 +504,7 @@ if (existsSync(rssPath)) {
  *      这条约束很容易在「新写一章时顺手把标签抄上去」时被破坏，而且不会报错，
  *      只会让标签页悄悄退化回刷屏状态。
  */
-const CANONICAL_CATEGORIES = new Set(['学习笔记', '技术教程', '随笔杂谈']);
+const CANONICAL_CATEGORIES = new Set(['学习笔记', '技术教程', '随笔杂谈', '技术思考']);
 const INVISIBLE_CHARS = /[\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/;
 
 const offVocabCategories = [];
@@ -706,7 +710,107 @@ if (mathLeaked.length) {
 const contentOutput = auditContentOutput(dist, sourceCatalog);
 failures.push(...contentOutput.failures);
 
-/* ---------- 11. 报告 ---------- */
+/* ---------- 11. 季节默认配色断言 ---------- */
+/**
+ * 首屏 bootstrap 决定「没有保存偏好时用哪套配色」，且必须在浏览器运行期按月份判定：
+ * 站点是 output: 'static'，构建期 new Date() 会被写死进 HTML、跨月不更新。
+ * 这类退化不报错、页面照常渲染，只是整年都用同一套色 —— 所以把产物里的内联脚本
+ * 抠出来，用伪 DOM + 伪 Date 逐月执行，正面断言 12 个月映射与「显式选择优先」。
+ *
+ * SEASONAL_EXPECTED 是需求规约（北半球 1–12 月逐月配色），与
+ * src/config/appearance.ts 的 seasonalSchemes 一一对应；调整配色表时须同步复核。
+ * 自检方式：改坏 dist/index.html 里注入的 seasonalSchemeIds，本组应报错。
+ */
+const SEASONAL_EXPECTED = [
+	'default', 'modern-minimal', 'perplexity', 'ocean-breeze', 'blog', 'modern-minimal',
+	'ocean-breeze', 'cosmic-night', 'perplexity', 'claude', 'claude', 'cosmic-night',
+];
+let seasonalChecked = 0;
+const seasonalIssues = [];
+const indexPath = path.join(dist, 'index.html');
+if (!existsSync(indexPath)) {
+	seasonalIssues.push('产物缺少 dist/index.html，无法校验首屏配色脚本');
+} else {
+	const indexHtml = await readFile(indexPath, 'utf8');
+	const inlineScripts = indexHtml.match(/<script\b[^>]*>[\s\S]*?<\/script>/g) ?? [];
+	const boot = inlineScripts.find((tag) => tag.includes('__appearanceBootstrapped'));
+	if (!boot) {
+		seasonalIssues.push('dist/index.html 缺少首屏外观 bootstrap（is:inline 可能被打包或删除）');
+	} else if (/\bsrc=/.test(boot.slice(0, boot.indexOf('>')))) {
+		seasonalIssues.push('首屏外观 bootstrap 变成了外链脚本，首次绘制后才生效、会闪烁');
+	} else {
+		const source = boot.replace(/^<script\b[^>]*>/, '').replace(/<\/script>$/, '');
+		// 月份必须来自运行期 Date；写死主题或改用构建期注入都会退化成「全年一套色」。
+		// 只匹配真正的表达式，不匹配注释里的字样（自检时踩过一次：注释也写了 getMonth()）。
+		if (!/new Date\(\)\s*\.getMonth\(\)/.test(source) || !source.includes('seasonalSchemeIds[')) {
+			seasonalIssues.push('首屏 bootstrap 缺少运行期月份判定（new Date().getMonth() 索引 seasonalSchemeIds）');
+		}
+		const injected = /const seasonalSchemeIds = (\[[^\]]*\]);/.exec(source);
+		let schemeIds = [];
+		try { schemeIds = injected ? JSON.parse(injected[1]) : []; } catch { /* 解析失败按空表处理 */ }
+		if (schemeIds.length !== 12 || schemeIds.join(',') !== SEASONAL_EXPECTED.join(',')) {
+			seasonalIssues.push(`注入的 seasonalSchemeIds 与北半球 1–12 月规约不符（实际 ${schemeIds.length} 项）`);
+		}
+		const allowed = /const colorSchemeIds = (\[[^\]]*\]);/.exec(source);
+		let allowedIds = [];
+		try { allowedIds = allowed ? JSON.parse(allowed[1]) : []; } catch { /* 同上 */ }
+		if (!allowedIds.length || SEASONAL_EXPECTED.some((id) => !allowedIds.includes(id))) {
+			seasonalIssues.push('季节配色表引用了不存在的配色 id');
+		}
+
+		function runBootstrap(month, savedScheme = null) {
+			const dataset = {};
+			const classes = new Set();
+			const root = {
+				dataset,
+				removeAttribute(name) {
+					if (name === 'data-color-scheme') delete dataset.colorScheme;
+					if (name === 'data-theme') delete dataset.theme;
+				},
+				classList: {
+					add: (name) => classes.add(name),
+					toggle: (name, on) => { if (on) classes.add(name); else classes.delete(name); },
+				},
+			};
+			const FakeDate = class extends Date { getMonth() { return month - 1; } };
+			vm.runInNewContext(source, {
+				window: {},
+				document: { documentElement: root },
+				localStorage: { getItem: (key) => (key === 'color-scheme-preference' ? savedScheme : null) },
+				matchMedia: () => ({ matches: false }),
+				Date: FakeDate,
+			}, { timeout: 1000 });
+			return { scheme: dataset.colorScheme ?? 'blog', classes: [...classes] };
+		}
+
+		for (let month = 1; month <= 12; month += 1) {
+			const expected = SEASONAL_EXPECTED[month - 1];
+			let auto;
+			let pinned;
+			try {
+				auto = runBootstrap(month);
+				pinned = runBootstrap(month, 'claude');
+			} catch (error) {
+				seasonalIssues.push(`${month} 月首屏脚本执行失败：${error.message}`);
+				continue;
+			}
+			if (auto.scheme !== expected) {
+				seasonalIssues.push(`${month} 月默认配色应为 ${expected}，实际 ${auto.scheme}`);
+			} else if (expected !== 'blog' && !auto.classes.includes(`theme-${expected}`)) {
+				seasonalIssues.push(`${month} 月缺少 theme-${expected} class`);
+			} else if (expected === 'blog' && auto.classes.some((name) => name.startsWith('theme-'))) {
+				seasonalIssues.push(`${month} 月 blog 配色不应带 theme-* class`);
+			}
+			if (pinned.scheme !== 'claude' || !pinned.classes.includes('theme-claude')) {
+				seasonalIssues.push(`${month} 月用户显式选择未覆盖季节默认（实际 ${pinned.scheme}）`);
+			}
+			seasonalChecked += 1;
+		}
+	}
+}
+failures.push(...seasonalIssues);
+
+/* ---------- 12. 报告 ---------- */
 const fmt = (b) => `${(b / 1024 / 1024).toFixed(2)} MB`;
 console.log('📦 构建产物体检');
 console.log(`   文件数: ${files.length}`);
@@ -718,6 +822,7 @@ for (const [ext, { count, bytes }] of [...byExt.entries()].sort((a, b) => b[1].b
 console.log(`   站内链接: 检查 ${seen.size} 条；完整链接/锚点审计 ${contentOutput.linkCount} 条`);
 console.log(`   专栏章节: ${columnChapterIds.length} 个（旧地址均为跳转桩页）`);
 console.log(`   数学公式: 校验 ${mathChecked} 篇（标了 mathjax 且正文含公式）`);
+console.log(`   季节配色: 校验 ${seasonalChecked}/12 个月（北半球）`);
 
 if (warnings.length) {
 	console.log('\n⚠️  警告:');
