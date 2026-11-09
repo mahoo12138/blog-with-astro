@@ -69,19 +69,21 @@ export const actions = style({
 // 这一行的两个入口是同一组导航词，不是一个「主按钮 + 次按钮」对：
 // 共用一个色、同一套间距、同一套 hover / 聚焦反馈，不做视觉分级。
 // 语义只由文字和箭头方向承担 —— ↓ 跳到页内目录，→ 离页进入第一章。
-// 同排已有 header 的 borderBottom，因此常态零装饰，反馈只用 accentSoft 淡晕、不用线条。
+// hover 用文字下划线承接，与面包屑 / 正文链接同一套排版语言；
+// 不叠淡晕底衬：底衬是输入框那类控件的反馈，贴在文字上会重新读成按钮。
 const actionBase = style({
 	display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-	minHeight: '44px', padding: '8px 10px',
+	minHeight: '44px', padding: '8px 0',
 	fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5,
 	whiteSpace: 'nowrap', textDecoration: 'none', borderRadius: '6px',
 	color: vars.color.textMuted,
-	transition: 'color 200ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+	transition: 'color 200ms cubic-bezier(0.16, 1, 0.3, 1), text-decoration-color 200ms cubic-bezier(0.16, 1, 0.3, 1)',
 	selectors: {
-		'&:hover': { background: vars.color.accentSoft, color: vars.color.accentStrong },
+		'&:hover': { color: vars.color.accentStrong, textDecoration: 'underline', textUnderlineOffset: '4px' },
 		'&:focus-visible': {
-			background: vars.color.accentSoft,
 			color: vars.color.accentStrong,
+			textDecoration: 'underline',
+			textUnderlineOffset: '4px',
 			outline: `2px solid ${vars.color.accentStrong}`,
 			outlineOffset: '3px',
 		},
