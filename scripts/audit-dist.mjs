@@ -9,8 +9,8 @@
  *   4. 关键隐私/收录断言（love 页不出现在索引与 sitemap）
  *   5. 无障碍断言（每页都存在 skip-link 与 #main-content 落点、有且仅有一个 h1）
  *   6. 代码块增强断言（每个代码块都套了外壳、页面引入了复制脚本、复制脚本带 ClientRouter 续期）
- *   7. 专栏分流断言（章节旧地址只能是跳转桩页、桩页跳转目标必须存在、博客流最多一条专栏链接、
- *      桩页不得进入搜索索引、RSS 只含独立文章）
+ *   7. 专栏分流断言（章节旧地址只能是跳转桩页、桩页跳转目标必须存在、博客流每个专栏
+ *      至多一条且总数不超上限、桩页不得进入搜索索引、RSS 只含独立文章）
  *   8. 内容卫生断言（分类词表口径、文件名不可见字符、已发布空正文）
  *   9. 模板泄漏断言（`{expr}` 不得作为字面文本出现在 HTML 里）
  *  10. 数学渲染断言（标了 mathjax 的必须渲染出 KaTeX；没标的不得出现 KaTeX）
@@ -30,6 +30,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getContentCatalog } from '../src/content-model/catalog.mjs';
+import { MAX_COLUMN_UPDATES } from '../src/config/feed.mjs';
 import { auditContentOutput } from './content-output.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -332,9 +333,11 @@ if (!existsSync(copyScriptPath)) {
  *      它指向哪里就是它存在的全部意义；目标一旦失效，旧链接就被静默送进 404，
  *      而桩页看起来完全正常 —— 页面检查、链接检查都抓不到。
  *
- *   c) 博客流第一页最多只能有一条指向专栏章节的链接（即「专栏最新更新」展示位）。
- *      这是用户提的核心诉求：学习某个主题会连续写十几篇笔记，
- *      一旦有人把专栏章节重新混进博客流，首页立刻被同一个系列刷屏。
+ *   c) 博客流第一页里，**同一个专栏最多只能有一条**章节链接（「专栏最新更新」展示位），
+ *      且总数不得超过 MAX_COLUMN_UPDATES。这是用户提的核心诉求：学习某个主题会连续写
+ *      十几篇笔记，一旦有人把专栏章节重新混进博客流，首页立刻被同一个系列刷屏。
+ *      注意不能回到「全站只允许一条」——那样每新开一个专栏，上一个专栏的更新就会
+ *      静默从首页消失（Tynel 首章就是这样被挤掉的）。
  *
  *   d) 跳转桩页不得进入搜索索引（见下方对应注释）。
  *
@@ -383,9 +386,12 @@ if (brokenRedirects.length) {
 	for (const p of brokenRedirects.slice(0, 10)) failures.push(`    ${p}`);
 }
 
-const blogFeedFirstPage = path.join(dist, 'posts', 'index.html');
-if (existsSync(blogFeedFirstPage)) {
-	const html = await readFile(blogFeedFirstPage, 'utf8');
+// 首页与 /posts/ 第一页共用同一份 feed，两边都要过这道护栏。
+const blogFeedFirstPages = ['index.html', path.join('posts', 'index.html')];
+for (const feedPage of blogFeedFirstPages) {
+	const pagePath = path.join(dist, feedPage);
+	if (!existsSync(pagePath)) continue;
+	const html = await readFile(pagePath, 'utf8');
 	/*
 	 * 只断言 main 区域。侧栏「热力图」会按日期链到当天的任意文章（含专栏章节），
 	 * 它是时间序列入口，不是博客流；把它算进来会让断言随「今天有没有写章节」误报，
@@ -394,14 +400,22 @@ if (existsSync(blogFeedFirstPage)) {
 	const mainStart = html.indexOf('id="main-content"');
 	const mainEnd = html.indexOf('</main>', mainStart + 1);
 	const feedHtml = mainStart >= 0 && mainEnd > mainStart ? html.slice(mainStart, mainEnd) : html;
-	const chapterLinks = new Set(
-		[...feedHtml.matchAll(/href="\/columns\/[^/"]+\/[^/"]+\/"/g)].map((m) => m[0]),
-	);
-	if (chapterLinks.size > 1) {
+	const chapterLinks = [...feedHtml.matchAll(/href="(\/columns\/([^/"]+)\/[^/"]+\/)"/g)].map((match) => ({
+		href: match[1],
+		column: match[2],
+	}));
+	const counts = new Map();
+	for (const { column } of chapterLinks) counts.set(column, (counts.get(column) ?? 0) + 1);
+	const repeated = [...counts].filter(([, count]) => count > 1).map(([column, count]) => `${column} ×${count}`);
+
+	if (repeated.length) {
+		failures.push(`/${feedPage} 博客流里同一专栏出现多条章节链接（每个专栏至多 1 条展示位）: ${repeated.join(', ')}`);
+	}
+	if (chapterLinks.length > MAX_COLUMN_UPDATES) {
 		failures.push(
-			`博客流第一页出现 ${chapterLinks.size} 条专栏章节链接（最多允许 1 条「专栏最新更新」展示位）`,
+			`/${feedPage} 博客流第一页出现 ${chapterLinks.length} 条专栏章节链接（上限 ${MAX_COLUMN_UPDATES} 条）`,
 		);
-		for (const link of [...chapterLinks].slice(0, 10)) failures.push(`    ${link}`);
+		for (const { href } of chapterLinks.slice(0, 10)) failures.push(`    ${href}`);
 	}
 }
 

@@ -1,6 +1,7 @@
 import type { ImageMetadata } from 'astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { postUrl } from '../consts';
+import { MAX_COLUMN_UPDATES } from '../config/feed.mjs';
 import { resolveMedia } from './media.mjs';
 
 type BlogPost = CollectionEntry<'posts'>;
@@ -354,34 +355,47 @@ export function buildColumnIndex(posts: BlogPost[], columns: ColumnEntry[]): Col
 /** 博客流里的「专栏最新更新」展示位。 */
 export interface ColumnUpdate {
 	column: ColumnBucket;
-	/** 代表章节：该专栏最新发布的一章 */
+	/** 代表章节：该专栏最新**已发布**的一章 */
 	post: BlogPost;
 }
 
 /**
- * 选出博客流中唯一的「专栏最新更新」。
+ * 选出博客流里的「专栏最新更新」展示位：每个专栏至多一条。
  *
- * 规则是刻意收紧的，目的是让专栏可以持续大量更新而不刷屏博客：
- * - **全站专栏合计只占一个位置**。若改成每个专栏各占一位，将来同时更新六个专栏，
- *   博客首页又会退回成学习笔记的堆叠。
- * - **替换而非累积**：专栏再发十篇，展示位依然只有一条。
- * - 代表章节取该专栏**最新发布**的一章，读者点进去就能读到新内容。
+ * 此前是「全站专栏合计只占一个位置」，一旦新开/更新另一个专栏，上一个专栏
+ * 的更新就会被静默挤掉 —— Tynel 首章就是这样从首页消失的。现在按专栏去重，
+ * 让每个专栏都有一次曝光，同时保留「连载不刷屏」这条底线：
+ *
+ * - **替换而非累积**：一个专栏再发十篇，展示位依然只有一条，取最新的一章。
+ * - **排除未来日期**：`date` 填成排期（如 2026-11-22）的章节不能当成「最新发布」
+ *   抢占首页；到了那天之后会自动取得资格，相当于定时发布。
+ * - **总量上限**：按代表章节时间倒序只保留前 MAX_COLUMN_UPDATES 个专栏，
+ *   专栏越开越多时博客流不会慢慢退化成专栏目录。
+ *
+ * `now` 可注入，便于测试与可重复构建；不传即用构建时刻。
  */
-export function latestColumnUpdate(columns: ColumnBucket[]): ColumnUpdate | null {
-	const candidates = columns.filter((column) => column.posts.length > 0 && column.updatedAt);
-	if (candidates.length === 0) {
-		return null;
-	}
+export function columnUpdates(columns: ColumnBucket[], now = new Date()): ColumnUpdate[] {
+	const cutoff = now.valueOf();
 
-	const column = candidates.reduce((newest, current) =>
-		current.updatedAt!.valueOf() > newest.updatedAt!.valueOf() ? current : newest,
-	);
+	return columns
+		.map((column): ColumnUpdate | null => {
+			const published = column.posts.filter((post) => post.data.pubDate.valueOf() <= cutoff);
+			if (published.length === 0) {
+				return null;
+			}
 
-	const post = column.posts.reduce((latest, current) =>
-		current.data.pubDate.valueOf() > latest.data.pubDate.valueOf() ? current : latest,
-	);
-
-	return { column, post };
+			const post = published.reduce((latest, current) =>
+				current.data.pubDate.valueOf() > latest.data.pubDate.valueOf() ? current : latest,
+			);
+			return { column, post };
+		})
+		.filter((update): update is ColumnUpdate => update !== null)
+		.sort(
+			(left, right) =>
+				right.post.data.pubDate.valueOf() - left.post.data.pubDate.valueOf() ||
+				collator.compare(left.column.slug, right.column.slug),
+		)
+		.slice(0, MAX_COLUMN_UPDATES);
 }
 
 export type BlogFeedItem =
@@ -389,20 +403,19 @@ export type BlogFeedItem =
 	| { kind: 'column-update'; post: BlogPost; date: Date };
 
 /**
- * 博客流条目：独立文章 + 至多一条专栏最新更新，按时间倒序合并。
+ * 博客流条目：独立文章 + 每个专栏至多一条最新更新，按时间倒序合并。
  *
  * 首页与 /posts/ 分页必须都走这个函数，否则两边的分页边界会错位，
  * 「下一页」会跳到读者已经看过的内容。
  *
  * 注意：`column-update` 这一条在渲染上与普通文章**完全一样**（同一张卡片、
- * 同样的「专栏 · X」角标），`kind` 只是保留「它是全站唯一的专栏展示位」这一语义，
+ * 同样的「专栏 · X」角标），`kind` 只是保留「它是专栏展示位」这一语义，
  * 供审计与后续调整识别。不要因为看不出差别就去掉它。
  */
-export function buildBlogFeed(posts: BlogPost[], columns: ColumnBucket[]): BlogFeedItem[] {
+export function buildBlogFeed(posts: BlogPost[], columns: ColumnBucket[], now = new Date()): BlogFeedItem[] {
 	const items: BlogFeedItem[] = posts.map((post) => ({ kind: 'post', post, date: post.data.pubDate }));
-	const update = latestColumnUpdate(columns);
 
-	if (update) {
+	for (const update of columnUpdates(columns, now)) {
 		items.push({
 			kind: 'column-update',
 			post: update.post,
