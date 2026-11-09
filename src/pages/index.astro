@@ -7,7 +7,7 @@ import StellarShell from '../layouts/StellarShell.astro';
 import * as styles from '../styles/homeFeed.css';
 import { buildBlogFeed, loadBlogFeedSource } from '../utils/content';
 
-// 博客流只承载独立文章 + 至多一条「专栏最新更新」。
+// 博客流只承载独立文章 + 每个专栏至多一条「专栏最新更新」。
 // 专栏章节不逐篇进入这里：学习某个主题动辄十几篇连续笔记，
 // 逐篇混排会让读者一滚动就满屏都是同一个系列。
 const { posts, columns } = await loadBlogFeedSource();
@@ -19,7 +19,7 @@ const nextUrl = totalPages > 1 ? '/posts/2' : undefined;
 // 首页与 /posts/ 内容重叠，必须给出可区分的 title / description，
 // 否则两者会被搜索引擎判定为重复内容（canonical 也不同）。
 const pageTitle = `${SITE_TITLE} · 首页`;
-const pageDescription = `${SITE_DESCRIPTION} 这里是最新发布的文章，共 ${posts.length} 篇。`;
+const pageDescription = `${SITE_DESCRIPTION} 这里是最新发布的文章与专栏更新，共 ${feed.length} 条。`;
 ---
 
 <StellarShell title={pageTitle} description={pageDescription} mainClass={styles.main} siteTree="home">

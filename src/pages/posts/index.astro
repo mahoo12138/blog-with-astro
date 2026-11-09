@@ -7,7 +7,7 @@ import StellarShell from '../../layouts/StellarShell.astro';
 import * as styles from '../../styles/homeFeed.css';
 import { buildBlogFeed, loadBlogFeedSource } from '../../utils/content';
 
-// 与首页共用同一份博客流（独立文章 + 至多一条专栏最新更新），
+// 与首页共用同一份博客流（独立文章 + 每个专栏至多一条专栏最新更新），
 // 保证两边的分页边界一致 —— 否则「下一页」会跳到读者已经看过的内容。
 const { posts, columns } = await loadBlogFeedSource();
 const feed = buildBlogFeed(posts, columns);
@@ -18,7 +18,7 @@ const nextUrl = totalPages > 1 ? '/posts/2' : undefined;
 // /posts/ 是「全部文章」的分页列表页（首页只承担最新的部分 + Hero），
 // 因此 title / description 必须与首页区分，避免被判为重复内容。
 const pageTitle = `全部文章 · ${SITE_TITLE}`;
-const pageDescription = `${SITE_TITLE} 的全部文章归档列表，共 ${posts.length} 篇，每页 ${POSTS_PER_PAGE} 篇。`;
+const pageDescription = `${SITE_TITLE} 的文章与专栏更新归档列表，共 ${feed.length} 条，每页 ${POSTS_PER_PAGE} 条。`;
 ---
 
 <StellarShell title={pageTitle} description={pageDescription} mainClass={styles.main} siteTree="home">
