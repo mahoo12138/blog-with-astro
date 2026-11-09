@@ -1,7 +1,7 @@
 ---
 import '../styles/theme.css.ts';
 import '../styles/themes/index.css';
-import { appearanceStorageKeys, colorSchemeIds } from '../config/appearance';
+import { appearanceStorageKeys, colorSchemeIds, seasonalSchemeIds } from '../config/appearance';
 // 代码块外壳（语言标签 + 复制按钮）样式。
 // 放在 BaseHead 是因为代码块可能出现在任何渲染 Markdown 的页面，
 // 这里是全站唯一的公共入口，能保证样式一定被引入。
@@ -71,13 +71,16 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
 
 <ClientRouter />
 
-<!-- 在首次绘制前恢复配色；后续导航由统一 appearance 控制器保留内存状态。 -->
-<script is:inline define:vars={{ appearanceStorageKeys, colorSchemeIds }}>
+<!-- 在首次绘制前恢复配色（无保存偏好时按北半球季节取默认配色）；后续导航由统一 appearance 控制器保留内存状态。 -->
+<script is:inline define:vars={{ appearanceStorageKeys, colorSchemeIds, seasonalSchemeIds }}>
 	(() => {
 		if (window.__appearanceBootstrapped) return;
 		window.__appearanceBootstrapped = true;
 		const root = document.documentElement;
-		let mode = 'system', scheme = 'blog';
+		// 月份在浏览器运行期判定：静态产物会跨月复用，构建期日期会被写死。
+		// 映射表来自 src/config/appearance.ts，下标即 getMonth() 的 0–11；
+		// 下面 localStorage 里用户显式选过的配色优先覆盖这个默认值。
+		let mode = 'system', scheme = seasonalSchemeIds[new Date().getMonth()] || 'blog';
 		try {
 			const savedMode = localStorage.getItem(appearanceStorageKeys.mode);
 			const savedScheme = localStorage.getItem(appearanceStorageKeys.scheme);

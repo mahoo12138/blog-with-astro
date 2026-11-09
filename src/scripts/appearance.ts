@@ -1,4 +1,8 @@
-import { appearanceModes, appearanceStorageKeys, colorSchemes, normalizeMode, normalizeScheme, type AppearanceMode, type ColorScheme } from '../config/appearance';
+import {
+	appearanceModes, appearanceStorageKeys, colorSchemes, normalizeMode, normalizeScheme,
+	seasonLabels, seasonalDefault, seasonalDefaultScheme, seasonalHemisphere,
+	type AppearanceMode, type ColorScheme,
+} from '../config/appearance';
 import * as styles from '../components/AppearancePicker.css';
 
 // 首屏由 head bootstrap 恢复；ClientRouter 切页后沿用内存状态，不依赖存储可用。
@@ -54,6 +58,12 @@ function update(nextMode: AppearanceMode, nextScheme: ColorScheme) {
 	syncControls();
 }
 
+function seasonHintText() {
+	const { month, season, scheme, tone } = seasonalDefault();
+	const meta = colorSchemes.find((item) => item.id === scheme) ?? colorSchemes[0];
+	return `${seasonalHemisphere.label} · ${month} 月「${seasonLabels[season]}」· 本季自动配色：${meta.name}（${tone}）`;
+}
+
 // 按需创建一次原生 dialog，避免在数百个静态页面里重复输出设置面板。
 function createDialog() {
 	const existing = document.getElementById('appearance-dialog');
@@ -73,12 +83,18 @@ function createDialog() {
 	// 唯一的静态 HTML 是关闭图标；所有主题文字均通过 textContent 创建。
 	close.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
 	header.append(title, close);
-	const description = element('p', styles.subtitle, '选择喜欢的配色，保留熟悉的阅读布局。');
+	const description = element('p', styles.subtitle,
+		`选择喜欢的配色，保留熟悉的阅读布局；未选择时按${seasonalHemisphere.label}季节自动选色。`);
 	description.id = 'appearance-description';
 	dialog.append(header, description);
 	for (const kind of ['mode', 'scheme'] as const) {
 		const fieldset = element('fieldset', styles.fieldset);
 		fieldset.append(element('legend', styles.legend, kind === 'mode' ? '明暗模式' : '配色主题'));
+		if (kind === 'scheme') {
+			const hint = element('p', styles.seasonHint, seasonHintText());
+			hint.dataset.seasonHint = '';
+			fieldset.append(hint);
+		}
 		const choices = element('div', kind === 'mode' ? styles.modes : styles.schemes);
 		const options = kind === 'mode' ? appearanceModes : colorSchemes;
 		for (const item of options) {
@@ -88,7 +104,12 @@ function createDialog() {
 			radio.type = 'radio'; radio.name = `appearance-${kind}`; radio.value = item.id;
 			radio.dataset.appearanceOption = kind;
 			const name = element('span', styles.label, isScheme ? item.name : item.label);
-			if (isScheme) name.append(element('span', styles.description, item.description));
+			if (isScheme) {
+				const tag = element('span', styles.seasonTag, '本季');
+				tag.dataset.appearanceSeasonTag = item.id;
+				tag.hidden = item.id !== seasonalDefaultScheme();
+				name.append(tag, element('span', styles.description, item.description));
+			}
 			label.append(radio, name);
 			if (isScheme) {
 				const swatches = element('span', styles.swatches);
@@ -108,6 +129,7 @@ function createDialog() {
 	const footer = element('div', styles.footer);
 	const reset = element('button', styles.reset, '恢复默认');
 	reset.type = 'button'; reset.dataset.appearanceReset = '';
+	reset.title = `明暗跟随系统，配色重新跟随${seasonalHemisphere.label}季节`;
 	const status = element('p', styles.status);
 	status.dataset.appearanceStatus = ''; status.setAttribute('role', 'status');
 	footer.append(reset, status); dialog.append(footer);
@@ -146,6 +168,13 @@ function openDialog(opener: HTMLElement) {
 	// 先解除现有侧栏的焦点约束和滚动锁，也兼容 WideShell。
 	document.querySelector<HTMLButtonElement>('[data-sidebar-dismiss]')?.click();
 	const dialog = createDialog();
+	// 面板只创建一次；跨月后重新打开时刷新季节提示与「本季」标记，避免文案停在旧月份。
+	const hint = dialog.querySelector<HTMLElement>('[data-season-hint]');
+	if (hint) hint.textContent = seasonHintText();
+	const current = seasonalDefaultScheme();
+	dialog.querySelectorAll<HTMLElement>('[data-appearance-season-tag]').forEach((tag) => {
+		tag.hidden = tag.dataset.appearanceSeasonTag !== current;
+	});
 	syncControls();
 	modalSession = { dialog, body: document.body, overflow: document.body.style.overflow, opener };
 	document.body.style.overflow = 'hidden';
@@ -158,8 +187,10 @@ document.addEventListener('click', (event) => {
 	if (opener) { openDialog(opener); return; }
 	if (event.target.closest('[data-appearance-close]')) { releaseModal(); return; }
 	if (event.target.closest('[data-appearance-reset]')) {
-		persist('mode', 'system', 'system'); persist('scheme', 'blog', 'blog');
-		update('system', 'blog'); return;
+		// 「默认」= 明暗跟随系统 + 配色跟随季节；清掉两项偏好，让下个月自动换色。
+		const fallback = seasonalDefaultScheme();
+		persist('mode', 'system', 'system'); persist('scheme', fallback, fallback);
+		update('system', fallback); return;
 	}
 	if (event.target.closest('[data-theme-cycler]')) {
 		const next = appearanceModes[(appearanceModes.findIndex((item) => item.id === mode) + 1) % appearanceModes.length].id;
@@ -178,15 +209,17 @@ document.addEventListener('change', (event) => {
 		persist('mode', next, 'system'); update(next, scheme);
 	} else if (input.dataset.appearanceOption === 'scheme') {
 		const next = normalizeScheme(input.value);
-		persist('scheme', next, 'blog'); update(mode, next);
+		// 选中本季默认配色 = 不写偏好（继续跟随季节）；选其它配色 = 固定下来。
+		persist('scheme', next, seasonalDefaultScheme()); update(mode, next);
 	}
 });
 document.addEventListener('close', (event) => { if (event.target === modalSession?.dialog) releaseModal(); }, true);
 window.addEventListener('storage', (event) => {
 	try { if (event.storageArea !== localStorage) return; } catch { return; }
-	if (event.key === null) update('system', 'blog');
+	if (event.key === null) update('system', seasonalDefaultScheme());
 	else if (event.key === appearanceStorageKeys.mode) update(normalizeMode(event.newValue), scheme);
-	else if (event.key === appearanceStorageKeys.scheme) update(mode, normalizeScheme(event.newValue));
+	// 偏好被删除（newValue 为 null）等价于回到季节默认，而不是回到 blog。
+	else if (event.key === appearanceStorageKeys.scheme) update(mode, normalizeScheme(event.newValue, seasonalDefaultScheme()));
 });
 darkQuery.addEventListener('change', () => { applyTo(document.documentElement); syncControls(); });
 document.addEventListener('astro:before-swap', (event) => {
