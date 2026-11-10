@@ -73,12 +73,6 @@ export const count = style({
 	lineHeight: 1.6,
 });
 
-export const subline = style({
-	margin: `${vars.space.xs} 0 0`,
-	fontSize: '0.78rem',
-	color: vars.color.textMeta,
-});
-
 export const headActions = style({
 	display: 'flex',
 	alignItems: 'center',
@@ -190,11 +184,22 @@ export const inlineAction = style({
 	},
 });
 
+/**
+ * 署名行不是注册表：三个字段按「用得多不多」分配宽度，整行只占内容列左侧，
+ * 右侧留白把视线让给下方正文区。窄屏不折成 2+1 的挂单，直接整齐地单列堆叠。
+ */
 export const identityRow = style({
 	display: 'grid',
-	gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-	gap: vars.space.sm,
-	marginBottom: vars.space.sm,
+	gridTemplateColumns: 'minmax(0, 0.82fr) minmax(0, 1.3fr) minmax(0, 0.88fr)',
+	gap: vars.space.md,
+	maxWidth: '28rem',
+	marginBottom: vars.space.xl,
+	'@media': {
+		[`screen and (max-width: ${breakpoints.mobile})`]: {
+			gridTemplateColumns: 'minmax(0, 1fr)',
+			gap: vars.space.xs,
+		},
+	},
 });
 
 export const input = style({
@@ -657,8 +662,9 @@ export const captchaOverlay = style({
 export const captchaCard = style({
 	display: 'flex',
 	flexDirection: 'column',
-	gap: vars.space.md,
-	width: 'min(320px, 92vw)',
+	// 组间松、组内紧：标题 / 字段组 / 验证码行 / 操作行形成节奏，而不是一竖排等距控件。
+	gap: vars.space.lg,
+	width: 'min(340px, 92vw)',
 	padding: vars.space.xl,
 	border: `1px solid ${vars.color.border}`,
 	borderRadius: vars.radius.lg,
@@ -668,16 +674,41 @@ export const captchaCard = style({
 });
 
 export const captchaTitle = style({ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: vars.color.textStrong });
-export const captchaHint = style({ margin: 0, fontSize: '0.78rem', color: vars.color.textMeta });
-export const captchaImage = style({
-	width: '160px',
-	height: '50px',
+
+const captchaImageBase = style({
 	objectFit: 'contain',
-	alignSelf: 'center',
 	borderRadius: vars.radius.sm,
 	cursor: 'pointer',
 });
-export const captchaInput = style([input, { background: vars.color.accentSoft }]);
+
+/** 邮箱与密码是一组，组内间距比组间紧。 */
+export const loginFields = style({
+	display: 'flex',
+	flexDirection: 'column',
+	gap: vars.space.xs,
+	minWidth: 0,
+});
+
+/** 图片与输入并成一行：验证码是一次动作，不该占两次视觉换行。两个弹层共用。 */
+export const captchaRow = style({
+	display: 'flex',
+	alignItems: 'center',
+	gap: vars.space.sm,
+	minWidth: 0,
+});
+
+export const captchaRowImage = style([captchaImageBase, {
+	width: '132px',
+	height: '42px',
+	flexShrink: 0,
+}]);
+
+export const captchaRowInput = style([input, {
+	flex: 1,
+	width: 'auto',
+	minWidth: 0,
+}]);
+
 export const captchaActions = style({ display: 'flex', justifyContent: 'flex-end', gap: vars.space.sm });
 
 /* ── 评论正文内的 Markdown 复位 ───────────────────────────────────────── */
