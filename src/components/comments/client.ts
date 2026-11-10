@@ -82,6 +82,9 @@ interface Refs {
 	loginEmail: HTMLInputElement;
 	loginPassword: HTMLInputElement;
 	loginError: HTMLElement;
+	loginCaptcha: HTMLElement;
+	loginCaptchaImage: HTMLImageElement;
+	loginCaptchaInput: HTMLInputElement;
 	loginCancel: HTMLButtonElement;
 	loginConfirm: HTMLButtonElement;
 }
@@ -143,13 +146,13 @@ function saveUser(user: LocalUser): void {
  */
 function shellHTML(): string {
 	return `
-<header class="${css.header}"><div><h2 class="${css.heading}">评论<span class="${css.count}" data-role="count" aria-label="评论数">···</span></h2><p class="${css.subline}">友善交流，理性讨论。邮箱不会公开显示。</p></div><div class="${css.headActions}"><button type="button" class="${css.ghostButton}" data-role="sort" aria-pressed="false">最早在前</button></div></header>
+<header class="${css.header}"><div><h2 class="${css.heading}">评论<span class="${css.count}" data-role="count" aria-label="评论数">···</span></h2></div><div class="${css.headActions}"><button type="button" class="${css.ghostButton}" data-role="sort" aria-pressed="false">最早在前</button></div></header>
 <div class="${css.editor}"><form data-role="form" novalidate><div class="${css.identityRow}"><input class="${css.input}" data-role="name" name="name" type="text" placeholder="昵称 *" required autocomplete="nickname"><input class="${css.input}" data-role="email" name="email" type="email" placeholder="邮箱 *" required autocomplete="email"><input class="${css.input}" data-role="link" name="link" type="url" placeholder="网站（可选）" autocomplete="url"></div><div class="${css.composer}"><textarea class="${css.textarea}" data-role="content" name="content" rows="4" required></textarea><div class="${css.toolbar}"><div class="${css.toolbarLeft}"><div class="${css.emojiAnchor}" data-role="emoji-anchor"><button type="button" class="${css.ghostButton}" data-role="emoji-toggle" aria-expanded="false" aria-label="插入表情">☺ 表情</button><div class="${css.emojiPanel}" data-role="emoji-panel" data-open="false" aria-label="表情选择"></div></div></div><button type="submit" class="${css.primaryButton}" data-role="submit">发送</button></div></div></form><p class="${css.notice}" data-role="notice" role="status" aria-live="polite"></p></div>
 <div class="${css.listHeader}"><span class="${css.listTitle}">全部评论</span><span class="${css.listMeta}" data-role="list-meta"></span></div>
 <div class="${css.list}" data-role="list" aria-busy="true" aria-live="polite"></div>
 <div class="${css.footer}" data-role="footer"><button type="button" class="${css.loadMore}" data-role="load-more" hidden>加载更多</button><span class="${css.pagerText}" data-role="pager-text"></span></div>
-<div class="${css.captchaOverlay}" data-role="captcha" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="人机验证"><h3 class="${css.captchaTitle}">请先完成验证</h3><p class="${css.captchaHint}">输入图中字符，验证通过会自动重新发送评论。</p><img class="${css.captchaImage}" data-role="captcha-img" alt="验证码，点击可刷新"><input class="${css.captchaInput}" data-role="captcha-input" type="text" placeholder="输入验证码" autocomplete="off"><p class="${css.notice}" data-role="captcha-error" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="captcha-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="captcha-confirm">确认</button></div></div></div>
-<div class="${css.captchaOverlay}" data-role="login" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="管理员登录"><h3 class="${css.captchaTitle}">管理员登录</h3><p class="${css.captchaHint}">你填写的昵称与邮箱属于管理员账号，Artalk 需要验证管理员身份后才能发表。登录成功后会自动重试这次发送。</p><input class="${css.input}" data-role="login-email" type="email" placeholder="管理员邮箱" autocomplete="username"><input class="${css.input}" data-role="login-password" type="password" placeholder="密码" autocomplete="current-password"><p class="${css.notice}" data-role="login-error" role="alert" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="login-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="login-confirm">登录并重试</button></div></div></div>`;
+<div class="${css.captchaOverlay}" data-role="captcha" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="人机验证"><h3 class="${css.captchaTitle}">请先完成验证</h3><div class="${css.captchaRow}"><img class="${css.captchaRowImage}" data-role="captcha-img" alt="验证码，点击可刷新"><input class="${css.captchaRowInput}" data-role="captcha-input" type="text" placeholder="输入验证码" autocomplete="off"></div><p class="${css.notice}" data-role="captcha-error" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="captcha-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="captcha-confirm">确认</button></div></div></div>
+<div class="${css.captchaOverlay}" data-role="login" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="管理员登录"><h3 class="${css.captchaTitle}">管理员登录</h3><div class="${css.loginFields}"><input class="${css.input}" data-role="login-email" type="email" placeholder="管理员邮箱" autocomplete="username"><input class="${css.input}" data-role="login-password" type="password" placeholder="密码" autocomplete="current-password"></div><div class="${css.captchaRow}" data-role="login-captcha" hidden><img class="${css.captchaRowImage}" data-role="login-captcha-img" alt="验证码，点击可刷新"><input class="${css.captchaRowInput}" data-role="login-captcha-input" type="text" placeholder="输入图中字符" autocomplete="off"></div><p class="${css.notice}" data-role="login-error" role="alert" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="login-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="login-confirm">登录并重试</button></div></div></div>`;
 }
 
 class CommentsClient {
@@ -195,6 +198,8 @@ class CommentsClient {
 	private scrollFrame = 0;
 	private pendingSubmit: SubmitPayload | null = null;
 	private pendingSource: Source = 'root';
+	/** 登录接口同样受 LimiterGuard 保护，need_captcha 时展开弹层内的验证码。 */
+	private loginCaptchaRequired = false;
 	private readonly loginLink: HTMLButtonElement;
 	private readonly onDocumentClick = (event: MouseEvent): void => {
 		const target = event.target;
@@ -269,6 +274,9 @@ class CommentsClient {
 			loginEmail: pick<HTMLInputElement>('login-email'),
 			loginPassword: pick<HTMLInputElement>('login-password'),
 			loginError: pick('login-error'),
+			loginCaptcha: pick('login-captcha'),
+			loginCaptchaImage: pick<HTMLImageElement>('login-captcha-img'),
+			loginCaptchaInput: pick<HTMLInputElement>('login-captcha-input'),
 			loginCancel: pick<HTMLButtonElement>('login-cancel'),
 			loginConfirm: pick<HTMLButtonElement>('login-confirm'),
 		};
@@ -987,8 +995,9 @@ class CommentsClient {
 			if (this.destroyed) return;
 			if (err instanceof ArtalkError && err.payload.need_captcha === true && allowCaptcha) {
 				this.pendingSubmit = payload;
-				this.openCaptcha(err.payload, source);
-				this.showNoticeFor(source, '需要先完成一次人机验证', 'info');
+				// 清掉「正在发送…」：验证码浮层本身已经说明当前在做什么，不必再叠一行提示。
+				this.showNoticeFor(source, '', 'info');
+				this.openCaptcha(err.payload);
 				return;
 			}
 			const described = this.describeError(err);
@@ -1003,8 +1012,7 @@ class CommentsClient {
 
 	/* ── 验证码 ───────────────────────────────────────────────────────── */
 
-	private openCaptcha(payload: Record<string, unknown>, source: Source): void {
-		this.showNoticeFor(source, '需要先完成一次人机验证', 'info');
+	private openCaptcha(payload: Record<string, unknown>): void {
 		this.refs.captchaError.textContent = '';
 		this.refs.captchaInput.value = '';
 		if (typeof payload.img_data === 'string' && payload.img_data) {
@@ -1086,6 +1094,13 @@ class CommentsClient {
 		this.refs.loginEmail.value = this.refs.emailInput.value.trim();
 		this.refs.loginPassword.value = '';
 		this.refs.loginError.textContent = '';
+		this.refs.loginError.dataset.tone = 'error';
+		// 每次打开从「无需验证码」开始，只有登录接口返回 need_captcha 才展开。
+		this.loginCaptchaRequired = false;
+		this.refs.loginCaptcha.hidden = true;
+		this.refs.loginCaptchaInput.value = '';
+		this.refs.loginCaptchaImage.hidden = true;
+		this.refs.loginCaptchaImage.removeAttribute('src');
 		this.refs.login.dataset.open = 'true';
 		this.refs.login.setAttribute('aria-hidden', 'false');
 		requestAnimationFrame(() => {
@@ -1104,9 +1119,44 @@ class CommentsClient {
 		this.refs.loginPassword.addEventListener('keydown', (event) => {
 			if (event.key === 'Enter') { event.preventDefault(); void this.confirmLogin(); }
 		});
+		this.refs.loginCaptchaInput.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') { event.preventDefault(); void this.confirmLogin(); }
+		});
+		this.refs.loginCaptchaImage.addEventListener('click', () => void this.refreshLoginCaptcha());
 		this.refs.login.addEventListener('click', (event) => {
 			if (event.target === this.refs.login) this.closeLogin();
 		});
+	}
+
+	/**
+	 * /user/access_token 同样套了 LimiterGuard：达到频率后返回
+	 * 403 { need_captcha, img_data }。图片与输入内嵌在登录弹层里，
+	 * 不和评论用的全屏验证码浮层叠加。
+	 */
+	private showLoginCaptcha(payload: Record<string, unknown>): void {
+		this.loginCaptchaRequired = true;
+		this.refs.loginCaptcha.hidden = false;
+		this.refs.loginCaptchaInput.value = '';
+		if (typeof payload.img_data === 'string' && payload.img_data) {
+			this.refs.loginCaptchaImage.src = payload.img_data;
+			this.refs.loginCaptchaImage.hidden = false;
+		} else {
+			void this.refreshLoginCaptcha();
+		}
+		// 图片 + 输入框占位文字已自解释，不再堆引导文案；仅 iframe 模式给一句必要提示。
+		this.refs.loginError.textContent = payload.iframe ? '请完成页面验证后重试' : '';
+		this.refs.loginError.dataset.tone = 'error';
+		requestAnimationFrame(() => this.refs.loginCaptchaInput.focus());
+	}
+
+	private async refreshLoginCaptcha(): Promise<void> {
+		try {
+			const data = await this.api.getCaptcha();
+			if (data.img_data) {
+				this.refs.loginCaptchaImage.src = data.img_data;
+				this.refs.loginCaptchaImage.hidden = false;
+			}
+		} catch { /* 保留旧图 */ }
 	}
 
 	private async confirmLogin(): Promise<void> {
@@ -1118,7 +1168,21 @@ class CommentsClient {
 			return;
 		}
 		this.refs.loginConfirm.disabled = true;
+		this.refs.loginError.textContent = '';
 		try {
+			if (this.loginCaptchaRequired) {
+				const value = this.refs.loginCaptchaInput.value.trim();
+				if (!value) {
+					this.refs.loginError.textContent = '请输入图中的字符';
+					this.refs.loginError.dataset.tone = 'error';
+					return;
+				}
+				// captcha/verify 不受 LimiterGuard 限制，验证通过会按 IP 标记放行，
+				// 随后的登录请求以及重试的评论提交即可通过。
+				await this.api.verifyCaptcha(value);
+				this.loginCaptchaRequired = false;
+				this.refs.loginCaptcha.hidden = true;
+			}
 			// 带上 name 精确匹配账号，避免同邮箱多用户时 need_name_select。
 			const result = await this.api.login({ name: this.refs.nameInput.value.trim(), email, password });
 			if (!result?.token) throw new Error('登录未返回凭证，请重试');
@@ -1134,6 +1198,20 @@ class CommentsClient {
 			const source = this.pendingSource;
 			if (pending) await this.doSubmit(pending, true, source);
 		} catch (err) {
+			if (err instanceof ArtalkError && err.payload.need_captcha === true) {
+				this.showLoginCaptcha(err.payload);
+				return;
+			}
+			// 验证码填错：verifyCaptcha 返回 403 并附一张新图。
+			if (err instanceof ArtalkError && this.loginCaptchaRequired && typeof err.payload.img_data === 'string') {
+				this.refs.loginCaptchaImage.src = err.payload.img_data;
+				this.refs.loginCaptchaImage.hidden = false;
+				this.refs.loginCaptchaInput.value = '';
+				this.refs.loginError.textContent = '验证码不正确，已换一张，请重试';
+				this.refs.loginError.dataset.tone = 'error';
+				requestAnimationFrame(() => this.refs.loginCaptchaInput.focus());
+				return;
+			}
 			this.refs.loginError.textContent = err instanceof Error ? err.message : '登录失败，请重试';
 			this.refs.loginError.dataset.tone = 'error';
 		} finally {
