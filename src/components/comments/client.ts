@@ -25,6 +25,14 @@ const LOCAL_USER_KEY = 'ArtalkUser'; // 与官方 SDK 共用，换组件不丢�
 const EMPTY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-3a3 3 0 0 1-1-2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3Z"/><path d="M8 9h8M8 12h5"/></svg>';
 
 type SortBy = 'date_desc' | 'date_asc' | 'vote';
+/** 一次提交来自顶层编辑器还是评论下方的回复专用输入区。 */
+type Source = 'root' | 'reply';
+type Tone = 'info' | 'error' | 'success';
+interface Notice {
+	text: string;
+	tone: Tone;
+	needLogin?: boolean;
+}
 
 interface ClientConfig {
 	server: string;
@@ -54,10 +62,8 @@ interface Refs {
 	textarea: HTMLTextAreaElement;
 	submitButton: HTMLButtonElement;
 	notice: HTMLElement;
-	replyBar: HTMLElement;
-	replyText: HTMLElement;
-	replyCancel: HTMLButtonElement;
 	sortButton: HTMLButtonElement;
+	emojiAnchor: HTMLElement;
 	emojiToggle: HTMLButtonElement;
 	emojiPanel: HTMLElement;
 	count: HTMLElement;
@@ -72,6 +78,12 @@ interface Refs {
 	captchaError: HTMLElement;
 	captchaCancel: HTMLButtonElement;
 	captchaConfirm: HTMLButtonElement;
+	login: HTMLElement;
+	loginEmail: HTMLInputElement;
+	loginPassword: HTMLInputElement;
+	loginError: HTMLElement;
+	loginCancel: HTMLButtonElement;
+	loginConfirm: HTMLButtonElement;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -132,11 +144,12 @@ function saveUser(user: LocalUser): void {
 function shellHTML(): string {
 	return `
 <header class="${css.header}"><div><h2 class="${css.heading}">评论<span class="${css.count}" data-role="count" aria-label="评论数">···</span></h2><p class="${css.subline}">友善交流，理性讨论。邮箱不会公开显示。</p></div><div class="${css.headActions}"><button type="button" class="${css.ghostButton}" data-role="sort" aria-pressed="false">最早在前</button></div></header>
-<div class="${css.editor}"><div class="${css.replyBar}" data-role="reply-bar" hidden><span data-role="reply-text"></span><button type="button" class="${css.ghostButton}" data-role="reply-cancel">取消回复</button></div><form data-role="form" novalidate><div class="${css.identityRow}"><input class="${css.input}" data-role="name" name="name" type="text" placeholder="昵称 *" required autocomplete="nickname"><input class="${css.input}" data-role="email" name="email" type="email" placeholder="邮箱 *" required autocomplete="email"><input class="${css.input}" data-role="link" name="link" type="url" placeholder="网站（可选）" autocomplete="url"></div><div class="${css.composer}"><textarea class="${css.textarea}" data-role="content" name="content" rows="4" required></textarea><div class="${css.toolbar}"><div class="${css.toolbarLeft}"><div class="${css.emojiAnchor}"><button type="button" class="${css.ghostButton}" data-role="emoji-toggle" aria-expanded="false" aria-label="插入表情">☺ 表情</button><div class="${css.emojiPanel}" data-role="emoji-panel" data-open="false" aria-label="表情选择"></div></div></div><button type="submit" class="${css.primaryButton}" data-role="submit">发送</button></div></div></form><p class="${css.notice}" data-role="notice" role="status" aria-live="polite"></p></div>
+<div class="${css.editor}"><form data-role="form" novalidate><div class="${css.identityRow}"><input class="${css.input}" data-role="name" name="name" type="text" placeholder="昵称 *" required autocomplete="nickname"><input class="${css.input}" data-role="email" name="email" type="email" placeholder="邮箱 *" required autocomplete="email"><input class="${css.input}" data-role="link" name="link" type="url" placeholder="网站（可选）" autocomplete="url"></div><div class="${css.composer}"><textarea class="${css.textarea}" data-role="content" name="content" rows="4" required></textarea><div class="${css.toolbar}"><div class="${css.toolbarLeft}"><div class="${css.emojiAnchor}" data-role="emoji-anchor"><button type="button" class="${css.ghostButton}" data-role="emoji-toggle" aria-expanded="false" aria-label="插入表情">☺ 表情</button><div class="${css.emojiPanel}" data-role="emoji-panel" data-open="false" aria-label="表情选择"></div></div></div><button type="submit" class="${css.primaryButton}" data-role="submit">发送</button></div></div></form><p class="${css.notice}" data-role="notice" role="status" aria-live="polite"></p></div>
 <div class="${css.listHeader}"><span class="${css.listTitle}">全部评论</span><span class="${css.listMeta}" data-role="list-meta"></span></div>
 <div class="${css.list}" data-role="list" aria-busy="true" aria-live="polite"></div>
 <div class="${css.footer}" data-role="footer"><button type="button" class="${css.loadMore}" data-role="load-more" hidden>加载更多</button><span class="${css.pagerText}" data-role="pager-text"></span></div>
-<div class="${css.captchaOverlay}" data-role="captcha" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="人机验证"><h3 class="${css.captchaTitle}">请先完成验证</h3><p class="${css.captchaHint}">输入图中字符，验证通过会自动重新发送评论。</p><img class="${css.captchaImage}" data-role="captcha-img" alt="验证码，点击可刷新"><input class="${css.captchaInput}" data-role="captcha-input" type="text" placeholder="输入验证码" autocomplete="off"><p class="${css.notice}" data-role="captcha-error" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="captcha-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="captcha-confirm">确认</button></div></div></div>`;
+<div class="${css.captchaOverlay}" data-role="captcha" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="人机验证"><h3 class="${css.captchaTitle}">请先完成验证</h3><p class="${css.captchaHint}">输入图中字符，验证通过会自动重新发送评论。</p><img class="${css.captchaImage}" data-role="captcha-img" alt="验证码，点击可刷新"><input class="${css.captchaInput}" data-role="captcha-input" type="text" placeholder="输入验证码" autocomplete="off"><p class="${css.notice}" data-role="captcha-error" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="captcha-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="captcha-confirm">确认</button></div></div></div>
+<div class="${css.captchaOverlay}" data-role="login" data-open="false" aria-hidden="true"><div class="${css.captchaCard}" role="dialog" aria-modal="true" aria-label="管理员登录"><h3 class="${css.captchaTitle}">管理员登录</h3><p class="${css.captchaHint}">你填写的昵称与邮箱属于管理员账号，Artalk 需要验证管理员身份后才能发表。登录成功后会自动重试这次发送。</p><input class="${css.input}" data-role="login-email" type="email" placeholder="管理员邮箱" autocomplete="username"><input class="${css.input}" data-role="login-password" type="password" placeholder="密码" autocomplete="current-password"><p class="${css.notice}" data-role="login-error" role="alert" aria-live="polite"></p><div class="${css.captchaActions}"><button type="button" class="${css.ghostButton}" data-role="login-cancel">取消</button><button type="button" class="${css.primaryButton}" data-role="login-confirm">登录并重试</button></div></div></div>`;
 }
 
 class CommentsClient {
@@ -158,26 +171,40 @@ class CommentsClient {
 	private submitting = false;
 	private destroyed = false;
 	private error: string | null = null;
+	/** 当前展开「回复专用输入区」的目标评论；顶层编辑器不再读它。 */
 	private replyTo: ArtalkComment | null = null;
+	private replyDraft = '';
+	private replyNotice: Notice = { text: '', tone: 'info' };
+	/** 回复区是列表的一部分，render() 会重建列表，这几个引用每次重建后刷新。 */
+	private replyTextarea: HTMLTextAreaElement | null = null;
+	private replyNoticeEl: HTMLElement | null = null;
+	private replySubmitButton: HTMLButtonElement | null = null;
 	private freshId: number | null = null;
+	private pageAdminOnly = false;
 	private emoticons: EmoticonGroup[] = BUILTIN_EMOTICONS;
 	private imageMap = new Map<string, string>();
 	private activeEmojiGroup = 0;
 	/** 面板只建一次，切分组时只换网格内容（重建会让点击目标脱离文档）。 */
 	private emojiTabsEl: HTMLElement | null = null;
 	private emojiGridEl: HTMLElement | null = null;
+	/** 表情面板是单实例：打开回复区时临时挂到回复区的 anchor 下。 */
+	private emojiArea: HTMLTextAreaElement | null = null;
+	private emojiToggleEl: HTMLButtonElement | null = null;
 	private conf: FrontendConf = {};
 	private observer: IntersectionObserver | null = null;
 	private scrollFrame = 0;
 	private pendingSubmit: SubmitPayload | null = null;
+	private pendingSource: Source = 'root';
+	private readonly loginLink: HTMLButtonElement;
 	private readonly onDocumentClick = (event: MouseEvent): void => {
 		const target = event.target;
 		// 面板内部重渲染会让被点中的节点脱离文档，此时 contains() 为 false，
 		// 会被误判成「点了外面」而关闭面板 —— 先排除已断开的目标。
 		if (!(target instanceof Node) || !target.isConnected) return;
-		if (!this.refs.emojiPanel.contains(target) && !this.refs.emojiToggle.contains(target)) {
-			this.closeEmojiPanel();
-		}
+		const inPanel = this.refs.emojiPanel.contains(target);
+		const inToggle = this.refs.emojiToggle.contains(target)
+			|| (this.emojiToggleEl !== null && this.emojiToggleEl.contains(target));
+		if (!inPanel && !inToggle) this.closeEmojiPanel();
 	};
 
 	constructor(private readonly root: HTMLElement) {
@@ -195,6 +222,10 @@ class CommentsClient {
 		);
 		root.innerHTML = shellHTML();
 		this.refs = this.collectRefs();
+		// 单实例动作链接：need_login 时移动到出错那块提示里（顶层或回复区）。
+		this.loginLink = el('button', css.inlineAction, '管理员登录');
+		this.loginLink.type = 'button';
+		this.loginLink.addEventListener('click', () => this.openLogin());
 		this.refs.count.dataset.commentCount = this.config.pageKey;
 		this.prefillUser();
 		this.bindEvents();
@@ -218,10 +249,8 @@ class CommentsClient {
 			textarea: pick<HTMLTextAreaElement>('content'),
 			submitButton: pick<HTMLButtonElement>('submit'),
 			notice: pick('notice'),
-			replyBar: pick('reply-bar'),
-			replyText: pick('reply-text'),
-			replyCancel: pick<HTMLButtonElement>('reply-cancel'),
 			sortButton: pick<HTMLButtonElement>('sort'),
+			emojiAnchor: pick('emoji-anchor'),
 			emojiToggle: pick<HTMLButtonElement>('emoji-toggle'),
 			emojiPanel: pick('emoji-panel'),
 			count: pick('count'),
@@ -236,6 +265,12 @@ class CommentsClient {
 			captchaError: pick('captcha-error'),
 			captchaCancel: pick<HTMLButtonElement>('captcha-cancel'),
 			captchaConfirm: pick<HTMLButtonElement>('captcha-confirm'),
+			login: pick('login'),
+			loginEmail: pick<HTMLInputElement>('login-email'),
+			loginPassword: pick<HTMLInputElement>('login-password'),
+			loginError: pick('login-error'),
+			loginCancel: pick<HTMLButtonElement>('login-cancel'),
+			loginConfirm: pick<HTMLButtonElement>('login-confirm'),
 		};
 	}
 
@@ -323,6 +358,8 @@ class CommentsClient {
 	private applyList(data: CommentListResult, append: boolean): void {
 		this.rootsCount = data.roots_count ?? 0;
 		this.total = data.count ?? 0;
+		// 后端页面级「仅管理员可评论」标记，用于把 need_login 解释成准确文案。
+		this.pageAdminOnly = data.page?.admin_only === true;
 		if (append) {
 			const known = new Set(this.comments.map((item) => item.id));
 			for (const comment of data.comments) if (!known.has(comment.id)) this.comments.push(comment);
@@ -381,12 +418,25 @@ class CommentsClient {
 
 	/* ── 渲染 ─────────────────────────────────────────────────────────── */
 
-	private showNotice(message: string, tone: 'info' | 'error' | 'success' = 'info'): void {
-		this.refs.notice.textContent = message;
-		this.refs.notice.dataset.tone = tone;
+	/** 顶层编辑器与回复区各写各的提示，互不覆盖。 */
+	private showNoticeFor(source: Source, message: string, tone: Tone, needLogin = false): void {
+		const host = source === 'reply' ? this.replyNoticeEl : this.refs.notice;
+		if (!host) return;
+		if (source === 'reply') this.replyNotice = { text: message, tone, needLogin };
+		host.textContent = message;
+		host.dataset.tone = tone;
+		// 单实例链接：need_login 时挂到出错的那一块提示里，其它情况一律摘掉。
+		if (needLogin) host.append(' ', this.loginLink);
+		else this.loginLink.remove();
 	}
 
 	private render(): void {
+		// 列表重绘会销毁回复区；若表情面板此刻挂在回复区里，先归还给顶层 anchor，
+		// 否则面板会随列表一起消失（顶层面板宿主不变，不受影响）。
+		this.ensureEmojiHost();
+		this.replyTextarea = null;
+		this.replyNoticeEl = null;
+		this.replySubmitButton = null;
 		this.refs.list.replaceChildren();
 		this.refs.list.setAttribute('aria-busy', String(this.loading && this.comments.length === 0));
 
@@ -515,6 +565,74 @@ class CommentsClient {
 		return node;
 	}
 
+	/**
+	 * 回复专用输入区：自己的 textarea / 提交按钮 / 就地提示。
+	 * 昵称、邮箱、网站只读顶层资料栏（谁也不想填两次），但输入区、清空与反馈完全独立。
+	 */
+	private buildReplyComposer(comment: ArtalkComment): HTMLElement {
+		const target = comment.nick || '匿名';
+		const wrap = el('div', css.replyComposer);
+		wrap.dataset.role = 'reply-composer';
+
+		const bar = el('div', css.replyBar);
+		bar.append(el('span', undefined, `回复 @${target}`));
+		const cancel = el('button', css.ghostButton, '取消');
+		cancel.type = 'button';
+		cancel.addEventListener('click', () => this.setReply(null));
+		bar.append(cancel);
+		wrap.append(bar);
+
+		const form = el('form');
+		form.noValidate = true;
+		const composer = el('div', css.composer);
+		const area = el('textarea', css.replyTextarea);
+		area.rows = 2;
+		area.value = this.replyDraft;
+		area.placeholder = `回复 @${target}…`;
+		area.setAttribute('aria-label', `回复 ${target} 的内容`);
+		area.addEventListener('input', () => {
+			this.replyDraft = area.value;
+			this.autoGrow(area);
+		});
+
+		const toolbar = el('div', css.toolbar);
+		const left = el('div', css.toolbarLeft);
+		if (this.config.emoticons !== false) {
+			const anchor = el('div', css.emojiAnchor);
+			const toggle = el('button', css.ghostButton, '☺ 表情');
+			toggle.type = 'button';
+			toggle.setAttribute('aria-expanded', 'false');
+			toggle.setAttribute('aria-label', '插入表情');
+			toggle.addEventListener('click', () => this.toggleEmoji(anchor, toggle, area));
+			anchor.append(toggle);
+			left.append(anchor);
+		}
+		const submit = el('button', css.primaryButton, '发送回复');
+		submit.type = 'submit';
+		toolbar.append(left, submit);
+		composer.append(area, toolbar);
+		form.append(composer);
+		form.addEventListener('submit', (event) => {
+			event.preventDefault();
+			void this.submitReply();
+		});
+		wrap.append(form);
+
+		const notice = el('p', css.notice);
+		notice.dataset.role = 'reply-notice';
+		notice.setAttribute('role', 'status');
+		notice.setAttribute('aria-live', 'polite');
+		notice.textContent = this.replyNotice.text;
+		notice.dataset.tone = this.replyNotice.tone;
+		if (this.replyNotice.needLogin) notice.append(' ', this.loginLink);
+		wrap.append(notice);
+
+		this.replyTextarea = area;
+		this.replyNoticeEl = notice;
+		this.replySubmitButton = submit;
+		return wrap;
+	}
+
 	private renderTree(): void {
 		const byId = new Map(this.comments.map((item) => [item.id, item]));
 		const childrenOf = new Map<number, ArtalkComment[]>();
@@ -537,6 +655,8 @@ class CommentsClient {
 			const parentName = comment.rid !== 0 ? (byId.get(comment.rid)?.nick ?? null) : null;
 			const node = this.commentNode(comment, parentName);
 			container.append(node);
+			// 回复专用输入区紧贴被回复评论，不复用、也不改动顶层编辑器。
+			if (this.replyTo?.id === comment.id) node.append(this.buildReplyComposer(comment));
 			const kids = childrenOf.get(comment.id) ?? [];
 			if (kids.length === 0 || chain.has(comment.id)) return;
 			const nextChain = new Set(chain).add(comment.id);
@@ -629,7 +749,8 @@ class CommentsClient {
 				button.textContent = item.val;
 			}
 			button.addEventListener('click', () => {
-				this.insertAtCaret(emoticonInsertText(grp, item));
+				// 面板当前挂在哪块编辑器下，就往那块 textarea 插入表情。
+				this.insertAtCaret(emoticonInsertText(grp, item), this.emojiArea ?? this.refs.textarea);
 				this.closeEmojiPanel();
 			});
 			buttons.push(button);
@@ -639,8 +760,7 @@ class CommentsClient {
 	}
 
 	/** 随内容增高（到上限后内部滚动），替代右下角那个压住「发送」的原生缩放手柄。 */
-	private autoGrow(): void {
-		const area = this.refs.textarea;
+	private autoGrow(area: HTMLTextAreaElement = this.refs.textarea): void {
 		const max = 248;
 		area.style.height = 'auto';
 		const next = Math.min(area.scrollHeight, max);
@@ -648,8 +768,7 @@ class CommentsClient {
 		area.style.overflowY = area.scrollHeight > max ? 'auto' : 'hidden';
 	}
 
-	private insertAtCaret(text: string): void {
-		const area = this.refs.textarea;
+	private insertAtCaret(text: string, area: HTMLTextAreaElement): void {
 		const start = area.selectionStart ?? area.value.length;
 		const end = area.selectionEnd ?? area.value.length;
 		area.value = `${area.value.slice(0, start)}${text}${area.value.slice(end)}`;
@@ -659,20 +778,49 @@ class CommentsClient {
 		area.setSelectionRange(caret, caret);
 	}
 
+	/**
+	 * 表情面板是全组件唯一实例：打开回复区时临时挂到回复区的 anchor，
+	 * 关闭或列表重绘时归还顶层 anchor，避免它随被销毁的回复区一起消失。
+	 */
+	private toggleEmoji(anchor: HTMLElement, toggle: HTMLButtonElement, area: HTMLTextAreaElement): void {
+		const panel = this.refs.emojiPanel;
+		if (panel.dataset.open === 'true' && this.emojiToggleEl === toggle) {
+			this.closeEmojiPanel();
+			return;
+		}
+		this.closeEmojiPanel();
+		if (panel.parentElement !== anchor) anchor.append(panel);
+		this.emojiArea = area;
+		this.emojiToggleEl = toggle;
+		panel.dataset.open = 'true';
+		toggle.setAttribute('aria-expanded', 'true');
+	}
+
+	private ensureEmojiHost(): void {
+		if (this.refs.emojiPanel.parentElement !== this.refs.emojiAnchor) this.closeEmojiPanel();
+	}
+
 	private closeEmojiPanel(): void {
-		this.refs.emojiPanel.dataset.open = 'false';
+		const panel = this.refs.emojiPanel;
+		panel.dataset.open = 'false';
 		this.refs.emojiToggle.setAttribute('aria-expanded', 'false');
+		this.emojiToggleEl?.setAttribute('aria-expanded', 'false');
+		if (panel.parentElement !== this.refs.emojiAnchor) this.refs.emojiAnchor.append(panel);
+		this.emojiArea = null;
+		this.emojiToggleEl = null;
 	}
 
 	/* ── 交互 ─────────────────────────────────────────────────────────── */
 
 	private setReply(comment: ArtalkComment | null): void {
+		// 同一时刻只保留一个回复区；切换/关闭目标即丢弃该回复区的草稿与提示。
+		// 顶层编辑器的内容和提示完全不参与这里的状态。
 		this.replyTo = comment;
-		this.refs.replyBar.hidden = !comment;
-		if (comment) {
-			this.refs.replyText.textContent = `正在回复 @${comment.nick || '匿名'}`;
-			this.refs.textarea.focus();
-		}
+		this.replyDraft = '';
+		this.replyNotice = { text: '', tone: 'info' };
+		this.closeEmojiPanel();
+		this.render();
+		if (comment) this.replyTextarea?.focus();
 	}
 
 	private onScroll = (): void => {
@@ -694,7 +842,6 @@ class CommentsClient {
 			event.preventDefault();
 			void this.submit();
 		});
-		this.refs.replyCancel.addEventListener('click', () => this.setReply(null));
 		this.refs.textarea.addEventListener('input', () => this.autoGrow());
 		this.refs.sortButton.addEventListener('click', () => {
 			this.sortBy = this.sortBy === 'date_desc' ? 'date_asc' : 'date_desc';
@@ -705,53 +852,119 @@ class CommentsClient {
 			void this.reload();
 		});
 		this.refs.emojiToggle.addEventListener('click', () => {
-			const open = this.refs.emojiPanel.dataset.open === 'true';
-			this.refs.emojiPanel.dataset.open = open ? 'false' : 'true';
-			this.refs.emojiToggle.setAttribute('aria-expanded', String(!open));
+			this.toggleEmoji(this.refs.emojiAnchor, this.refs.emojiToggle, this.refs.textarea);
 		});
 		document.addEventListener('click', this.onDocumentClick);
 		this.refs.loadMore.addEventListener('click', () => void this.fetchPage(this.offset + this.pageSize));
 		window.addEventListener('scroll', this.onScroll, { passive: true });
 		this.bindCaptcha();
+		this.bindLogin();
 	}
 
+	/**
+	 * 顶层编辑器只发根评论（rid = 0）。回复有自己的输入区与提交路径，
+	 * 所以这里的草稿、提示、按钮状态永远不会被回复流程改写。
+	 */
 	private async submit(): Promise<void> {
 		if (this.submitting) return;
 		if (!this.refs.form.reportValidity()) return;
 		const content = this.refs.textarea.value.trim();
 		if (!content) {
-			this.showNotice('写点什么再发送吧', 'error');
+			this.showNoticeFor('root', '写点什么再发送吧', 'error');
 			this.refs.textarea.focus();
 			return;
 		}
-		const payload: SubmitPayload = {
+		await this.doSubmit(this.buildPayload(content, 0), true, 'root');
+	}
+
+	/** 回复专用输入区的提交路径：rid 取父评论 id，页面上下文一律取当前页配置。 */
+	private async submitReply(): Promise<void> {
+		if (this.submitting || !this.replyTo) return;
+		const content = (this.replyTextarea?.value ?? '').trim();
+		if (!content) {
+			this.showNoticeFor('reply', '写点什么再发送吧', 'error');
+			this.replyTextarea?.focus();
+			return;
+		}
+		if (!this.refs.nameInput.value.trim() || !this.refs.emailInput.value.trim()) {
+			this.showNoticeFor('reply', '请先在上方资料栏填写昵称和邮箱，再发送回复', 'error');
+			this.refs.nameInput.focus();
+			return;
+		}
+		await this.doSubmit(this.buildPayload(content, this.replyTo.id), true, 'reply');
+	}
+
+	/**
+	 * 完整报文的唯一构造点。Artalk v2 会校验 parentComment.PageKey === p.PageKey，
+	 * 所以回复绝不能继承父评论的 page_key / site_name（跨页评论会 400）；
+	 * 页面上下文固定取当前页配置，rid 只决定父评论。
+	 */
+	private buildPayload(content: string, rid: number): SubmitPayload {
+		return {
 			content,
 			name: this.refs.nameInput.value.trim(),
 			email: this.refs.emailInput.value.trim(),
 			link: this.refs.linkInput.value.trim() || undefined,
-			rid: this.replyTo?.id ?? 0,
-			page_key: this.replyTo?.page_key || this.config.pageKey,
-			...(this.replyTo ? {} : { page_title: this.config.pageTitle }),
-			site_name: this.replyTo?.site_name || this.config.site,
+			rid,
+			page_key: this.config.pageKey,
+			page_title: this.config.pageTitle,
+			site_name: this.config.site,
 		};
-		await this.doSubmit(payload, true);
 	}
 
-	private async doSubmit(payload: SubmitPayload, allowCaptcha: boolean): Promise<void> {
+	/** 把后端错误翻译成可操作的提示，而不是把 msg 原样丢给用户。 */
+	private describeError(err: unknown): { message: string; needLogin: boolean } {
+		if (err instanceof ArtalkError) {
+			const payload = err.payload;
+			if (payload.need_auth_login === true) {
+				return { message: '登录状态已失效，请重新登录管理员后再发送。', needLogin: true };
+			}
+			if (payload.need_login === true) {
+				return {
+					message: this.pageAdminOnly
+						? '这个页面开启了「仅管理员可评论」，请先登录管理员后再发送。'
+						: '你填写的昵称和邮箱与管理员账号一致，Artalk 为防止冒名要求先登录；也可以改用其他昵称/邮箱。',
+					needLogin: true,
+				};
+			}
+			if (payload.incomplete === true) return { message: err.message, needLogin: false };
+			if (payload.err_no_site === true) return { message: '评论站点配置不正确，请联系站长', needLogin: false };
+			return { message: `发送失败：${err.message}`, needLogin: false };
+		}
+		return { message: `发送失败：${err instanceof Error ? err.message : '请稍后重试'}`, needLogin: false };
+	}
+
+	private async doSubmit(payload: SubmitPayload, allowCaptcha: boolean, source: Source): Promise<void> {
+		if (this.submitting) return;
 		this.submitting = true;
-		this.refs.submitButton.disabled = true;
-		this.refs.submitButton.textContent = '发送中…';
-		this.showNotice('正在发送…');
+		this.pendingSource = source;
+		const button = source === 'reply' ? this.replySubmitButton : this.refs.submitButton;
+		const idleLabel = source === 'reply' ? '发送回复' : '发送';
+		if (button) { button.disabled = true; button.textContent = '发送中…'; }
+		this.showNoticeFor(source, '正在发送…', 'info');
 		try {
 			const created = await this.api.createComment(payload);
 			if (this.destroyed) return;
 			saveUser({ name: payload.name, email: payload.email, link: payload.link ?? '' });
-			this.refs.textarea.value = '';
-			this.autoGrow();
-			this.setReply(null);
+			if (source === 'root') {
+				this.refs.textarea.value = '';
+				this.autoGrow();
+			} else {
+				// 只清回复区：顶层草稿、提示、按钮一概不动。
+				this.replyDraft = '';
+				this.replyTo = null;
+				this.replyNotice = { text: '', tone: 'info' };
+			}
 			// POST 响应没有 visible 字段，视为可见；本地插入而不是重载第一页，
-			// 这样用户已经翻到的分页不会被打回，也不会多发一次列表请求。
-			const fresh: ArtalkComment = { ...created, visible: created.visible ?? true };
+			// 这样用户已经翻到的分页不会被打回。renderTree 按 rid 重建树，
+			// 新回复会挂到对应父评论下并带「回复 @xxx」。
+			const fresh: ArtalkComment = {
+				...created,
+				rid: payload.rid,
+				page_key: payload.page_key,
+				site_name: payload.site_name,
+				visible: created.visible ?? true,
+			};
 			if (payload.rid > 0) {
 				const parentIndex = this.comments.findIndex((item) => item.id === payload.rid);
 				this.comments.splice(parentIndex >= 0 ? parentIndex + 1 : this.comments.length, 0, fresh);
@@ -763,32 +976,35 @@ class CommentsClient {
 			this.total += 1;
 			if (payload.rid === 0) this.rootsCount += 1;
 			this.freshId = created.id;
-			this.showNotice(created.is_pending ? '评论已提交，等待审核' : '评论已发布', 'success');
 			this.error = null;
+			this.showNoticeFor(source, created.is_pending
+				? '评论已提交，等待审核'
+				: (source === 'reply' ? '回复已发布' : '评论已发布'), 'success');
 			this.render();
 			void this.syncCountWidgets();
+			this.pendingSubmit = null;
 		} catch (err) {
 			if (this.destroyed) return;
 			if (err instanceof ArtalkError && err.payload.need_captcha === true && allowCaptcha) {
 				this.pendingSubmit = payload;
-				this.openCaptcha(err.payload);
-				this.submitting = false;
-				this.refs.submitButton.disabled = false;
-				this.refs.submitButton.textContent = '发送';
+				this.openCaptcha(err.payload, source);
+				this.showNoticeFor(source, '需要先完成一次人机验证', 'info');
 				return;
 			}
-			this.showNotice(`发送失败：${err instanceof Error ? err.message : '请稍后重试'}`, 'error');
+			const described = this.describeError(err);
+			// 只有 need_login 的登录补全过程要原样重试这份完整报文。
+			this.pendingSubmit = described.needLogin ? payload : null;
+			this.showNoticeFor(source, described.message, 'error', described.needLogin);
 		} finally {
 			this.submitting = false;
-			this.refs.submitButton.disabled = false;
-			this.refs.submitButton.textContent = '发送';
+			if (button) { button.disabled = false; button.textContent = idleLabel; }
 		}
 	}
 
 	/* ── 验证码 ───────────────────────────────────────────────────────── */
 
-	private openCaptcha(payload: Record<string, unknown>): void {
-		this.showNotice('需要先完成一次人机验证', 'info');
+	private openCaptcha(payload: Record<string, unknown>, source: Source): void {
+		this.showNoticeFor(source, '需要先完成一次人机验证', 'info');
 		this.refs.captchaError.textContent = '';
 		this.refs.captchaInput.value = '';
 		if (typeof payload.img_data === 'string' && payload.img_data) {
@@ -826,7 +1042,7 @@ class CommentsClient {
 		this.refs.captchaImage.addEventListener('click', () => void this.refreshCaptcha());
 		this.refs.captchaCancel.addEventListener('click', () => {
 			this.closeCaptcha();
-			this.showNotice('已取消发送', 'info');
+			this.showNoticeFor(this.pendingSource, '已取消发送', 'info');
 		});
 		this.refs.captchaConfirm.addEventListener('click', () => void this.confirmCaptcha());
 		this.refs.captchaInput.addEventListener('keydown', (event) => {
@@ -847,14 +1063,81 @@ class CommentsClient {
 		try {
 			await this.api.verifyCaptcha(value);
 			const pending = this.pendingSubmit;
+			const source = this.pendingSource;
 			this.closeCaptcha();
-			if (pending) await this.doSubmit(pending, false);
+			if (pending) await this.doSubmit(pending, false, source);
 		} catch {
 			this.refs.captchaError.textContent = '验证失败，请重试';
 			this.refs.captchaInput.value = '';
 			void this.refreshCaptcha();
 		} finally {
 			this.refs.captchaConfirm.disabled = false;
+		}
+	}
+
+	/* ── 管理员登录（need_login 的补全过程） ───────────────────────────── */
+
+	/**
+	 * Artalk v2 的 isAllowComment：昵称+邮箱命中管理员账号、或页面 admin_only 时，
+	 * 请求必须带管理员 JWT，否则 403 { need_login: true }。这里在本地完成登录，
+	 * 拿到 token 后原地更新 Api 实例并重试原始报文（含正确的 rid / page_key）。
+	 */
+	private openLogin(): void {
+		this.refs.loginEmail.value = this.refs.emailInput.value.trim();
+		this.refs.loginPassword.value = '';
+		this.refs.loginError.textContent = '';
+		this.refs.login.dataset.open = 'true';
+		this.refs.login.setAttribute('aria-hidden', 'false');
+		requestAnimationFrame(() => {
+			(this.refs.loginEmail.value ? this.refs.loginPassword : this.refs.loginEmail).focus();
+		});
+	}
+
+	private closeLogin(): void {
+		this.refs.login.dataset.open = 'false';
+		this.refs.login.setAttribute('aria-hidden', 'true');
+	}
+
+	private bindLogin(): void {
+		this.refs.loginCancel.addEventListener('click', () => this.closeLogin());
+		this.refs.loginConfirm.addEventListener('click', () => void this.confirmLogin());
+		this.refs.loginPassword.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') { event.preventDefault(); void this.confirmLogin(); }
+		});
+		this.refs.login.addEventListener('click', (event) => {
+			if (event.target === this.refs.login) this.closeLogin();
+		});
+	}
+
+	private async confirmLogin(): Promise<void> {
+		const email = this.refs.loginEmail.value.trim();
+		const password = this.refs.loginPassword.value;
+		if (!email || !password) {
+			this.refs.loginError.textContent = '请填写管理员邮箱和密码';
+			this.refs.loginError.dataset.tone = 'error';
+			return;
+		}
+		this.refs.loginConfirm.disabled = true;
+		try {
+			// 带上 name 精确匹配账号，避免同邮箱多用户时 need_name_select。
+			const result = await this.api.login({ name: this.refs.nameInput.value.trim(), email, password });
+			if (!result?.token) throw new Error('登录未返回凭证，请重试');
+			saveUser({
+				name: this.refs.nameInput.value.trim(),
+				email,
+				link: this.refs.linkInput.value.trim(),
+				token: result.token,
+			});
+			this.api.setToken(result.token);
+			this.closeLogin();
+			const pending = this.pendingSubmit;
+			const source = this.pendingSource;
+			if (pending) await this.doSubmit(pending, true, source);
+		} catch (err) {
+			this.refs.loginError.textContent = err instanceof Error ? err.message : '登录失败，请重试';
+			this.refs.loginError.dataset.tone = 'error';
+		} finally {
+			this.refs.loginConfirm.disabled = false;
 		}
 	}
 

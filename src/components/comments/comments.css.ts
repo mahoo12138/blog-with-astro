@@ -143,6 +143,7 @@ export const editor = style({
 	marginBottom: vars.space.xl,
 });
 
+/** 回复目标条：只挂在被回复评论下方的独立输入区里，不再出现在顶层编辑器。 */
 export const replyBar = style({
 	display: 'flex',
 	alignItems: 'center',
@@ -154,6 +155,39 @@ export const replyBar = style({
 	background: vars.color.accentSoft,
 	color: vars.color.accentStrong,
 	fontSize: '0.78rem',
+});
+
+/**
+ * 回复专用输入区：挂在被回复评论节点内部，左基线对齐评论正文列。
+ * 与顶层编辑器完全独立 —— 一级结构靠留白分区，不加边框或分隔线。
+ */
+export const replyComposer = style({
+	marginTop: vars.space.md,
+	marginLeft: `calc(34px + ${vars.space.md})`,
+	minWidth: 0,
+	'@media': {
+		[`screen and (max-width: ${breakpoints.mobile})`]: { marginLeft: '18px' },
+	},
+});
+
+/**
+ * 提示文字里的动作链接（如「管理员登录」）。按站内正文文字链接的语言：
+ * hover 用 accentStrong + 下划线，不垫淡晕 —— 淡晕只属于输入控件与 tab 行。
+ */
+export const inlineAction = style({
+	marginLeft: '4px',
+	padding: 0,
+	border: 'none',
+	background: 'transparent',
+	color: vars.color.accentStrong,
+	font: 'inherit',
+	fontSize: 'inherit',
+	textDecoration: 'none',
+	cursor: 'pointer',
+	transition: ghostTransition,
+	selectors: {
+		'&:hover': { textDecoration: 'underline', textUnderlineOffset: '4px' },
+	},
 });
 
 export const identityRow = style({
@@ -221,6 +255,13 @@ export const textarea = style({
 		'&:focus-visible': { outline: 'none', backgroundColor: 'transparent' },
 	},
 });
+
+/** 回复区的 textarea 比顶层矮一截，其余幽灵态规则完全沿用 textarea。 */
+export const replyTextarea = style([textarea, {
+	minHeight: '64px',
+	paddingTop: vars.space.sm,
+	fontSize: '0.86rem',
+}]);
 
 export const toolbar = style({
 	display: 'flex',
