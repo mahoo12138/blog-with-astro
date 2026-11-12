@@ -15,7 +15,6 @@ import * as ui from './islandUi.css';
 
 type ScenarioId = 'cold' | 'warm' | 'h3';
 type Phase = '导航' | '网络' | '解析' | '渲染';
-type PhaseKey = 'nav' | 'network' | 'parse' | 'render';
 
 interface StageCopy {
 	title: string;
@@ -27,7 +26,6 @@ interface StageCopy {
 interface Stage {
 	id: string;
 	phase: Phase;
-	phaseKey: PhaseKey;
 	title: string;
 	summary: string;
 	detail: string;
@@ -45,6 +43,18 @@ interface Scenario {
 	note: string;
 }
 
+interface NavigationJourneyProps {
+	/** 面试专栏展示输入、依赖、瓶颈与考点；课时默认保持原有的精简详情。 */
+	interviewMode?: boolean;
+}
+
+interface InterviewNote {
+	input: string;
+	dependencies: string;
+	bottleneck: string;
+	point: string;
+}
+
 const SCENARIOS: Scenario[] = [
 	{
 		id: 'cold',
@@ -56,7 +66,7 @@ const SCENARIOS: Scenario[] = [
 		id: 'warm',
 		label: '再次访问',
 		hint: 'DNS / 连接复用',
-		note: '同一站点、连接仍在 keep-alive 窗口内、DNS 缓存未过期。HTML 仍可能 revalidate，所以请求与服务器各留 1 RTT。',
+		note: '同一站点、连接仍在 keep-alive 窗口内、DNS 缓存未过期。HTML 仍可能 revalidate，请求与首个响应字节合计约 1 RTT。',
 	},
 	{
 		id: 'h3',
@@ -66,20 +76,10 @@ const SCENARIOS: Scenario[] = [
 	},
 ];
 
-const PHASES: Phase[] = ['导航', '网络', '解析', '渲染'];
-
-const PHASE_META: Record<Phase, { key: PhaseKey }> = {
-	导航: { key: 'nav' },
-	网络: { key: 'network' },
-	解析: { key: 'parse' },
-	渲染: { key: 'render' },
-};
-
 const STAGES: Stage[] = [
 	{
 		id: 'url',
 		phase: '导航',
-		phaseKey: 'nav',
 		title: '解析 URL',
 		summary: '地址栏里的文本先被拆成协议、主机、端口、路径、查询和片段，再补全成绝对 URL。',
 		detail:
@@ -91,7 +91,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'navigation',
 		phase: '导航',
-		phaseKey: 'nav',
 		title: '导航与缓存判定',
 		summary: '浏览器判断这次导航能不能由已有文档、Service Worker 或 HTTP 缓存直接回答。',
 		detail:
@@ -103,7 +102,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'dns',
 		phase: '网络',
-		phaseKey: 'network',
 		title: 'DNS 解析',
 		summary: '把主机名翻译成 IP 地址；浏览器、操作系统、递归解析器和权威服务器都可能回答。',
 		detail:
@@ -122,13 +120,12 @@ const STAGES: Stage[] = [
 	{
 		id: 'connect',
 		phase: '网络',
-		phaseKey: 'network',
 		title: '建立连接',
 		summary: '浏览器与目标服务器（通常是 CDN 边缘）建立一条可用的传输连接。',
 		detail:
 			'TCP 通过 SYN → SYN + ACK → ACK 三次握手建立连接，完整一次往返后才能发送请求数据。TFO（TCP Fast Open）可以省一点，但部署有限。',
 		artifact: '一条可复用的 TCP 连接',
-		gotcha: '每个请求都新建 TCP 连接。真实浏览器会复用连接池；HTTP/2 通常在一条连接上跑多个流。',
+		gotcha: '并不是每个请求都新建 TCP 连接：浏览器会复用连接池；HTTP/2 通常在一条连接上跑多个流。',
 		rtt: { cold: 1, warm: 0, h3: 1 },
 		copy: {
 			cold: {
@@ -154,7 +151,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'tls',
 		phase: '网络',
-		phaseKey: 'network',
 		title: 'TLS 1.3 握手',
 		summary: '验证证书链、协商密钥与应用协议，然后才把 HTTP 字节放进加密通道。',
 		detail:
@@ -179,19 +175,18 @@ const STAGES: Stage[] = [
 	{
 		id: 'request',
 		phase: '网络',
-		phaseKey: 'network',
 		title: '发送 HTTP 请求',
 		summary: '把方法、目标和头字段编码成 HTTP 请求；HTTP/2 与 HTTP/3 会再拆成帧 / 流。',
 		detail:
 			'导航通常是 GET。HTTP/1.1 用请求行与 Host 头；HTTP/2 用 :method、:scheme、:authority、:path 伪头。Accept、Accept-Encoding、Cookie、Referer、Sec-Fetch-* 和 Priority 决定服务器返回什么、如何压缩，以及资源谁先谁后。',
 		artifact: '一个 HTTP 请求（可能带 If-None-Match / If-Modified-Since）',
 		gotcha: 'HTTP/2 的“文本”只是语义层；线上是二进制帧。抓包看到的可读请求行是工具还原出来的。',
-		rtt: { cold: 1, warm: 1, h3: 1 },
+		// 请求发出到首个响应字节合计约 1 RTT，记在 server 站，避免重复计费。
+		rtt: { cold: 0, warm: 0, h3: 0 },
 	},
 	{
 		id: 'server',
 		phase: '网络',
-		phaseKey: 'network',
 		title: '服务器处理与响应',
 		summary: 'CDN / 反向代理 / 应用 / 数据库处理请求，返回状态行、响应头和正文（或 304）。',
 		detail:
@@ -203,7 +198,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'decode',
 		phase: '解析',
-		phaseKey: 'parse',
 		title: '响应处理与预加载',
 		summary: '浏览器解码正文、确认 MIME 与字符集，把字节交给 HTML 解析器；预加载扫描器同时寻找子资源。',
 		detail:
@@ -215,7 +209,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'dom',
 		phase: '解析',
-		phaseKey: 'parse',
 		title: 'HTML → DOM',
 		summary: 'Tokenizer 把字节切成标签与文本，Tree Construction 按 HTML 规则搭出 DOM。',
 		detail:
@@ -227,7 +220,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'style',
 		phase: '渲染',
-		phaseKey: 'render',
 		title: 'CSSOM 与 Render Tree',
 		summary: 'CSS 解析成 CSSOM，与 DOM 合成 Render Tree；只有会参与渲染的节点才进入这棵树。',
 		detail:
@@ -239,7 +231,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'render',
 		phase: '渲染',
-		phaseKey: 'render',
 		title: 'Layout → Paint → Composite',
 		summary: 'Layout 算几何，Paint 记录绘制指令，Raster 栅格化，Composite 合成上屏。',
 		detail:
@@ -251,7 +242,6 @@ const STAGES: Stage[] = [
 	{
 		id: 'after',
 		phase: '渲染',
-		phaseKey: 'render',
 		title: '首帧之后',
 		summary: '字体、图片、水合和长任务继续影响 LCP、CLS 与 INP。',
 		detail:
@@ -262,7 +252,82 @@ const STAGES: Stage[] = [
 	},
 ];
 
-export default function NavigationJourney() {
+const INTERVIEW_NOTES: Record<string, InterviewNote> = {
+	url: {
+		input: '地址栏文本、浏览器补全与安全策略',
+		dependencies: 'WHATWG URL 解析规则；输入也可能被识别为搜索词',
+		bottleneck: '本阶段通常不是性能热点；错误地址与多余改写会制造额外导航',
+		point: '说清 scheme / host / port 共同决定 origin；#fragment 不会进入 HTTP 请求。',
+	},
+	navigation: {
+		input: '绝对 URL、当前文档、Service Worker 与 HTTP 缓存',
+		dependencies: 'SW 作用域、缓存新鲜度、重定向与 bfcache 状态',
+		bottleneck: '缓存失效、SW 响应慢、连续重定向增加往返',
+		point: '强缓存命中不发请求；协商缓存仍会请求，304 后复用旧正文。',
+	},
+	dns: {
+		input: 'URL 主机名与各层 DNS 缓存',
+		dependencies: 'TTL、递归解析器、A / AAAA / CNAME / HTTPS 记录',
+		bottleneck: '缓存未命中、CNAME 链过长、解析器或跨地域网络慢',
+		point: 'DNS 把域名变成 IP；任一缓存层命中都会提前结束，并非每次都问根服务器。',
+	},
+	connect: {
+		input: 'IP、端口、代理配置与连接池状态',
+		dependencies: 'DNS 结果；TCP 或 QUIC；已有连接能否复用',
+		bottleneck: '高 RTT、丢包、拥塞，以及 TCP 层的队头阻塞',
+		point: 'TCP 三次握手通常 1 RTT；HTTP/2 多路复用仍受 TCP 丢包影响，HTTP/3 使用 QUIC。',
+	},
+	tls: {
+		input: '传输连接、SNI、ALPN、证书与会话状态',
+		dependencies: 'TCP（h1 / h2）或 QUIC（h3）、信任库与证书链',
+		bottleneck: '完整握手、证书链校验与跨地域 RTT；h3 中已并入 QUIC',
+		point: 'TLS 提供身份认证、机密性与完整性；TLS 1.3 完整握手通常 1 RTT。',
+	},
+	request: {
+		input: 'URL、可用连接、请求头、Cookie 与缓存验证器',
+		dependencies: '安全通道已就绪；重定向后的最终目标已明确',
+		bottleneck: 'Cookie / 头部过大、连接池排队、资源优先级不合理',
+		point: '区分 HTTP/1.1 请求行与 h2 / h3 伪头；CORS 不会阻止地址栏顶级导航。',
+	},
+	server: {
+		input: 'HTTP 请求、CDN 缓存状态、应用与数据依赖',
+		dependencies: '边缘缓存、反向代理、后端服务与数据库',
+		bottleneck: 'CDN 回源、服务器排队、慢查询、首字节前等待完整结果',
+		point: 'TTFB 不含 DNS / 连接 / TLS；200、304 与重定向要走不同后续路径。',
+	},
+	decode: {
+		input: '响应字节、Content-Encoding、Content-Type 与安全策略',
+		dependencies: '响应头已到达；网络服务已向渲染进程提交响应',
+		bottleneck: '解压与解码通常较轻；错误 MIME 或安全策略可能直接终止渲染',
+		point: '先内容解码再字符解码；HTML 流式解析，预加载扫描器只发现资源、不构建 DOM。',
+	},
+	dom: {
+		input: 'HTML 文本流与已发现的子资源',
+		dependencies: 'MIME / 字符集已确定；脚本执行时机会改变解析进度',
+		bottleneck: '超大 DOM、阻塞解析的脚本与主线程长任务',
+		point: 'DOMContentLoaded 等 HTML 解析和 defer 脚本执行，不等图片，也不代表可交互。',
+	},
+	style: {
+		input: 'DOM、CSS 字节、视口与样式计算上下文',
+		dependencies: '可见 DOM 节点与渲染阻塞 CSSOM；脚本可能读取样式',
+		bottleneck: '关键 CSS 下载慢、@import 串行、大范围样式重算',
+		point: 'CSS 不直接阻塞 DOM 构建，但阻塞渲染，并可能阻塞脚本执行。',
+	},
+	render: {
+		input: 'Render Tree、计算样式、视口与资源尺寸',
+		dependencies: 'DOM + CSSOM 已汇合；首屏关键资源与主线程可用',
+		bottleneck: '布局抖动、大面积重绘、图层过多与主线程长任务',
+		point: 'Layout → Paint → Raster → Composite；transform / opacity 通常可只合成，但并非零成本。',
+	},
+	after: {
+		input: '已提交的首帧、剩余资源、水合任务与用户输入',
+		dependencies: 'LCP 元素、字体、脚本水合和后续主线程任务',
+		bottleneck: '首图晚发现 / 过大、字体换入造成 CLS、水合长任务推高 INP',
+		point: 'FCP、LCP、DOMContentLoaded、load 与可交互不是同一时刻；用真实用户指标验证。',
+	},
+};
+
+export default function NavigationJourney({ interviewMode = false }: NavigationJourneyProps) {
 	const [scenario, setScenario] = useState<ScenarioId>('cold');
 	const [active, setActive] = useState(0);
 
@@ -274,16 +339,19 @@ export default function NavigationJourney() {
 	const detailText = copy?.detail ?? activeStage.detail;
 	const detailArtifact = copy?.artifact ?? activeStage.artifact;
 	const detailGotcha = copy?.gotcha ?? activeStage.gotcha;
+	const interviewNote = INTERVIEW_NOTES[activeStage.id];
 	const skipReason = activeStage.skip?.[scenario];
 
 	return (
 		<section className={ui.root} aria-labelledby="navigation-journey-title">
 			<p className={ui.eyebrow}>INTERACTIVE · NAVIGATION TIMELINE</p>
 			<h3 className={ui.title} id="navigation-journey-title">
-				一次导航的 12 个站点
+				{interviewMode ? '首屏加载的 12 个面试站点' : '一次导航的 12 个站点'}
 			</h3>
 			<p className={ui.lead}>
-				切换场景，看看哪些步骤会被缓存、连接复用或 QUIC 省掉；点击任意站点查看它在整条链路里的职责。
+				{interviewMode
+					? '切换场景，再用上一站 / 下一站按顺序走完 12 个站点；每一站的输入、输出、依赖、瓶颈与考点都直接平铺在卡片里。'
+					: '切换场景，再用上一站 / 下一站按顺序走完 12 个站点；每一站的完整职责说明都直接平铺在卡片里。'}
 			</p>
 
 			<div className={styles.scenarioBar}>
@@ -309,74 +377,87 @@ export default function NavigationJourney() {
 
 			<p className={styles.scenarioNote}>{activeScenario.note}</p>
 
-			<div className={styles.layout}>
-				<ol className={styles.timeline} aria-label="导航阶段">
-					{PHASES.map((phase) => {
-						const items = STAGES.filter((stage) => stage.phase === phase);
-						const meta = PHASE_META[phase];
-						return (
-							<li key={phase} className={styles.phaseGroup}>
-								<p className={styles.phaseLabel}>
-									<span className={`${styles.dot} ${styles.phaseDot[meta.key]}`} aria-hidden="true" />
-									{phase}
-									<span className={styles.phaseCount}>{items.length} 站</span>
-								</p>
-								<ol className={styles.stageList}>
-									{items.map((stage) => {
-										const index = STAGES.indexOf(stage);
-										const isActive = index === active;
-										const stageCopy = stage.copy?.[scenario];
-										const stageSkip = stage.skip?.[scenario];
-										const rtt = stage.rtt[scenario];
-										return (
-											<li key={stage.id}>
-												<button
-													type="button"
-													className={[styles.stageButton, stageSkip && !isActive ? styles.skipped : '']
-														.filter(Boolean)
-														.join(' ')}
-													aria-current={isActive ? 'step' : undefined}
-													onClick={() => setActive(index)}
-												>
-													<span className={styles.stageIndex}>{String(index + 1).padStart(2, '0')}</span>
-													<span className={styles.stageTitle}>{stageCopy?.title ?? stage.title}</span>
-													<span className={styles.stageRtt} data-skip={Boolean(stageSkip)}>
-														{stageSkip ?? `${rtt} RTT`}
-													</span>
-												</button>
-											</li>
-										);
-									})}
-								</ol>
-							</li>
-						);
-					})}
-				</ol>
-
+			<div className={styles.card}>
 				<aside className={styles.detail} aria-live="polite" aria-atomic="true">
-					<p className={styles.detailKicker}>
-						{String(active + 1).padStart(2, '0')} / {activeStage.phase} · {activeScenario.label}
-					</p>
-					<h4 className={styles.detailTitle}>{detailTitle}</h4>
-					{skipReason && <span className={styles.skipBadge}>本场景：{skipReason}</span>}
-					<p className={styles.detailSummary}>{activeStage.summary}</p>
-					<p className={styles.detailText}>{detailText}</p>
-
-					<div className={styles.detailBlock}>
-						<span className={styles.blockLabel}>OUTPUT / 产物与交接</span>
-						<p className={styles.blockValue}>{detailArtifact}</p>
+					<div className={styles.detailHead}>
+						<div className={styles.detailHeading}>
+							<p className={styles.detailKicker}>
+								{String(active + 1).padStart(2, '0')} / {activeStage.phase} · {activeScenario.label}
+							</p>
+							<h4 className={styles.detailTitle}>{detailTitle}</h4>
+						</div>
+						<div className={styles.navRow}>
+							<button
+								type="button"
+								className={ui.control}
+								disabled={active === 0}
+								onClick={() => setActive((value) => Math.max(0, value - 1))}
+							>
+								← 上一站
+							</button>
+							<button
+								type="button"
+								className={ui.control}
+								disabled={active === STAGES.length - 1}
+								onClick={() => setActive((value) => Math.min(STAGES.length - 1, value + 1))}
+							>
+								下一站 →
+							</button>
+						</div>
 					</div>
 
-					<div className={styles.gotcha}>
-						<span className={styles.gotchaLabel}>EASY TO MISS / 容易误解</span>
-						{detailGotcha}
-					</div>
+					<div className={styles.detailBody}>
+						{skipReason && <span className={styles.skipBadge}>本场景：{skipReason}</span>}
+						<p className={styles.detailSummary}>{activeStage.summary}</p>
+						<p className={styles.detailText}>{detailText}</p>
 
-					<div className={styles.detailFoot}>
-						<span className={styles.progress}>
-							第 {active + 1} / {STAGES.length} 站
-						</span>
-						<span className={styles.progress}>{totalRtt} RTT 总预算</span>
+						{interviewMode && interviewNote ? (
+							<div className={styles.interviewDetails}>
+								<div className={styles.dataFlow}>
+									<div className={styles.flowNode}>
+										<span className={styles.blockLabel}>INPUT / 输入</span>
+										<p className={styles.blockValue}>{interviewNote.input}</p>
+									</div>
+									<div className={styles.flowNode}>
+										<span className={styles.blockLabel}>→ OUTPUT / 输出</span>
+										<p className={styles.blockValue}>{detailArtifact}</p>
+									</div>
+								</div>
+								<div className={styles.factGrid}>
+									<div className={styles.flowNode}>
+										<span className={styles.blockLabel}>DEPENDS ON / 前置依赖</span>
+										<p className={styles.blockValue}>{interviewNote.dependencies}</p>
+									</div>
+									<div className={styles.flowNode}>
+										<span className={styles.blockLabel}>BOTTLENECK / 常见瓶颈</span>
+										<p className={styles.blockValue}>{interviewNote.bottleneck}</p>
+									</div>
+								</div>
+								<div className={styles.interviewPoint}>
+									<span className={styles.interviewLabel}>INTERVIEW / 面试考点</span>
+									<p className={styles.blockValue}>{interviewNote.point}</p>
+								</div>
+							</div>
+						) : (
+							<div className={styles.detailBlock}>
+								<span className={styles.blockLabel}>OUTPUT / 产物与交接</span>
+								<p className={styles.blockValue}>{detailArtifact}</p>
+							</div>
+						)}
+
+						<div className={styles.gotcha}>
+							<span className={styles.gotchaLabel}>EASY TO MISS / 容易误解</span>
+							{detailGotcha}
+						</div>
+
+						<div className={styles.detailFoot}>
+							<span className={styles.progress}>
+								第 {active + 1} / {STAGES.length} 站
+							</span>
+							<span className={styles.progress}>
+								{skipReason ?? `${activeStage.rtt[scenario]} RTT`} · 总预算 {totalRtt} RTT
+							</span>
+						</div>
 					</div>
 				</aside>
 			</div>
@@ -393,28 +474,6 @@ export default function NavigationJourney() {
 				<p className={styles.budgetText}>
 					{activeScenario.label}：到首字节前的往返预算（示意）。不含并行子资源、服务端排队与真实网络抖动。
 				</p>
-			</div>
-
-			<div className={styles.navRow}>
-				<button
-					type="button"
-					className={ui.control}
-					disabled={active === 0}
-					onClick={() => setActive((value) => Math.max(0, value - 1))}
-				>
-					← 上一站
-				</button>
-				<span className={styles.progress} aria-hidden="true">
-					{active + 1} / {STAGES.length}
-				</span>
-				<button
-					type="button"
-					className={ui.control}
-					disabled={active === STAGES.length - 1}
-					onClick={() => setActive((value) => Math.min(STAGES.length - 1, value + 1))}
-				>
-					下一站 →
-				</button>
 			</div>
 		</section>
 	);
