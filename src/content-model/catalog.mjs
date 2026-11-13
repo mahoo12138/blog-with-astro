@@ -109,6 +109,27 @@ export function getContentCatalog(root = process.cwd(), { fresh = false, legacyI
   return catalog;
 }
 
+/**
+ * 排期到未来才发布的内容路由（按传入时刻判定，默认构建时刻）。
+ *
+ * 字段口径：frontmatter 用 Hexo 遗留的 `date`（少量用 `pubDate`），是
+ * content.config.ts 的 transform 才归一化到 `pubDate`，所以这里两个都看。
+ * 放在内容模型层而不是站点配置里，是为了让「哪些内容算未发布」只有一处定义。
+ *
+ * 静态站没有运行时：到期之后必须重新构建（或重启 dev）才会解除保护。
+ */
+export function scheduledRoutes(root = process.cwd(), now = new Date()) {
+  const cutoff = now.valueOf();
+  return new Set(
+    getContentCatalog(root).entries
+      .filter((entry) => {
+        const date = entry.data.pubDate ?? entry.data.date;
+        return date && new Date(date).valueOf() > cutoff;
+      })
+      .map((entry) => entry.route),
+  );
+}
+
 export function assertLocalFile(file, catalog) {
   if (!existsSync(file) || !statSync(file).isFile()) fail(file, '相对链接目标不存在或不是文件');
   const actual = realpathSync(file);

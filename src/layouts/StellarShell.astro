@@ -31,11 +31,13 @@ interface Props {
 	tocHeadings?: { depth: number; slug: string; text: string }[];
 	column?: ColumnSidebarContext;
 	noindex?: boolean;
+	/** 覆盖 canonical 路径，见 BaseHead 的同名说明（/posts/ 与首页归一用） */
+	canonicalPath?: string;
 	/** 页面级字体样式表（默认不加载，见 config/fonts.ts） */
 	extraFonts?: string[];
 }
 
-const { title, description, lang = 'zh-CN', image, type, publishedTime, modifiedTime, mainClass, contentWidth = 'reading', siteTree = 'page', menuId, leftbar, rightbar, tocHeadings = [], column, noindex = false, extraFonts } = Astro.props;
+const { title, description, lang = 'zh-CN', image, type, publishedTime, modifiedTime, mainClass, contentWidth = 'reading', siteTree = 'page', menuId, leftbar, rightbar, tocHeadings = [], column, noindex = false, canonicalPath, extraFonts } = Astro.props;
 const hasHero = Astro.slots.has('hero');
 const hasLead = Astro.slots.has('lead');
 const hasLeftbar = Astro.slots.has('leftbar');
@@ -48,7 +50,7 @@ const expandContent = contentWidth === 'wide' && !hasRightbarContent;
 <!doctype html>
 <html lang={lang}>
 	<head>
-		<BaseHead title={title} description={description} image={image} type={type} publishedTime={publishedTime} modifiedTime={modifiedTime} noindex={noindex} extraFonts={extraFonts} />
+		<BaseHead title={title} description={description} image={image} type={type} publishedTime={publishedTime} modifiedTime={modifiedTime} noindex={noindex} canonicalPath={canonicalPath} extraFonts={extraFonts} />
 	</head>
 	<body class={styles.body}>
 		<TopProgressBar />
@@ -69,7 +71,7 @@ const expandContent = contentWidth === 'wide' && !hasRightbarContent;
 				<StellarLeftSidebar menuId={shellConfig.menuId} widgets={shellConfig.leftbar} column={column} />
 				{hasLeftbar && <slot name="leftbar" />}
 			</aside>
-			<main id="main-content" class={styles.mainArea} data-pagefind-body tabindex="-1">
+			<main id="main-content" class={styles.mainArea} data-pagefind-body={noindex ? undefined : true} tabindex="-1">
 				<div class:list={[styles.mainContent, mainClass]}>
 					{hasLead && <div class={styles.lead}><slot name="lead" /></div>}
 					<slot />

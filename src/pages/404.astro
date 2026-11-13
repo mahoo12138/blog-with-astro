@@ -1,0 +1,62 @@
+---
+import StellarShell from '../layouts/StellarShell.astro';
+import { SITE_TITLE } from '../consts';
+
+// 站点自己的 404 页。注意：线上是 EdgeOne 直接接管 404 响应，
+// 这个页面只有在 CDN 把自定义错误页指向 /404.html 之后才会被用户看到。
+// 颜色一律继承 StellarShell 的主题，不写死色值。
+---
+
+<StellarShell
+	title={`页面不存在 · ${SITE_TITLE}`}
+	description="这个地址没有对应的页面，可以从首页、归档或站内搜索重新找起。"
+	siteTree="page"
+	noindex
+>
+	<style is:inline>
+		.nf {
+			max-width: 34rem;
+			margin: 0 auto;
+			padding: 4rem 1rem 6rem;
+		}
+		.nf-code {
+			margin: 0 0 1rem;
+			font-size: 0.75rem;
+			letter-spacing: 0.22em;
+			opacity: 0.6;
+		}
+		.nf h1 {
+			margin: 0 0 0.75rem;
+			font-size: 1.5rem;
+		}
+		.nf-lead {
+			margin: 0 0 2rem;
+			line-height: 1.8;
+			opacity: 0.78;
+		}
+		.nf-links {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem 1.5rem;
+		}
+		.nf-links a {
+			text-underline-offset: 4px;
+		}
+	</style>
+
+	<section class="nf">
+		<p class="nf-code">404</p>
+		<h1>这里没有内容</h1>
+		<p class="nf-lead">
+			链接可能已经变更，或者地址里有拼写错误。文章与专栏章节都保留着原有入口，
+			可以从下面几个地方重新找起。
+		</p>
+		<nav class="nf-links" aria-label="返回站内的入口">
+			<a href="/">返回首页</a>
+			<a href="/posts/">全部文章</a>
+			<a href="/archives/">归档</a>
+			<a href="/columns/">专栏</a>
+			<a href="/search/">站内搜索</a>
+		</nav>
+	</section>
+</StellarShell>

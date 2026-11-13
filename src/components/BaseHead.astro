@@ -24,6 +24,12 @@ interface Props {
 	/** 功能页 / 内部预览页用，输出 robots noindex 阻止收录 */
 	noindex?: boolean;
 	/**
+	 * 覆盖 canonical 路径。用于与别的页面内容完全重合的列表页：
+	 * /posts/ 与首页共用同一份博客流，必须把收录信号归到唯一的规范地址，
+	 * 否则两个 URL 各自 canonical，形成重复内容。og:url / twitter:url 同步跟随。
+	 */
+	canonicalPath?: string;
+	/**
 	 * 额外的字体样式表 URL（页面级按需）。
 	 * 全站只加载 mono 字体；像 /love 这种独立设计语言的页面要衬线字体时，
 	 * 传 `[siteFontConfig.serifFontsUrl]` 自行引入，不要退回全局。
@@ -31,14 +37,14 @@ interface Props {
 	extraFonts?: string[];
 }
 
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-
 // 未显式传图时的 og:image 兜底。源 avatar.png 为 1056×992 / 738KB 的 PNG，
 // 直接把原图 URL 塞进 og:image 会让社交平台抓取端白白下载 738KB。
 // 这里走图片管线压成 512px 宽的 JPEG（约 40KB），兼容性也优于 webp。
 const fallbackOgImage = await getImage({ src: FallbackImage, width: 512, format: 'jpeg' });
 
-const { title, description, image = fallbackOgImage, type = 'website', publishedTime, modifiedTime, noindex = false, extraFonts = [] } = Astro.props;
+const { title, description, image = fallbackOgImage, type = 'website', publishedTime, modifiedTime, noindex = false, canonicalPath, extraFonts = [] } = Astro.props;
+
+const canonicalURL = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
 
 // og:image 既支持本地 ImageMetadata，也支持远程 URL 字符串
 const ogImage = typeof image === 'string' ? new URL(image, Astro.url) : new URL(image.src, Astro.url);
@@ -114,8 +120,10 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
      仍保留 media="print" + onload 的异步化：mono 字体虽小，但同样不该
      阻塞首次渲染（代码块的字体抖动比正文轻，不值得为它排队）。
      需要衬线的独立页面（/love）通过 extraFonts 自行引入 serifFontsUrl。 -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+{/* 不再对 fonts.googleapis.com / gstatic.com 做 preconnect：这两个域名在大陆
+     不可达，提前握手只会让浏览器多排两个必然超时的连接。样式表本身仍走
+     media="print" + onload 的异步路径，不阻塞首屏（彻底去掉外部字体请求
+     需要改字体来源，属于另一项决策）。 */}
 <link
 	rel="stylesheet"
 	href={siteFontConfig.googleFontsUrl}
@@ -156,7 +164,7 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content={type} />
-<meta property="og:url" content={Astro.url} />
+<meta property="og:url" content={canonicalURL} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={ogImage} />
@@ -165,7 +173,7 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:url" content={Astro.url} />
+<meta property="twitter:url" content={canonicalURL} />
 <meta property="twitter:title" content={title} />
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={ogImage} />

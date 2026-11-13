@@ -68,6 +68,13 @@ const {
 
 const resolvedSiteTree: SiteTreeKey = siteTree ?? (columnContext ? 'column' : 'post');
 
+// 排期到未来才发布的内容：页面照常生成（站内目录、直链、校对都保留），
+// 但不参与索引，也不进站内搜索索引。判定按构建时刻，过了发布日期重新
+// 构建即自动翻转，不需要人工开关；与 astro.config.mjs 的 sitemap 排除同源口径。
+// 注：非文章页（mdx-components / kit）传的是固定历史日期，不受影响。
+const scheduled = pubDate.valueOf() > Date.now();
+const shouldNoindex = noindex || scheduled;
+
 // 评论 key 用文章的稳定标识而不是当前 URL：专栏章节的地址从 /post/<id>/
 // 迁到 /columns/<专栏>/<id>/ 之后，历史评论仍然落在同一个 key 上。
 // 非文章页（没有 postId）回退到路径，与改动前的行为一致。
@@ -113,7 +120,7 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 	image={coverSrc}
 	publishedTime={pubDate}
 	modifiedTime={updatedDate}
-	noindex={noindex}
+	noindex={shouldNoindex}
 	column={columnContext
 		? {
 				title: columnContext.title,
@@ -126,7 +133,7 @@ const blogPostingJsonLdSafe = JSON.stringify(blogPostingJsonLd).replace(/</g, '\
 >
 	{mathjax && <KatexStyles />}
 	<script is:inline type="application/ld+json" set:html={blogPostingJsonLdSafe} />
-	<article class={styles.article} data-pagefind-body={noindex ? undefined : true}>
+	<article class={styles.article} data-pagefind-body={shouldNoindex ? undefined : true}>
 		<header
 			class:list={[styles.postBanner, 'article', 'banner', 'top']}
 			data-cover={cover ? 'true' : 'false'}

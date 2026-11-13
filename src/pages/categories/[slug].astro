@@ -4,7 +4,7 @@ import ColumnCard from '../../components/ColumnCard.astro';
 import Pagination from '../../components/Pagination.astro';
 import StellarNavTabs from '../../components/StellarNavTabs.astro';
 import StellarPostCard from '../../components/StellarPostCard.astro';
-import { POSTS_PER_PAGE, SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { POSTS_PER_PAGE, SITE_TITLE } from '../../consts';
 import StellarShell from '../../layouts/StellarShell.astro';
 import * as styles from '../../styles/taxonomy.css';
 import { buildColumnBuckets, buildTaxonomyBuckets, sortBlogPosts, type TaxonomyBucket } from '../../utils/content';
@@ -30,7 +30,7 @@ const posts = bucket.posts.slice(0, POSTS_PER_PAGE);
 const nextUrl = totalPages > 1 ? `/categories/${bucket.slug}/2` : undefined;
 ---
 
-<StellarShell title={`${bucket.label} · Categories · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.pageMain} siteTree="index_blog">
+<StellarShell title={`${bucket.label} · 分类 · ${SITE_TITLE}`} description={`${bucket.label} 分类归档：共 ${bucket.posts.length} 篇文章，按发布时间排列。`} mainClass={styles.pageMain} siteTree="index_blog">
 	<header class={styles.header}>
 		<StellarNavTabs active="categories" />
 	</header>

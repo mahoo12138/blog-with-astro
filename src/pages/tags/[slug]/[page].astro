@@ -3,7 +3,7 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 import Pagination from '../../../components/Pagination.astro';
 import StellarNavTabs from '../../../components/StellarNavTabs.astro';
 import StellarPostCard from '../../../components/StellarPostCard.astro';
-import { POSTS_PER_PAGE, SITE_DESCRIPTION, SITE_TITLE } from '../../../consts';
+import { POSTS_PER_PAGE, SITE_TITLE } from '../../../consts';
 import StellarShell from '../../../layouts/StellarShell.astro';
 import * as styles from '../../../styles/taxonomy.css';
 import { buildColumnBuckets, buildTaxonomyBuckets, sortBlogPosts } from '../../../utils/content';
@@ -47,7 +47,7 @@ const prevUrl = page === 2 ? `/tags/${slug}` : `/tags/${slug}/${page - 1}`;
 const nextUrl = page < totalPages ? `/tags/${slug}/${page + 1}` : undefined;
 ---
 
-<StellarShell title={`${label} · 第 ${page} 页 · Tags · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.pageMain} siteTree="index_blog">
+<StellarShell title={`${label} · 第 ${page} 页 · 标签 · ${SITE_TITLE}`} description={`${label} 标签归档第 ${page} 页，共 ${totalPages} 页，按发布时间排列。`} mainClass={styles.pageMain} siteTree="index_blog">
 	<header class={styles.header}>
 		<StellarNavTabs active="tags" />
 	</header>

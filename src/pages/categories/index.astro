@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import StellarIcon from '../../components/StellarIcon.astro';
 import StellarNavTabs from '../../components/StellarNavTabs.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { SITE_TITLE } from '../../consts';
 import StellarShell from '../../layouts/StellarShell.astro';
 import * as styles from '../../styles/taxonomy.css';
 import { buildColumnBuckets, buildTaxonomyBuckets, sortBlogPosts, taxonomyEntryCount } from '../../utils/content';
@@ -13,7 +13,7 @@ const columns = buildColumnBuckets(posts, await getCollection('columns'));
 const categories = buildTaxonomyBuckets(posts, 'categories', columns);
 ---
 
-<StellarShell title={`Categories · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.pageMain} siteTree="index_blog">
+<StellarShell title={`分类索引 · ${SITE_TITLE}`} description={`分类索引：按主题浏览全站 ${categories.length} 个分类，查看每个分类下的文章与专栏。`} mainClass={styles.pageMain} siteTree="index_blog">
 	<header class={styles.header}>
 		<StellarNavTabs active="categories" />
 	</header>

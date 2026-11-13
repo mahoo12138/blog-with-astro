@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import StellarNavTabs from '../components/StellarNavTabs.astro';
-import { SITE_DESCRIPTION, SITE_TITLE, columnUrl } from '../consts';
+import { SITE_TITLE, columnUrl } from '../consts';
 import StellarShell from '../layouts/StellarShell.astro';
 import * as styles from '../styles/homeFeed.css';
 import { buildColumnBuckets, postHref, sortBlogPosts, standalonePosts } from '../utils/content';
@@ -41,7 +41,7 @@ function formatSpan(startedAt?: Date, updatedAt?: Date) {
 }
 ---
 
-<StellarShell title={`Archives · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.archiveMain} siteTree="archives">
+<StellarShell title={`文章归档 · ${SITE_TITLE}`} description={`文章归档：按年份浏览全部 ${posts.length} 篇独立文章，并按系列汇总专栏。`} mainClass={styles.archiveMain} siteTree="archives">
 	<header class={styles.header}>
 		{/* 年份用 h2 作分节标题，但文档还需要一个 h1 作为大纲根节点，
 		    否则 h2 直接浮在顶层（axe: page-has-heading-one）。 */}

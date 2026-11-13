@@ -1,10 +1,10 @@
 ---
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { SITE_TITLE } from '../consts';
 import StellarShell from '../layouts/StellarShell.astro';
 import * as styles from '../styles/search.css';
 ---
 
-<StellarShell title={`站内搜索 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.main} siteTree="index_blog" noindex>
+<StellarShell title={`站内搜索 · ${SITE_TITLE}`} description="站内搜索：在全部文章与专栏章节中检索标题与正文。" mainClass={styles.main} siteTree="index_blog" noindex>
 	<section class={styles.root} data-pagefind-ignore>
 		<header class={styles.header}>
 			<div>
