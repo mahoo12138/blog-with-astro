@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import ColumnCard from '../../components/ColumnCard.astro';
 import StellarNavTabs from '../../components/StellarNavTabs.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { SITE_TITLE } from '../../consts';
 import StellarShell from '../../layouts/StellarShell.astro';
 import * as styles from '../../styles/columnsIndex.css';
 import { buildColumnBuckets, sortBlogPosts } from '../../utils/content';
@@ -13,7 +13,7 @@ const buckets = buildColumnBuckets(posts, columns);
 const totalChapters = buckets.reduce((total, column) => total + column.posts.length, 0);
 ---
 
-<StellarShell title={`Columns · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.pageMain} siteTree="index_topic">
+<StellarShell title={`专栏 · ${SITE_TITLE}`} description={`专栏索引：按主题整理的 ${buckets.length} 个系列笔记与教程，共 ${totalChapters} 篇章节。`} mainClass={styles.pageMain} siteTree="index_topic">
 	<div class={styles.navigation}>
 		<StellarNavTabs active="columns" />
 	</div>

@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+# 站内搜索的索引碎片是构建产物，不是内容页。放行会让爬虫把抓取预算
+# 花在 200+ 个 pf_fragment 上；/_astro/ 下的 CSS/JS 必须保持可抓取，
+# 否则渲染判定会失真，所以这里只收窄这一处。
+Disallow: /pagefind/
+
 Sitemap: https://mahoo12138.cn/sitemap-index.xml

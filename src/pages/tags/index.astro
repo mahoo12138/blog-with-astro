@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import StellarNavTabs from '../../components/StellarNavTabs.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { SITE_TITLE } from '../../consts';
 import StellarShell from '../../layouts/StellarShell.astro';
 import * as styles from '../../styles/taxonomy.css';
 import { buildColumnBuckets, buildTaxonomyBuckets, sortBlogPosts } from '../../utils/content';
@@ -18,7 +18,7 @@ const describe = (bucket: (typeof tags)[number]) =>
 		.join('、') || '暂无内容';
 ---
 
-<StellarShell title={`Tags · ${SITE_TITLE}`} description={SITE_DESCRIPTION} mainClass={styles.pageMain} siteTree="index_blog">
+<StellarShell title={`标签索引 · ${SITE_TITLE}`} description={`标签索引：按主题浏览全站 ${tags.length} 个标签，汇总每个主题下的文章与专栏。`} mainClass={styles.pageMain} siteTree="index_blog">
 	<header class={styles.header}>
 		<StellarNavTabs active="tags" />
 	</header>

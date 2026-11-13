@@ -14,10 +14,15 @@
 import WideShell from './WideShell.astro';
 import * as styles from './LessonLayout.css';
 import * as lessonStyles from '../styles/lesson.css';
+import { SITE_AUTHOR } from '../consts';
 
 interface Props {
 	title: string;
 	description: string;
+	/** 结构化数据用：课时发布时间 / 领域 / 难度，均由 frontmatter 提供 */
+	pubDate?: Date;
+	domain?: string;
+	level?: string;
 	/** hero 左上小字，如 A PROGRAMMER'S PERSPECTIVE */
 	eyebrow?: string;
 	/** hero 标题（可含 <em> 高亮，由 slot=hero-title 传入更自由；这里走纯文本） */
@@ -35,6 +40,9 @@ interface Props {
 const {
 	title,
 	description,
+	pubDate,
+	domain,
+	level,
 	eyebrow = 'KNOWLEDGE LESSON',
 	lead,
 	tags = [],
@@ -69,6 +77,38 @@ const heroVars = [
 	`--hero-accent: hsl(${heroHue} 80% 74%)`,
 	`--hero-deep: hsl(${heroHue} 38% 8%)`,
 ].join('; ');
+
+// 课时页此前只有全站共用的 WebSite 结构化数据，正文最长的一类页面反而
+// 没有任何文章级信号。这里补 Article + BreadcrumbList，与文章页的
+// BlogPosting 体系对齐；字段全部可选，缺失就不输出，不编造发布时间。
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const siteRoot = new URL('/', Astro.site).toString();
+const learnRoot = new URL('/learn/', Astro.site).toString();
+const lessonJsonLd = {
+	'@context': 'https://schema.org',
+	'@graph': [
+		{
+			'@type': 'Article',
+			headline: title,
+			description,
+			...(pubDate ? { datePublished: pubDate.toISOString() } : {}),
+			author: { '@type': 'Person', name: SITE_AUTHOR },
+			mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalURL.toString() },
+			...(tags.length ? { keywords: tags.join(', ') } : {}),
+			...(domain ? { about: domain } : {}),
+			...(level ? { educationalLevel: level } : {}),
+		},
+		{
+			'@type': 'BreadcrumbList',
+			itemListElement: [
+				{ '@type': 'ListItem', position: 1, name: '首页', item: siteRoot },
+				{ '@type': 'ListItem', position: 2, name: '学苑', item: learnRoot },
+				{ '@type': 'ListItem', position: 3, name: title, item: canonicalURL.toString() },
+			],
+		},
+	],
+};
+const lessonJsonLdSafe = JSON.stringify(lessonJsonLd).replace(/</g, '\\u003c');
 ---
 
 <WideShell
@@ -80,6 +120,7 @@ const heroVars = [
 	tocHeadings={headings}
 	mainClass={lessonStyles.lessonBody}
 >
+	<script is:inline type="application/ld+json" set:html={lessonJsonLdSafe} />
 	<div slot="lead" class={styles.hero} style={heroVars}>
 		<div class={styles.heroInner}>
 			<div class={styles.heroTop}>

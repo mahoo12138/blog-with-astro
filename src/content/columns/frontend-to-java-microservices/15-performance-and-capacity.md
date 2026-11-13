@@ -1,10 +1,10 @@
 ---
 title: '15 性能与容量：慢 SQL、缓存、批处理、连接池'
-date: 2026-11-22
+date: 2026-11-10
 order: 15
 ---
 
-> 专栏：[前端转 Java 微服务实战笔记](/columns/frontend-to-java-microservices/) · 第 15 篇 · 发布日期：2026-11-22
+> 专栏：[前端转 Java 微服务实战笔记](/columns/frontend-to-java-microservices/) · 第 15 篇 · 发布日期：2026-11-10
 > 目录：[专栏目录](/columns/frontend-to-java-microservices/) | 上一篇：[14 事务与一致性：@Transactional 的边界、分布式事务是否真的启用](14-transaction-and-consistency.md) | 下一篇：已是最后一篇
 
 ---

@@ -6,7 +6,7 @@ import sitemap from '@astrojs/sitemap';
 import pagefind from 'astro-pagefind';
 import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
-import { getContentCatalog } from './src/content-model/catalog.mjs';
+import { getContentCatalog, scheduledRoutes } from './src/content-model/catalog.mjs';
 import { remarkContentLinks } from './src/content-model/relative-links.mjs';
 import { contentStructure } from './src/content-model/integration.mjs';
 import { defineConfig } from 'astro/config';
@@ -39,13 +39,57 @@ const artalkProxyKey = devEnv.ARTALK_DEV_PROXY && !/^[01]$/.test(devEnv.ARTALK_D
 // Derive aliases lazily from the same content graph as the loaders.
 // Filesystem relocation must not change existing canonical routes or index old redirect pages.
 
-// 不参与搜索引擎收录的功能页 / 私人页（与页面上的 robots noindex 保持一致）
-const SITEMAP_EXCLUDE = [/\/search\/?$/, /\/mdx-components\/?$/, /\/love\/?$/, /\/privacy\/?$/, /\/terms\/?$/];
+// 不参与搜索引擎收录的功能页 / 私人页（与页面上的 robots noindex 保持一致），
+// 以及与首页内容完全重合的 /posts/ 第一页（canonical 已归一到 /）。
+const SITEMAP_EXCLUDE = [
+	/\/search\/?$/,
+	/\/mdx-components\/?$/,
+	/\/love\/?$/,
+	/\/privacy\/?$/,
+	/\/terms\/?$/,
+	/^\/posts\/?$/,
+];
+
+// 排期到未来才发布的章节：页面与专栏目录照常生成（便于校对，也保留连载预告），
+// 首页 feed 已有 columnUpdates 的日期保护；这里补的是「索引入口」——不进 sitemap，
+// 页面自身由 BlogPost 输出 noindex。判定按构建时刻，到发布日期后重新构建
+// 即自动解除保护，不需要改代码或内容文件。
+const SCHEDULED_ROUTES = scheduledRoutes();
+
+// sitemap 的 lastmod 用「内容真实变动时点」：文章/章节页取各自的发布日期，
+// 聚合页（首页、标签、分类、归档、专栏索引）取全站最新发布日期 —— 列表页
+// 的内容确实是在最新一篇文章发布时才变化。刻意不用顶层 lastmod 选项，
+// 那会把同一个构建时间盖到所有 URL 上，对抓取调度没有信息量。
+const contentDates = new Map();
+let latestContentDate;
+const publishedCutoff = Date.now();
+for (const entry of getContentCatalog().entries) {
+	const raw = entry.data.pubDate ?? entry.data.date;
+	if (!raw) continue;
+	const date = new Date(raw);
+	// 排期到未来的章节不能当「全站最新发布时点」：否则所有聚合页的
+	// lastmod 会一起落在未来日期上，比没有 lastmod 更糟。与 SCHEDULED_ROUTES
+	// 同口径，按构建时刻判定。
+	if (date.valueOf() > publishedCutoff) continue;
+	contentDates.set(entry.route, date);
+	if (!latestContentDate || date > latestContentDate) latestContentDate = date;
+}
+const fallbackLastmod = (latestContentDate ?? new Date()).toISOString();
+
+/** @param {string} url */
+function lastmodFor(url) {
+	const pathname = new URL(url).pathname;
+	const date = contentDates.get(pathname);
+	return date ? date.toISOString() : fallbackLastmod;
+}
 
 /** @param {string} page */
 function sitemapFilter(page) {
 	const pathname = new URL(page).pathname;
 	if (SITEMAP_EXCLUDE.some((pattern) => pattern.test(pathname))) {
+		return false;
+	}
+	if (SCHEDULED_ROUTES.has(pathname)) {
 		return false;
 	}
 	return !getContentCatalog().aliases.has(pathname.replace(/\/?$/, '/'));
@@ -61,6 +105,7 @@ export default defineConfig({
 		react(),
 		sitemap({
 			filter: sitemapFilter,
+			serialize: (item) => ({ ...item, lastmod: lastmodFor(item.url) }),
 		}),
 		pagefind(),
 	],

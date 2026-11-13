@@ -14,7 +14,7 @@ export function chapterSlug(id: string, columnId: string): string {
 }
 
 export const SITE_TITLE = 'Mahoo Space';
-export const SITE_DESCRIPTION = 'Welcome to my planet!';
+export const SITE_DESCRIPTION = '保持好奇，持续探索，记录每一次思考与创造';
 export const SITE_AUTHOR = 'mahoo12138';
 
 export const POSTS_PER_PAGE = 10;
