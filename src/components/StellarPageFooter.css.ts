@@ -111,3 +111,52 @@ export const text = style({
 		[`screen and (max-width: ${breakpoints.mobile})`]: { paddingInlineEnd: '56px', textWrap: 'balance' },
 	},
 });
+
+// 备案号：与版权行同字号 / 同色，靠留白分组，不新增分隔线、边框或卡片容器。
+// 窄屏自动折行，且与版权行一样为右下角浮动按钮预留安全区。
+export const registrations = style({
+	display: 'flex',
+	flexWrap: 'wrap',
+	alignItems: 'center',
+	columnGap: '16px',
+	rowGap: '2px',
+	minWidth: 0,
+	margin: '4px 0 0',
+	fontSize: '0.75rem',
+	fontWeight: 400,
+	lineHeight: 1.8,
+	color: vars.color.textMeta,
+	'@media': {
+		[`screen and (max-width: ${breakpoints.mobile})`]: { paddingInlineEnd: '56px' },
+	},
+});
+
+export const registrationLink = style({
+	display: 'inline-flex',
+	alignItems: 'center',
+	flexShrink: 0,
+	minHeight: '28px',
+	maxWidth: '100%',
+	borderRadius: '2px',
+	fontSize: 'inherit',
+	fontWeight: 'inherit',
+	lineHeight: 'inherit',
+	color: 'inherit',
+	overflowWrap: 'anywhere',
+	textDecoration: 'underline',
+	textDecorationColor: vars.color.borderStrong,
+	textDecorationThickness: '1px',
+	textUnderlineOffset: '3px',
+	transition: `color ${vars.motion.durationFast} ${vars.motion.ease}, text-decoration-color ${vars.motion.durationFast} ${vars.motion.ease}`,
+	selectors: {
+		'&:hover': {
+			color: vars.color.accentStrong,
+			textDecorationColor: 'currentColor',
+		},
+		'&:focus-visible': {
+			color: vars.color.accentStrong,
+			outline: `2px solid ${vars.color.accentStrong}`,
+			outlineOffset: '3px',
+		},
+	},
+});
