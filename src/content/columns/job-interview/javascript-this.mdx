@@ -1,0 +1,512 @@
+---
+title: 'JavaScript 中的 this：8 道面试题，从调用现场到绑定规则'
+description: '从默认绑定、隐式绑定、显式绑定到 new 与箭头函数：8 道面试题串起 this 的完整判定顺序，配典型调用现场、优先级表格与高频易错点。'
+date: 2025-05-24
+order: 1
+---
+
+<Intro>
+	<strong>this 不是函数自带的属性，而是每次调用时被临时放进函数里的隐式参数。</strong>
+	同一个函数，`obj.fn()`、`fn()`、`fn.call(x)`、`new fn()` 会得到四个不同的 this；箭头函数则根本不接这个参数，只在定义位置向外捕获。
+	面试里真正要答清楚的，是「谁发起了这次调用」以及「判定在哪一步停止」。
+</Intro>
+
+这篇文章用 8 道面试题走完 this 的判定链。前 5 题拆绑定规则与优先级，第 6、7 题处理箭头函数和回调丢绑定的现场，最后把严格模式、模块与宿主环境的边界补齐。每题先给能在面试现场说出口的结论，再拆到规范与实现。
+
+## 先把地图画出来：一条判定链，五个出口
+
+在背任何结论之前，先记住这个顺序。后面所有题，都是这条链上某一步的变体。
+
+<Flow>
+<FlowStep title="① 先看函数本身">箭头函数没有自己的 this，直接取外层词法 this，后面的规则全部不参与。</FlowStep>
+<FlowStep title="② 看是否 new">new Fn() 创建新对象，并把新对象作为 this；new 的优先级高于 bind。</FlowStep>
+<FlowStep title="③ 看是否显式绑定">call / apply 立即指定 this；bind 返回一个 this 已固定的新函数。</FlowStep>
+<FlowStep title="④ 看调用表达式">obj.fn() 取最后一个点左边的对象；a.b.fn() 的 this 是 b，不是 a。</FlowStep>
+<FlowStep title="⑤ 都没有">默认绑定：严格模式下是 undefined，非严格模式下是 globalThis。</FlowStep>
+</Flow>
+
+<Caption>
+	判定顺序比「谁离得近」重要。每一步命中就停止，不再往下看；箭头函数在第 ① 步就已经出局。
+</Caption>
+
+把常见调用现场先摊开，后面逐题展开：
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:27%" /><col style="width:20%" /><col /></colgroup>
+<thead><tr><th>调用现场</th><th>this</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td><code>fn()</code></td><td><code>undefined</code> / <code>globalThis</code></td><td>默认绑定，取决于函数自身是否严格</td></tr>
+<tr><td><code>obj.fn()</code></td><td><code>obj</code></td><td>隐式绑定，只看最后一个点</td></tr>
+<tr><td><code>fn.call(x)</code> / <code>fn.apply(x, args)</code></td><td><code>x</code></td><td>显式绑定，立即调用</td></tr>
+<tr><td><code>const g = fn.bind(x); g()</code></td><td><code>x</code></td><td>bind 固定 this，之后改不了</td></tr>
+<tr><td><code>new Fn()</code></td><td>新创建的对象</td><td>new 绑定优先级最高</td></tr>
+<tr><td><code>() =&gt; this</code></td><td>外层 this</td><td>箭头函数没有自己的 this</td></tr>
+<tr><td><code>el.addEventListener('click', fn)</code></td><td><code>el</code>（currentTarget）</td><td>宿主调用普通回调时指定</td></tr>
+<tr><td><code>setTimeout(obj.fn, 0)</code></td><td>全局对象 / Timeout</td><td>传入的是函数值，obj 这个调用现场已经丢了</td></tr>
+</tbody>
+</table>
+</Table>
+
+## Q1 · this 是定义时决定的，还是调用时决定的
+
+> **面试官：** 同一个函数，为什么换个方式调用，this 就变了？this 到底在什么时候绑定？
+
+**面试官在考什么：** 你知不知道普通函数的 this 是运行时的调用信息，而不是函数定义的一部分；以及箭头函数是唯一的例外。
+
+**先给结论。** 普通函数的 this 由**调用方式**决定，同一个函数可以被调出不同的 this；箭头函数没有自己的 this，它在**定义时**从外层词法作用域捕获，之后不再改变。
+
+```js
+const user = {
+  name: 'Ada',
+  say() {
+    return this.name;
+  },
+};
+
+user.say(); // 'Ada'：调用现场是 user.say()
+
+const say = user.say;
+say(); // ESM / 严格模式下抛 TypeError；非严格模式下 this 是 globalThis
+```
+
+`user.say()` 之所以能拿到 user，不是函数记住了 user，而是调用表达式 `user.say()` 提供了一个 Reference：base 是 user。把它赋给 `say` 之后，调用表达式只剩 `say()`，base 没了，this 自然也就没了。
+
+箭头函数的对比：
+
+```js
+const user = {
+  name: 'Ada',
+  // 这里的 this 不是 user，而是模块/脚本外层的 this
+  say: () => this.name,
+};
+
+user.say(); // 模块顶层 this 为 undefined，直接抛错；脚本里则去读 window.name
+```
+
+**一句话记忆：** 普通函数问「你怎么被调用」，箭头函数问「你在哪里被定义」。
+
+**追问：把方法挂到原型上，this 还稳定吗？** 稳定，但取决于调用者。`Child.prototype.fn` 被 `child.fn()` 调用时，this 是 child；被解构出来单独调用时，仍然走默认绑定。
+
+## Q2 · 独立调用时，this 为什么有时是 undefined，有时是 window
+
+> **面试官：** 直接调用一个函数，this 是什么？为什么浏览器里是 window，Node 里有时是 undefined？
+
+**面试官在考什么：** 严格模式对 this 的兜底规则，以及 ESM、CommonJS、class 这些「默认严格」的边界。
+
+**先给结论。** 独立调用 `fn()` 走默认绑定：函数自身处于严格模式时 this 是 `undefined`；非严格模式下 `undefined` / `null` 会被替换成 `globalThis`（浏览器里是 `window`，Node 里是 `globalThis`）。
+
+```js
+function sloppy() {
+  return this;
+}
+
+function strict() {
+  'use strict';
+  return this;
+}
+
+sloppy(); // 浏览器脚本里是 window；Node ESM 里是 undefined
+strict(); // undefined
+strict.call(null); // null，严格模式不再兜底
+sloppy.call(null); // globalThis
+```
+
+**关键点：严格模式看的是「被调用函数自己的代码」，不是调用方。** 一个非严格函数被严格函数调用，`fn()` 依然会把 this 兜底成 globalThis。
+
+```js
+function sloppy() {
+  return this; // 自身非严格
+}
+
+function caller() {
+  'use strict';
+  return sloppy(); // 仍然是 globalThis
+}
+```
+
+**现代项目里默认就是严格模式。** ESM 模块、class 体、`<script type="module">` 全部自动严格，所以「this 是 window」在模块代码里已经不成立了。Node 顶层还有一层差异：CommonJS 模块的顶层 this 是 `module.exports`，ESM 的顶层 this 是 `undefined`。
+
+**易错点：**
+
+- 不要在 ESM 里用 `this === window` 判断环境，它恒为 false。
+- `fn.call(null)` 在严格与非严格下结果不同，面试里要先声明函数的严格状态。
+- 浏览器 classic script 顶层 `this` 是 window，即使脚本写了 `'use strict'`；严格模式改变的是函数调用，不是脚本顶层。
+
+## Q3 · obj.fn() 里的 this 到底看哪个对象
+
+> **面试官：** `a.b.c.fn()` 的 this 是谁？`(obj.fn)()` 和 `(0, obj.fn)()` 有区别吗？
+
+**先给结论。** 隐式绑定只看调用表达式里**最后一个点左边的对象**：`a.b.c.fn()` 的 this 是 `c`。括号不改变引用，所以 `(obj.fn)()` 等价于 `obj.fn()`；逗号运算符会丢掉引用，`(0, obj.fn)()` 等价于独立调用。
+
+```js
+const a = {
+  name: 'a',
+  b: {
+    name: 'b',
+    c: {
+      name: 'c',
+      fn() {
+        return this.name;
+      },
+    },
+  },
+};
+
+a.b.c.fn(); // 'c'，不是 'a' 也不是 'b'
+(a.b.c.fn)(); // 'c'，括号不改变 Reference
+(0, a.b.c.fn)(); // undefined / globalThis，逗号丢掉了 base
+```
+
+**为什么会这样。** 规范里 `obj.fn` 求值得到一个 Reference（base = obj，name = 'fn'），`CallExpression` 会把这个 base 作为 this。赋值、解构、逗号、`bind` 等操作会把「函数值」从 Reference 里取出来，base 就消失了。
+
+```js
+const fn = a.b.c.fn;
+fn(); // 默认绑定
+
+const { fn: fn2 } = a.b.c;
+fn2(); // 默认绑定
+
+[0].map(a.b.c.fn); // 默认绑定，map 不会替你保留 base
+```
+
+**可选链不丢绑定。** `a.b.c.fn?.()` 在 `fn` 存在时仍然是 `c` 在调用；`a.b.c?.fn()` 只在 `c` 为空时短路，this 规则不变。
+
+**追问：`obj.fn.call(other)` 之后，隐式绑定还有效吗？** 没有。显式绑定直接覆盖隐式绑定，other 生效；这正是下一题的优先级。
+
+## Q4 · call、apply、bind 的区别，bind 之后还能不能改
+
+> **面试官：** call、apply、bind 有什么区别？bind 两次，this 是谁？bind 之后还能用 call 改吗？
+
+**先给结论。** `call` 和 `apply` 都是**立即调用**，区别只在参数形式；`bind` **不调用**，而是返回一个 this 已经固定、还可以预置参数的新函数。绑定只能发生一次，后续的 call / apply / bind 都改不了。
+
+```js
+function introduce(greeting, punct) {
+  return `${greeting}, ${this.name}${punct}`;
+}
+
+const ada = { name: 'Ada' };
+
+introduce.call(ada, 'Hello', '!'); // 'Hello, Ada!'
+introduce.apply(ada, ['Hi', '?']); // 'Hi, Ada?'
+const bound = introduce.bind(ada, 'Hey');
+bound('!'); // 'Hey, Ada!'
+
+bound.call({ name: 'Bob' }, '!'); // 仍然是 'Hey, Ada!'
+bound.bind({ name: 'Bob' })('!'); // 仍然是 'Hey, Ada!'
+```
+
+**三者对比：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:14%" /><col style="width:16%" /><col style="width:22%" /><col style="width:19%" /><col /></colgroup>
+<thead><tr><th>方法</th><th>是否立即执行</th><th>参数形式</th><th>返回值</th><th>后续能否改 this</th></tr></thead>
+<tbody>
+<tr><td><code>call</code></td><td>是</td><td>逐个传</td><td>函数返回值</td><td>不适用</td></tr>
+<tr><td><code>apply</code></td><td>是</td><td>数组 / 类数组</td><td>函数返回值</td><td>不适用</td></tr>
+<tr><td><code>bind</code></td><td>否</td><td>逐个传，可预置</td><td>新函数</td><td>不能</td></tr>
+</tbody>
+</table>
+</Table>
+
+**bind 的两个细节：**
+
+1. 预置参数会固定在前面，调用新函数时传入的参数排在后面（偏函数）。
+2. `bind` 不修改原函数，只创建新函数；原函数仍然可以被别的调用方式改 this。
+
+**易错点：** `bind` 只认第一次。`fn.bind(a).bind(b)` 的 this 还是 a，第二次 bind 只是给第一个绑定函数再套一层，内层的 `[[BoundThis]]` 不会变。
+
+**追问：bind 能改变箭头函数的 this 吗？** 不能，箭头函数没有自己的 this，bind 只能预置参数，this 仍然走词法。
+
+## Q5 · new 出来的 this 从哪来，return 会覆盖它吗
+
+> **面试官：** `new Fn()` 内部发生了什么？构造函数 return 一个对象，结果是什么？new 和 bind 谁优先？
+
+**先给结论。** `new` 会创建一个新对象、把它的原型链到 `Fn.prototype`、以新对象为 this 执行构造函数；如果构造函数返回一个**对象**（包括函数、数组），这个返回值会替换掉新对象；返回原始值则被忽略。`new` 的优先级高于 `bind`，绑定函数被 new 时 bound this 被忽略。
+
+```js
+function Person(name) {
+  this.name = name;
+  // return { name: '覆盖' }; // 返回对象：new 出来的是这个对象
+  // return 42;                // 返回原始值：忽略，仍然是 this
+}
+
+const ada = new Person('Ada');
+ada.name; // 'Ada'
+ada instanceof Person; // true
+```
+
+**四步拆解：**
+
+<Flow>
+<FlowStep title="① 创建对象">以 Fn.prototype 为原型创建一个新对象。</FlowStep>
+<FlowStep title="② 绑定 this">把新对象作为 this 执行构造函数。</FlowStep>
+<FlowStep title="③ 处理返回值">返回对象则替换；返回原始值（含 null）则忽略。</FlowStep>
+<FlowStep title="④ 得到结果">没有对象返回值时，返回第 ① 步创建的对象。</FlowStep>
+</Flow>
+
+**new 与 bind 的优先级：**
+
+```js
+function Point() {
+  this.x = 1;
+}
+
+const BoundPoint = Point.bind({ x: 0 });
+const p = new BoundPoint();
+p.x; // 1，不是 0
+p instanceof Point; // true
+```
+
+`new BoundPoint()` 时，`new` 先创建新对象，bound this 被忽略；但 `bind` 预置的参数仍然会传给构造函数。
+
+**哪些函数不能 new：**
+
+- 箭头函数没有 `[[Construct]]`，`new (() => {})` 抛 TypeError。
+- 对象方法简写、class 方法也不是构造函数。
+- class 必须用 new 调用，直接 `Person()` 会抛 TypeError。
+- 派生类构造函数在 `super()` 之前访问 this 会抛 ReferenceError。
+
+**追问：构造函数返回 null 呢？** `null` 是原始值，忽略，仍然返回新对象；只有 `typeof result === 'object' && result !== null` 或 `typeof result === 'function'` 才会替换。
+
+## Q6 · 箭头函数为什么「没有 this」
+
+> **面试官：** 箭头函数的 this 指向谁？能用 call、apply、bind 改吗？为什么对象字面量里的箭头函数拿不到对象本身？
+
+**先给结论。** 箭头函数没有自己的 this 绑定，它在定义时从外层词法作用域捕获 this；call、apply、bind 都改不了，也不能被 new。所谓「没有 this」，准确说是「不创建新的 this 绑定」。
+
+```js
+const counter = {
+  count: 0,
+  start() {
+    setTimeout(() => {
+      this.count++;
+      console.log(this.count); // 1，this 是 counter
+    }, 0);
+  },
+};
+
+counter.start();
+```
+
+`start` 是普通方法，this 是 counter；箭头函数定义在 `start` 内部，捕获的是 `start` 的 this，所以定时器回调里仍然能访问 counter。
+
+对象字面量里直接写箭头函数则是另一回事：
+
+```js
+const user = {
+  name: 'Ada',
+  say: () => this.name,
+};
+
+user.say(); // 不是 user.name
+```
+
+箭头函数定义在对象字面量所在的外层作用域，不是对象内部；对象字面量本身不会创建 this 作用域。要拿对象本身，用方法简写或普通函数。
+
+**箭头函数与普通函数的差异：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:25%" /><col style="width:35%" /><col /></colgroup>
+<thead><tr><th>能力</th><th>普通函数</th><th>箭头函数</th></tr></thead>
+<tbody>
+<tr><td>自己的 this</td><td>有，调用时决定</td><td>没有，定义时捕获</td></tr>
+<tr><td>arguments</td><td>有</td><td>没有，取外层</td></tr>
+<tr><td>new</td><td>可作为构造函数</td><td>抛 TypeError</td></tr>
+<tr><td>prototype</td><td>有</td><td>没有</td></tr>
+<tr><td>call / apply / bind 改 this</td><td>可以</td><td>不可以（只能预置参数）</td></tr>
+<tr><td>super / new.target</td><td>有</td><td>取外层</td></tr>
+</tbody>
+</table>
+</Table>
+
+**类字段箭头函数的取舍：**
+
+```js
+class Button {
+  label = '提交';
+  handleClick = () => {
+    console.log(this.label); // 一定是当前实例
+  };
+}
+```
+
+好处是回调传出去也不丢 this，适合 React class 组件和事件处理器；代价是每个实例都有一份函数，不挂在原型上，继承时也不能通过原型覆写。方法多、实例多时要权衡内存。
+
+**易错点：**
+
+- 不要给对象字面量写箭头方法，this 不会指向对象。
+- Vue Options API 的 `methods` 不要用箭头函数，Vue 依赖重新绑定 this 到组件实例。
+- `addEventListener` 用箭头函数时，拿不到 `this.currentTarget`，需要从事件对象取。
+- `arguments` 在箭头函数里是外层的，不是自己的。
+
+## Q7 · 回调、事件和类方法：this 是在哪一步丢的
+
+> **面试官：** `setTimeout(obj.fn, 0)`、`addEventListener('click', obj.fn)`、`promise.then(obj.fn)` 里的 this 分别是谁？怎么修？
+
+**先给结论。** 这些 API 接收的是**函数值**，不是 `obj.fn()` 这个调用表达式。函数被它们以普通函数方式调用，原来的 obj 不会跟过来；具体 this 由宿主决定，通常不再是 obj。
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:30%" /><col style="width:30%" /><col /></colgroup>
+<thead><tr><th>现场</th><th>实际 this</th><th>修复</th></tr></thead>
+<tbody>
+<tr><td><code>setTimeout(obj.fn, 0)</code></td><td>浏览器是 window / globalThis；Node 是 Timeout 对象</td><td><code>obj.fn.bind(obj)</code> 或 <code>() =&gt; obj.fn()</code></td></tr>
+<tr><td><code>el.addEventListener('click', obj.fn)</code></td><td><code>el</code>（currentTarget）</td><td>bind / 箭头包一层 / 从 event.currentTarget 取</td></tr>
+<tr><td><code>promise.then(obj.fn)</code></td><td>严格模式 undefined，非严格 globalThis</td><td>bind / 箭头包一层</td></tr>
+<tr><td><code>arr.map(obj.fn)</code></td><td>默认绑定，不是 obj</td><td><code>arr.map(obj.fn, obj)</code> 或 bind</td></tr>
+<tr><td><code>emitter.on('x', obj.fn)</code></td><td>emitter</td><td>bind / 箭头包一层</td></tr>
+<tr><td><code>onClick=&#123;this.handle&#125;</code>（React class）</td><td>undefined</td><td>constructor 里 bind 或类字段箭头</td></tr>
+</tbody>
+</table>
+</Table>
+
+**事件回调要分清两个 this：** 普通函数的 this 是绑定它的元素（`currentTarget`），不是触发事件的子元素（`target`）；箭头函数的 this 是外层词法 this，根本不是元素。
+
+```js
+button.addEventListener('click', function () {
+  console.log(this === button); // true
+});
+
+button.addEventListener('click', () => {
+  console.log(this === button); // false
+});
+```
+
+**React class 组件：** 方法默认不绑定实例，`onClick={this.handle}` 传出去的是未绑定函数；在 constructor 里 `this.handle = this.handle.bind(this)`，或者直接用类字段箭头函数 `handle = () => {}`。函数组件没有 this，这个问题不存在。
+
+**Vue Options API：** `methods` 里的普通方法会被 Vue 绑定到组件实例，所以 `this` 正常；写成箭头函数反而会捕获外层 this，拿不到组件实例。Vue 3 的 `<script setup>` 里没有 this。
+
+**Node EventEmitter：** 监听器被调用时 this 是 emitter，不是注册监听器时所在的对象。想固定成自己的对象，还是要 bind。
+
+**追问：`forEach` 的第二个参数为什么能指定 this？** `forEach` / `map` / `filter` 等数组方法允许传 `thisArg`，回调是普通函数时会被当作 this；箭头函数忽略这个参数，因为它的 this 在定义时已经定死了。`reduce` 没有 thisArg。
+
+## Q8 · 严格模式、模块和宿主环境：还有哪些边界
+
+> **面试官：** 严格模式下 this 有什么变化？ESM 顶层 this 是什么？class 方法单独拿出来调用为什么会报错？
+
+**先给结论。** 严格模式把「独立调用」的 this 从 globalThis 改成 undefined，也取消了 null / undefined 的兜底和原始值的装箱；ESM、class 体默认严格。宿主环境还会在事件、定时器等入口自己决定 this。
+
+**严格模式的三处变化：**
+
+```js
+'use strict';
+
+function fn() {
+  return this;
+}
+
+fn(); // undefined
+fn.call(null); // null
+fn.call(1); // 1，不再装箱成 Number 对象
+```
+
+非严格模式下对应结果是 `globalThis`、`globalThis`、`Number` 对象。
+
+**不同位置的顶层 this：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>位置</th><th>this</th></tr></thead>
+<tbody>
+<tr><td>浏览器 classic script 顶层</td><td>window，即使写了 <code>'use strict'</code></td></tr>
+<tr><td>浏览器 module script 顶层</td><td>undefined</td></tr>
+<tr><td>ESM 模块顶层</td><td>undefined</td></tr>
+<tr><td>CommonJS 模块顶层</td><td><code>module.exports</code></td></tr>
+<tr><td>class 体（constructor / method / 字段）</td><td>实例或类本身，且始终严格</td></tr>
+<tr><td>普通函数内部</td><td>由调用方式决定</td></tr>
+</tbody>
+</table>
+</Table>
+
+**class 方法为什么会报错：** class 体默认严格，方法被单独取出调用时 this 是 undefined，再访问 `this.x` 就抛 TypeError。这不是 this 指向了 class，而是它根本没有指向任何对象。
+
+```js
+class User {
+  constructor(name) {
+    this.name = name;
+  }
+  say() {
+    return this.name;
+  }
+}
+
+const say = new User('Ada').say;
+say(); // TypeError: Cannot read properties of undefined
+```
+
+**其他容易忽略的边界：**
+
+- getter / setter 的 this 是访问该属性的对象；从原型继承后，this 仍然是实际接收者。
+- 静态方法被继承后，`Child.method()` 里的 this 是 Child，不是定义方法的 Parent。
+- DOM 内联事件 `onclick="..."` 的 this 是元素；`addEventListener` 传对象且实现 `handleEvent` 时，this 是这个监听器对象。
+- 派生类构造函数在 `super()` 之前没有 this，访问会抛 ReferenceError。
+
+**追问：this 在箭头函数和普通函数里的查找路径有什么不同？** 普通函数每次调用创建一个新的 this 绑定；箭头函数不创建，沿定义位置的词法作用域向外找，直到找到最近的非箭头函数的 this 或模块 / 全局顶层。
+
+## 一页速查
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:26%" /><col style="width:36%" /><col /></colgroup>
+<thead><tr><th>现象</th><th>结论</th><th>常见错误</th></tr></thead>
+<tbody>
+<tr><td>方法单独赋值后调用</td><td>默认绑定，this 不再是原对象</td><td>以为函数还记得 obj</td></tr>
+<tr><td><code>obj.fn()</code></td><td>this 是 obj</td><td>看成了更外层的对象</td></tr>
+<tr><td><code>a.b.fn()</code></td><td>this 是 b</td><td>看成了 a</td></tr>
+<tr><td><code>fn.call(x)</code></td><td>this 是 x，且立即执行</td><td>以为 call 只绑定不调用</td></tr>
+<tr><td><code>fn.bind(x)()</code></td><td>this 是 x，二次绑定无效</td><td>以为 bind 可叠加</td></tr>
+<tr><td><code>new Bound()</code></td><td>this 是新对象，bound this 失效</td><td>以为 bind 优先于 new</td></tr>
+<tr><td>箭头函数</td><td>外层词法 this</td><td>以为 call / bind 能改</td></tr>
+<tr><td>事件回调</td><td>普通函数 this 是 currentTarget</td><td>和 event.target 混淆</td></tr>
+<tr><td>class 方法解构</td><td>undefined，访问属性抛 TypeError</td><td>以为方法自动绑定实例</td></tr>
+<tr><td>严格模式独立调用</td><td>undefined</td><td>以为永远是 window</td></tr>
+</tbody>
+</table>
+</Table>
+
+**30 秒版本的口头回答：**
+
+> 普通函数的 this 由调用方式决定，优先级是 new、显式绑定、隐式绑定、默认绑定。默认绑定在严格模式是 undefined，非严格模式是 globalThis；`obj.fn()` 看最后一个点左边的对象；call / apply 立即改 this，bind 返回一个 this 固定的新函数，而且 new 会忽略 bind 的 this；箭头函数没有自己的 this，定义时从外层捕获，call / apply / bind / new 都改不了。实际排查时先看调用表达式，再看是不是箭头函数，最后确认严格模式和宿主环境。
+
+## 面试官可能继续追问
+
+<Disclosure title="箭头函数被 bind 之后，this 能改吗？">
+	不能。`bind` 对箭头函数只能预置参数，返回的新函数调用时仍然使用箭头函数定义位置的词法 this。箭头函数根本没有 `[[BoundThis]]` 之外的 this 绑定可供替换。
+</Disclosure>
+
+<Disclosure title="bind 之后的函数还能 new 吗？">
+	能，只要目标函数本身可构造。`new boundFn()` 会忽略 bound this，创建新对象并把它作为 this；但 bind 预置的参数仍然会按顺序传给构造函数。如果目标是箭头函数、方法简写或 class 方法，则 new 会抛 TypeError。
+</Disclosure>
+
+<Disclosure title="obj.fn() 和 (obj.fn)() 有区别吗？">
+	没有。括号不改变 Reference，二者都等价于以 obj 为 this 调用。真正会改变结果的是逗号运算符：`(0, obj.fn)()` 先把函数值取出来，base 丢失，走默认绑定。
+</Disclosure>
+
+<Disclosure title="为什么 class 方法单独拿出来调用会报错，而不是指向 class？">
+	class 体默认严格，单独调用方法时 this 是 undefined，访问 `this.x` 才会抛 TypeError。this 从来不会自动指向方法所属的类；要保留实例，需要 bind、箭头包一层，或者使用类字段箭头函数。
+</Disclosure>
+
+<Disclosure title="严格模式是由调用方决定，还是被调用方决定？">
+	由被调用函数自己的代码决定。调用方是否严格不会改变被调用函数的 this 兜底行为；同一个非严格函数，无论被谁调用，独立调用时都会得到 globalThis。
+</Disclosure>
+
+<Disclosure title="Node 的 setTimeout 回调里 this 是什么？">
+	浏览器里通常是 window / globalThis，Node 里是 Timeout 对象。但无论哪种，`setTimeout(obj.fn, 0)` 都不会把 this 还原成 obj；要固定 this 只能 bind 或用箭头包一层。
+</Disclosure>
+
+<Disclosure title="getter、setter 和静态方法里的 this 有什么特别？">
+	getter / setter 的 this 是实际访问属性的对象，沿原型链继承后仍然如此。静态方法里的 this 是调用它的构造函数，所以 `Child.method()` 得到 Child；这也让静态方法可以写出一份对子类生效的逻辑。
+</Disclosure>
+
+## 参考
+
+- [MDN：this](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/this)
+- [MDN：Function.prototype.bind](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Function/bind)
+- [MDN：new 运算符](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/new)
+- [MDN：箭头函数](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/Arrow_functions)
+- [MDN：严格模式](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Strict_mode)
+- [ECMAScript：OrdinaryCallBindThis](https://tc39.es/ecma262/multipage/ecmascript-execution.html#sec-ordinarycallbindthis)
