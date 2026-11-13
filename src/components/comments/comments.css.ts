@@ -185,14 +185,15 @@ export const inlineAction = style({
 });
 
 /**
- * 署名行不是注册表：三个字段按「用得多不多」分配宽度，整行只占内容列左侧，
- * 右侧留白把视线让给下方正文区。窄屏不折成 2+1 的挂单，直接整齐地单列堆叠。
+ * 署名行不是注册表：按字段实际内容长度分配列宽 —— 昵称最短、邮箱居中、网址最长。
+ * 网址是完整 URL，绝不能压到只显示一半；整行略收，右侧留白把视线让给正文区。
+ * 窄屏直接单列，不折成 2+1 的挂单。
  */
 export const identityRow = style({
 	display: 'grid',
-	gridTemplateColumns: 'minmax(0, 0.82fr) minmax(0, 1.3fr) minmax(0, 0.88fr)',
+	gridTemplateColumns: 'minmax(0, 0.7fr) minmax(0, 1.1fr) minmax(0, 1.6fr)',
 	gap: vars.space.md,
-	maxWidth: '28rem',
+	maxWidth: '40rem',
 	marginBottom: vars.space.xl,
 	'@media': {
 		[`screen and (max-width: ${breakpoints.mobile})`]: {
@@ -526,6 +527,7 @@ export const commentLine = style({
 });
 
 export const avatar = style({
+	position: 'relative',
 	width: '34px',
 	height: '34px',
 	display: 'grid',
@@ -539,7 +541,14 @@ export const avatar = style({
 	fontWeight: 600,
 });
 
+/**
+ * 头像图必须盖在字母占位之上，不能做 grid 的第二个子元素 ——
+ * 否则两个子元素各占一行，34px 的圆被切成上下两半，图片被裁成半个「白碗」。
+ * 加载失败时 JS 会移除 img，自然露出底下的字母。
+ */
 export const avatarImg = style({
+	position: 'absolute',
+	inset: 0,
 	width: '100%',
 	height: '100%',
 	objectFit: 'cover',
