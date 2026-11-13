@@ -7,6 +7,9 @@ const sitemap = stellarConfig.footer.sitemap;
 const content = stellarConfig.footer.content
 	.replace('{year}', String(new Date().getFullYear()))
 	.replace('{site.title}', SITE_TITLE);
+
+// 工信部备案号按官方要求链接至备案管理系统；萌 ICP 备案号按给定标签原样渲染。
+// 两者均在新窗口打开，文案、字号与颜色沿用版权行。
 ---
 
 <footer class:list={[styles.root, 'page-footer', 'footnote']} aria-label="站点页脚" data-pagefind-ignore>
@@ -27,4 +30,8 @@ const content = stellarConfig.footer.content
 		)
 	}
 	<p class={styles.text}>{content}</p>
+	<p class={styles.registrations}>
+		<a class={styles.registrationLink} href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2021001160号</a>
+		<a class={styles.registrationLink} href="https://icp.gov.moe/?keyword=20269308" target="_blank" rel="noopener noreferrer">萌ICP备20269308号</a>
+	</p>
 </footer>
