@@ -1,0 +1,465 @@
+---
+title: 'React 与 Vue 的异同：7 道面试题，从设计哲学到选型'
+description: '从更新模型、响应式原理、JSX 与模板、组件通信、副作用、性能优化到生态选型：7 道面试题说清 React 和 Vue 的相同点与真正差异，避免「JSX vs 模板」式标签化回答。'
+date: 2026-11-02
+order: 3
+---
+
+<Intro>
+	<strong>React 和 Vue 的面试题，最容易被答成三句标签：「JSX 对模板」「虚拟 DOM 对响应式」「单向数据流对双向绑定」。</strong>
+	这些说法都只对了一半。两者解决的是同一个问题：状态变化后，怎样用尽量小的代价把 UI 更新到正确状态。
+	真正的差异在于「谁来决定更新」——React 让开发者显式提交新快照，Vue 让响应式系统自动追踪依赖。
+</Intro>
+
+这篇文章用 7 道题比较 React 与 Vue。先对齐相同点，再拆更新模型、响应式、视图描述、组件通信、副作用、性能与选型。题目数量按内容密度来，不硬凑八道；每题仍然先给面试现场能说出口的结论，再展开取舍与易错点。
+
+## 先把相同点说清楚：它们不是两个物种
+
+面试里先承认相同点，反而更容易把差异说准。React 和 Vue 在工程层面高度相似：
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:24%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>共同点</th></tr></thead>
+<tbody>
+<tr><td>核心范式</td><td>声明式、组件化，用状态描述 UI，而不是手动操作 DOM。</td></tr>
+<tr><td>视图更新</td><td>都维护组件树，默认都走虚拟 DOM 加 diff 的更新路径；Vue 额外做编译期优化，Vapor 是另一条可选演进路线。</td></tr>
+<tr><td>数据流向</td><td>props 向下传递，子组件通过回调或事件向上通知；Vue 的 v-model 本质也是 prop 加事件的语法糖。</td></tr>
+<tr><td>逻辑复用</td><td>React 用 Hooks，Vue 用 Composables；两者都把「状态 + 副作用 + 派生值」封装成可组合函数。</td></tr>
+<tr><td>工程能力</td><td>都支持 TypeScript、SSR / SSG、代码分割、懒加载和成熟的构建工具链。</td></tr>
+<tr><td>更新时机</td><td>状态更新都不是同步改 DOM：React 批处理后再渲染，Vue 把更新排进微任务队列，等 nextTick 后统一 patch。</td></tr>
+</tbody>
+</table>
+</Table>
+
+所以「React 操作 DOM、Vue 不操作 DOM」「Vue 没有虚拟 DOM」这类回答都不成立。真正的分水岭在下面这张图里。
+
+<Diagram
+	label="React 与 Vue 的两种更新模型"
+	width={700}
+	height={210}
+	nodes={[
+		{ id: 'r1', x: 0, y: 0, w: 150, h: 50, role: 'formula', title: 'React：setState', sub: '提交新状态快照' },
+		{ id: 'r2', x: 175, y: 0, w: 150, h: 50, role: 'instr', title: '调度渲染', sub: 'batching / concurrent' },
+		{ id: 'r3', x: 350, y: 0, w: 150, h: 50, role: 'instr', title: '组件函数重跑', sub: '返回新 JSX' },
+		{ id: 'r4', x: 525, y: 0, w: 150, h: 50, role: 'target', title: 'Reconcile → DOM', sub: '按 key / type 比对' },
+		{ id: 'v1', x: 0, y: 90, w: 150, h: 50, role: 'formula', title: 'Vue：响应式写入', sub: 'Proxy set / ref.value' },
+		{ id: 'v2', x: 175, y: 90, w: 150, h: 50, role: 'instr', title: '依赖触发', sub: 'track → trigger' },
+		{ id: 'v3', x: 350, y: 90, w: 150, h: 50, role: 'instr', title: '组件更新', sub: '编译标记 + patch' },
+		{ id: 'v4', x: 525, y: 90, w: 150, h: 50, role: 'target', title: 'Patch → DOM', sub: '只更新动态节点' },
+	]}
+	arrows={[
+		{ from: 'r1', to: 'r2', dir: 'right' },
+		{ from: 'r2', to: 'r3', dir: 'right' },
+		{ from: 'r3', to: 'r4', dir: 'right' },
+		{ from: 'v1', to: 'v2', dir: 'right' },
+		{ from: 'v2', to: 'v3', dir: 'right' },
+		{ from: 'v3', to: 'v4', dir: 'right' },
+	]}
+	notes={[
+		{ at: 'canvas', y: 160, h: 22, text: 'React：开发者决定何时提交更新；组件函数重新执行，再用 diff 找出需要改的 DOM。' },
+		{ at: 'canvas', y: 184, h: 22, text: 'Vue：响应式系统记录谁读过状态；写入后只通知依赖方，编译器提前标记动态节点。' },
+	]}
+/>
+
+<Caption>
+	两条链路都从状态变化走到 DOM，但「谁掌握更新决策」不同：React 是显式调度，Vue 是依赖驱动。
+</Caption>
+
+## Q1 · React 和 Vue 最根本的差异是什么
+
+> **面试官：** 你用了 React 和 Vue，说说它们最根本的区别。React 是库、Vue 是框架，这个说法准确吗？
+
+**先给结论。** 最根本的差异是**更新模型**：React 把状态当作不可变快照，调用 setState 显式请求一次重新渲染；Vue 用响应式代理记录依赖，状态被修改后自动通知读过它的组件更新。至于「库还是框架」，React 核心确实更像视图库，路由和数据层交给 Next.js、Remix 等生态；Vue 官方提供 Router、Pinia 和构建工具，更像开箱即用的框架。但这是生态定位差异，不是能力高下。
+
+**React 的隐含假设：** 渲染是纯函数，状态是快照。你每次提交的是「下一帧应该长什么样」，React 负责调度和比对。
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
+}
+```
+
+**Vue 的隐含假设：** 状态是可观察的对象。你直接修改它，框架知道哪些渲染函数读过它，于是只更新那些依赖。
+
+```vue
+<script setup>
+import { ref } from 'vue';
+const count = ref(0);
+</script>
+
+<template>
+  <button @click="count++">{{ count }}</button>
+</template>
+```
+
+**一句话对比：** React 让你描述「下一次渲染」，Vue 让你修改「当前状态」。两者都能得到正确的 UI，但心智模型不同。
+
+**追问：React 一定更灵活、Vue 一定更简单吗？** 不能这么下结论。JSX 的表达力更强，Vue 的模板约束更多；但 Vue 的 SFC、指令和官方工具链让中小项目起步更快。选型要看团队和场景，而不是抽象地比「灵活」。
+
+## Q2 · 响应式原理差在哪
+
+> **面试官：** React 的 setState 和 Vue 的 ref / reactive 在原理上有什么区别？为什么 React 直接改对象不生效，Vue 可以？
+
+**先给结论。** React 不劫持对象，靠**引用比较**判断状态是否变化；你必须用新对象替换旧对象，或者用 setter 提交新值。Vue 3 用 **Proxy** 包装对象，在读取时收集依赖、写入时触发更新，所以直接改属性就能生效。
+
+```jsx
+const [user, setUser] = useState({ name: 'Ada' });
+
+user.name = 'Bob'; // 不触发渲染：引用没变
+setUser({ ...user, name: 'Bob' }); // 触发渲染：新对象
+setUser(prev => ({ ...prev, name: 'Bob' })); // 依赖旧值时用函数式更新
+```
+
+```js
+import { reactive, ref } from 'vue';
+
+const user = reactive({ name: 'Ada' });
+user.name = 'Bob'; // 触发：Proxy 拦截了 set
+
+const name = ref('Ada');
+name.value = 'Bob'; // 触发：ref 内部也是 getter / setter
+```
+
+**为什么 React 不直接劫持？** 不可变更新让渲染结果可预测，也让并发渲染、时间旅行调试和状态比较更容易实现；代价是对象更新要手动展开，深层嵌套时写法更啰嗦。
+
+**Vue 的代价是什么？** 响应式不是免费的：Proxy 有运行时开销，解构会丢响应性，替换整个 reactive 对象也会断开原来的代理。
+
+```js
+const state = reactive({ count: 0 });
+const { count } = state; // count 只是普通数字，后续变化不会同步
+
+const { count: countRef } = toRefs(state); // 保留响应性
+```
+
+**两者的「依赖」来源不同：**
+
+- React：依赖由开发者显式声明——你调用了哪个 setter、useEffect 的依赖数组写了什么。
+- Vue：依赖由运行时自动收集——渲染函数或 effect 读到了哪个属性，就订阅哪个属性。
+
+**易错点：**
+
+- React 里直接改 state 对象、数组 push，都不会触发更新；必须返回新引用。
+- Vue 里把 `ref` 当普通变量用，忘了 `.value`；模板中会自动解包，JavaScript 里不会。
+- Vue 的 `reactive` 只对对象有效，基本类型要用 `ref`。
+- React 的 `setState` 是异步批处理的，连续读取 state 可能拿到旧值；需要基于旧值计算时用函数式更新。
+
+## Q3 · JSX 和模板，谁更灵活
+
+> **面试官：** React 用 JSX，Vue 用模板，两者有什么本质区别？Vue 模板是不是不如 JSX 灵活？
+
+**先给结论。** JSX 是 JavaScript 表达式，条件、循环、组合都直接用 JS 写；Vue 模板是一层受约束的 DSL，由编译器翻译成渲染函数，换来更接近 HTML 的写法、指令语法和编译期优化。灵活性和可维护性是取舍，不是单向碾压。
+
+**同一个列表的两种写法：**
+
+```jsx
+function TodoList({ todos }) {
+  return (
+    <ul>
+      {todos.map(todo => (
+        <li key={todo.id}>{todo.done ? '✓' : '○'} {todo.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```vue
+<template>
+  <ul>
+    <li v-for="todo in todos" :key="todo.id">
+      {{ todo.done ? '✓' : '○' }} {{ todo.title }}
+    </li>
+  </ul>
+</template>
+```
+
+**本质区别在编译产物。** JSX 被编译成 `jsx()` 运行时调用，表达式就是 JavaScript；Vue 模板被编译成渲染函数，编译器知道哪些节点是静态的、哪些绑定会变，于是可以提升静态节点、给动态节点打 patch flag，更新时跳过整棵静态子树。
+
+**对比表：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:20%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>React JSX</th><th>Vue 模板</th></tr></thead>
+<tbody>
+<tr><td>表达方式</td><td>JavaScript 表达式，灵活度最高</td><td>HTML 风格的 DSL，指令表达逻辑</td></tr>
+<tr><td>编译优化</td><td>运行时 diff 为主，编译器辅助有限</td><td>静态提升、patch flag、tree-shaking 等编译期优化</td></tr>
+<tr><td>上手成本</td><td>需要熟悉 JS 函数式写法</td><td>贴近 HTML，前端与设计协作更直观</td></tr>
+<tr><td>类型检查</td><td>JSX + TS 直接推导</td><td>script setup + vue-tsc 检查模板</td></tr>
+<tr><td>逻辑复用</td><td>Hooks、render props、HOC</td><td>Composables、slots、render 函数</td></tr>
+</tbody>
+</table>
+</Table>
+
+**容易被追问的点：**
+
+- Vue 模板不是「不能写 JS」，而是把逻辑限制在表达式和指令里；复杂逻辑应该放进 script setup 或 composable。
+- React 的 JSX 也不是「HTML」，`className`、事件驼峰、`htmlFor` 都是 JavaScript 对象属性的映射。
+- Vue 3 支持多根节点，React 16 起支持 Fragment；「Vue 只能一个根节点」是 Vue 2 的旧印象。
+- 两者都需要稳定的 `key`；React 的 key 不会传给子组件，Vue 的 key 也主要用于 diff。
+
+## Q4 · 组件通信和状态管理有什么不同
+
+> **面试官：** React 和 Vue 分别怎么做父子通信、跨层通信和全局状态？v-model 和 React 的受控组件是一回事吗？
+
+**先给结论。** 父子通信的思路一致：props 向下、回调或事件向上。跨层通信 React 用 Context，Vue 用 provide / inject；全局状态 React 社区选择更多（Redux Toolkit、Zustand、Jotai 等），Vue 官方推荐 Pinia。`v-model` 不是魔法，它只是「value prop + change 事件」的语法糖，和 React 受控组件解决的是同一个问题。
+
+**父子通信对照：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:18%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>场景</th><th>React</th><th>Vue</th></tr></thead>
+<tbody>
+<tr><td>父传子</td><td>props</td><td>props（defineProps）</td></tr>
+<tr><td>子传父</td><td>回调函数 prop</td><td>emit（defineEmits）</td></tr>
+<tr><td>跨层传递</td><td>Context + useContext</td><td>provide / inject</td></tr>
+<tr><td>双向绑定</td><td>value + onChange 受控组件</td><td>v-model（modelValue + update:modelValue）</td></tr>
+<tr><td>全局状态</td><td>Redux Toolkit / Zustand / Jotai</td><td>Pinia（Vuex 已进入维护模式）</td></tr>
+<tr><td>插槽 / 内容分发</td><td>children、render props</td><td>slot、作用域插槽</td></tr>
+</tbody>
+</table>
+</Table>
+
+**Context 和 provide / inject 都有一个容易忽略的点：**
+
+- React 的 Context value 变化时，所有消费该 Context 的组件都会重新渲染，哪怕它只用了其中一部分。常见做法是拆分 Context、`useMemo` 稳定 value，或用状态库的选择器订阅。
+- Vue 的 provide / inject 默认**不会**让注入值自动响应；想共享可变状态，要 provide 一个 `ref` / `reactive`，或者 provide 一个会更新的 getter，并在注入方保持响应式连接。
+
+```js
+// Vue：provide 一个 ref，注入方才能跟着变
+provide('theme', readonly(themeRef));
+```
+
+```jsx
+// React：Context value 变化会通知所有消费者
+<ThemeContext.Provider value={theme}>
+  {children}
+</ThemeContext.Provider>
+```
+
+**v-model 与受控组件的对应关系：**
+
+```vue
+<MyInput v-model="name" />
+<!-- 等价于 -->
+<MyInput :model-value="name" @update:model-value="name = $event" />
+```
+
+```jsx
+<MyInput value={name} onChange={event => setName(event.target.value)} />
+```
+
+Vue 的 props 仍然是单向的，子组件不能直接改父组件的变量；`v-model` 只是把「读值 + 写回」的样板代码收进了语法糖。React 也能实现同样的双向效果，只是写起来更显式。
+
+## Q5 · 生命周期与副作用怎么写
+
+> **面试官：** React 的 useEffect 和 Vue 的 watch、watchEffect、onMounted 有什么区别？为什么 React 要写依赖数组，Vue 不用？
+
+**先给结论。** React 的副作用在**提交之后**按声明顺序执行，依赖由开发者显式声明；Vue 的副作用通常写在 setup 里，`watchEffect` 自动收集依赖，`watch` 显式指定来源，`onMounted` 等钩子绑定组件生命周期。两者都要处理清理逻辑，但触发时机和依赖来源不同。
+
+**挂载时请求数据的对照：**
+
+```jsx
+useEffect(() => {
+  let cancelled = false;
+
+  fetch(`/api/user/${userId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!cancelled) setUser(data);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [userId]);
+```
+
+```vue
+<script setup>
+import { ref, watch } from 'vue';
+
+const user = ref(null);
+
+watch(
+  () => userId.value,
+  async (id, _, onCleanup) => {
+    let cancelled = false;
+    onCleanup(() => {
+      cancelled = true;
+    });
+
+    const res = await fetch(`/api/user/${id}`);
+    const data = await res.json();
+    if (!cancelled) user.value = data;
+  },
+  { immediate: true },
+);
+</script>
+```
+
+**核心差异：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:20%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>React</th><th>Vue</th></tr></thead>
+<tbody>
+<tr><td>依赖来源</td><td>开发者写依赖数组</td><td>watchEffect 自动收集；watch 显式指定</td></tr>
+<tr><td>执行时机</td><td>useEffect 在绘制后；useLayoutEffect 在绘制前</td><td>watch 默认在组件更新前；可配 flush: 'post' / 'sync'</td></tr>
+<tr><td>首次执行</td><td>挂载后执行一次</td><td>watch 默认不执行，watchEffect 立即执行；可配 immediate</td></tr>
+<tr><td>清理方式</td><td>effect 返回 cleanup 函数</td><td>onCleanup 回调、onUnmounted</td></tr>
+<tr><td>开发期重复执行</td><td>StrictMode 下会双重调用，暴露副作用问题</td><td>没有对应的双重调用机制</td></tr>
+</tbody>
+</table>
+</Table>
+
+**React 最容易错的两件事：**
+
+1. 依赖数组漏写，effect 里读到旧的 state 或 props，形成 stale closure。
+2. 依赖数组写了每次新建的对象或函数，effect 每次都重新执行；需要稳定引用时用 `useMemo` / `useCallback`，或者把逻辑移到 effect 内部。
+
+**Vue 最容易错的两件事：**
+
+1. `watch` 一个 reactive 对象时默认深度监听，性能开销比想象中大；只关心某个字段时用 getter。
+2. 在 `watchEffect` 里读写同一个响应式变量，可能造成不必要的重复触发；需要明确依赖时改用 `watch`。
+
+**追问：Vue 的 nextTick 对应 React 的什么？** 它对应「状态更新后 DOM 已经 patch 完成」的时机。React 里通常用 `useEffect` 或 `useLayoutEffect` 等待提交完成；Vue 里用 `await nextTick()` 读取更新后的 DOM。
+
+## Q6 · 性能优化：React 靠调度，Vue 靠编译吗
+
+> **面试官：** React 和 Vue 谁的性能更好？为什么 React 要 memo、useMemo，Vue 好像不怎么需要？
+
+**先给结论。** 不能脱离场景说谁更快。React 的优化重点是**减少不必要的组件重渲染**，手段是 memo、useMemo、useCallback、虚拟列表和并发调度；Vue 的优化重点是**减少每次更新的工作量**，靠响应式依赖追踪和编译期标记，但并不是「完全不用优化」。
+
+**React 的更新粒度是组件。** 状态变化会让组件函数重新执行，子组件默认也会跟着渲染，除非用 `memo` 跳过、用 `useMemo` 缓存计算结果、用 `useCallback` 稳定回调引用。React 18 的并发特性（`useTransition`、`useDeferredValue`）还能把非紧急更新让给用户输入。
+
+```jsx
+const MemoList = memo(function List({ items }) {
+  return items.map(item => <Row key={item.id} item={item} />);
+});
+```
+
+**Vue 的更新粒度是「依赖该状态的组件 + 编译标记的动态节点」。** 响应式系统知道哪个组件读过哪个属性，只通知相关组件；编译器把静态节点提升、给动态节点打 patch flag，patch 时跳过不会变的部分。`computed` 还会缓存派生值。
+
+```vue
+<template>
+  <div>
+    <h1>静态标题</h1>
+    <p>{{ dynamicText }}</p>
+  </div>
+</template>
+```
+
+上面的静态标题在编译后被提升，更新时不会参与 diff；但这不代表 Vue 可以乱写：父组件重新渲染、插槽内容变化、`v-for` 缺少 key，仍然会带来额外工作。
+
+**常见误区：**
+
+- 「Vue 不需要虚拟 DOM」：Vue 3 默认仍然使用虚拟 DOM，只是加了编译优化；Vapor 模式是可选方向。
+- 「React 每次更新都 diff 整个页面」：React 只 reconcile 受影响的组件子树，不是整页重算。
+- 「Vue 自动优化，所以不用 memo」：Vue 也有 `v-memo`、`shallowRef`、`shallowReactive`、`markRaw`，只是使用频率不同。
+- 「React 一定比 Vue 慢」：框架开销只是应用性能的一部分，列表规模、状态结构、网络和渲染策略往往影响更大。
+
+**两者共通的优化：** 稳定的 key、列表虚拟化、代码分割与懒加载、避免在渲染期间做重计算、合理使用 SSR / 预渲染、用真实用户指标定位瓶颈，而不是凭框架标签下结论。
+
+## Q7 · 生态、SSR、TypeScript 与选型怎么答
+
+> **面试官：** 新项目让你选 React 或 Vue，你会怎么选？SSR、TypeScript、移动端和团队因素分别怎么考虑？
+
+**先给结论。** 选型不是选「更好的框架」，而是选「更适合当前约束的组合」。React 的优势是生态大、选择多、招聘市场广，配合 Next.js 可以做 RSC、流式渲染和复杂的全栈场景；Vue 的优势是官方工具链完整、模板上手快、SFC 协作直观，Nuxt 覆盖了大多数 SSR / SSG 需求。
+
+**生态对照：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:20%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>React</th><th>Vue</th></tr></thead>
+<tbody>
+<tr><td>元框架</td><td>Next.js、Remix / React Router</td><td>Nuxt</td></tr>
+<tr><td>路由 / 状态</td><td>社区方案为主</td><td>官方 Router、Pinia</td></tr>
+<tr><td>SSR / RSC</td><td>Next.js 的 Server Components 是特色方向</td><td>Nuxt 的 server routes、islands 覆盖相近场景</td></tr>
+<tr><td>移动端</td><td>React Native 生态更成熟</td><td>NativeScript-Vue、Ionic Vue 等可选</td></tr>
+<tr><td>TypeScript</td><td>JSX 类型推导直接</td><td>script setup + defineProps / defineEmits，vue-tsc 检查模板</td></tr>
+<tr><td>学习曲线</td><td>需要理解函数式渲染与 Hooks 规则</td><td>模板接近 HTML，起步更平缓</td></tr>
+<tr><td>招聘与团队</td><td>岗位总量通常更多</td><td>国内中小团队与外包项目常见</td></tr>
+</tbody>
+</table>
+</Table>
+
+**选型时真正该问的问题：**
+
+1. 团队现有技术栈和招聘难度如何？换框架的学习与维护成本能不能接受？
+2. 是否需要 SSR、SEO、全栈能力和 React Server Components？如果需要，Next.js 生态更成熟。
+3. 是否有移动端或跨端需求？React Native 的生态和社区规模更大。
+4. 项目规模和生命周期多长？中小项目 Vue 的官方全家桶更省决策成本；长期大型项目 React 的生态选择更多。
+5. 团队更擅长 JavaScript 表达式还是模板 DSL？这不是技术优劣，而是协作效率。
+
+**面试里不要这样答：** 「Vue 简单，React 高级」「React 性能好，Vue 性能差」「国内用 Vue，国外用 React」。这些都是过度简化。更好的答法是先给约束，再给取舍，最后说明验证方式。
+
+## 一页速查
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:22%" /><col style="width:36%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>React</th><th>Vue</th></tr></thead>
+<tbody>
+<tr><td>核心定位</td><td>视图库 + 生态组合</td><td>渐进式框架 + 官方工具链</td></tr>
+<tr><td>状态模型</td><td>不可变快照，setState 提交</td><td>响应式代理，直接修改</td></tr>
+<tr><td>更新触发</td><td>显式调度渲染</td><td>依赖追踪自动触发</td></tr>
+<tr><td>视图描述</td><td>JSX，JavaScript 表达式</td><td>模板 DSL + 指令 + 编译优化</td></tr>
+<tr><td>逻辑复用</td><td>Hooks</td><td>Composables</td></tr>
+<tr><td>父子通信</td><td>props + 回调</td><td>props + emit</td></tr>
+<tr><td>跨层通信</td><td>Context</td><td>provide / inject</td></tr>
+<tr><td>状态管理</td><td>Redux Toolkit / Zustand / Jotai</td><td>Pinia</td></tr>
+<tr><td>副作用</td><td>useEffect / useLayoutEffect</td><td>watch / watchEffect / 生命周期钩子</td></tr>
+<tr><td>性能策略</td><td>组件级重渲染控制 + 并发调度</td><td>依赖追踪 + 编译期标记</td></tr>
+<tr><td>SSR 生态</td><td>Next.js / Remix</td><td>Nuxt</td></tr>
+</tbody>
+</table>
+</Table>
+
+**30 秒版本的口头回答：**
+
+> React 和 Vue 都是声明式、组件化的框架，默认都走虚拟 DOM 加 diff，差别主要在更新模型。React 把状态当作不可变快照，用 setState 显式请求重新渲染，所以要用新引用、memo、useMemo 控制更新范围，配合并发渲染处理优先级；Vue 用 Proxy 做响应式依赖追踪，直接改状态就能触发相关组件更新，再加上模板编译的静态提升和 patch flag，减少每次更新的工作量。组件通信都是 props 向下、事件或回调向上，React 用 Context，Vue 用 provide/inject；全局状态分别常见 Redux/Zustand 和 Pinia。选型要看团队、生态、SSR、移动端和维护周期，不能简单说谁更好。
+
+## 面试官可能继续追问
+
+<Disclosure title="Vue 真的不需要虚拟 DOM 吗？">
+	Vue 3 默认仍然使用虚拟 DOM。模板会先编译成渲染函数，生成虚拟节点树，再通过 patch 更新真实 DOM；编译期的静态提升和 patch flag 是在这个基础上减少工作量。Vapor 模式尝试跳过虚拟 DOM，但它是可选的新路径，不是当前 Vue 的唯一实现。
+</Disclosure>
+
+<Disclosure title="React 一定比 Vue 慢吗？">
+	不能这样下结论。React 的组件级重渲染在状态频繁变化、组件树很宽时可能带来额外开销，但可以用 memo、拆分状态和并发调度控制；Vue 的响应式更新更细，但父组件渲染、插槽和列表 diff 仍然有成本。真实性能要用 Profiler、Performance 面板和用户指标测，不要用框架标签替代测量。
+</Disclosure>
+
+<Disclosure title="Vue 的 v-model 是双向绑定，和 React 单向数据流矛盾吗？">
+	不矛盾。Vue 的 props 仍然是单向传递，子组件不能直接修改父组件状态；v-model 只是 `modelValue` prop 和 `update:modelValue` 事件的语法糖。React 的受控组件用 value + onChange 实现同样的效果，只是把读写过程写得更显式。
+</Disclosure>
+
+<Disclosure title="为什么 React 需要 memo，Vue 好像不需要？">
+	React 的状态更新会让组件函数重新执行，子组件默认也会重新渲染，所以需要 memo 跳过 props 未变的子树；Vue 的响应式系统只通知真正读过被修改状态的组件，粒度更细。但 Vue 也不是零成本：父组件重渲染、插槽变化、缺少 key 的列表仍然需要优化，Vue 也提供 v-memo、shallowRef 等工具。
+</Disclosure>
+
+<Disclosure title="Vue 的 ref 解构为什么会丢响应性？">
+	`ref` 是一个带 getter / setter 的对象，直接解构得到的是某一时刻的普通值，后续 `.value` 变化不会再同步到变量；`reactive` 对象解构同理。需要解构时用 `toRefs` 保留引用，或者直接通过对象属性访问。
+</Disclosure>
+
+<Disclosure title="React Hooks 和 Vue Composables 是一回事吗？">
+	目标相同：把状态、派生值和副作用封装成可复用函数。差异在运行时：React Hooks 依赖固定的调用顺序和依赖数组，必须在顶层调用；Vue Composables 通常在 setup 中调用，依赖由响应式系统自动收集，也可以在没有组件实例的地方配合 effectScope 使用。
+</Disclosure>
+
+<Disclosure title="选型时最容易被忽略的因素是什么？">
+	团队维护成本和招聘连续性。框架本身的性能差异通常不是最大风险；真正昂贵的是团队不熟悉心智模型导致的 Bug、生态库的长期维护状态，以及 SSR、移动端等约束是否被提前验证。选型前最好用一个真实业务切片做原型，而不是只看基准测试。
+</Disclosure>
+
+## 参考
+
+- [React 官方文档](https://react.dev/)
+- [Vue 官方文档：响应式基础](https://cn.vuejs.org/guide/essentials/reactivity-fundamentals.html)
+- [Vue 官方文档：深入响应式系统](https://cn.vuejs.org/guide/extras/reactivity-in-depth.html)
+- [Vue 官方文档：渲染机制与编译优化](https://cn.vuejs.org/guide/extras/rendering-mechanism.html)
+- [Next.js 官方文档](https://nextjs.org/docs)
+- [Nuxt 官方文档](https://nuxt.com/docs)
