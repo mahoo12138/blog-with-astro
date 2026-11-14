@@ -483,7 +483,7 @@ if (existsSync(rssPath)) {
 
 /* ---------- 8. 内容卫生断言 ---------- */
 /**
- * 四条「改坏了不报错、只会悄悄退化」的内容约定，都是实际踩过的坑：
+ * 五条「改坏了不报错、只会悄悄退化」的内容约定，都是实际踩过的坑：
  *
  *   a) 分类词表只收约定的四类，按**文章体裁 / 写作视角**划分；主题一律走 tags。
  *      历史上有 7 种，其中 5 种只有 1–3 篇，还有「前端」这种按主题划分的误用
@@ -503,14 +503,37 @@ if (existsSync(rssPath)) {
  *      章节上重复标一遍是冗余的，也会让标签页被同一个系列的十几张卡铺满。
  *      这条约束很容易在「新写一章时顺手把标签抄上去」时被破坏，而且不会报错，
  *      只会让标签页悄悄退化回刷屏状态。
+ *
+ *   e) 标签沿用已废弃的写法。标签页按 slug 归并，同一主题的两种写法会拆成两个页面
+ *      （Golang / Go、CSS / CSS布局 都曾各占一页）。这里只拦「已确认废弃的旧写法」，
+ *      不做封闭词表 —— 标签是开放的，新主题随时可以加。规范见 docs/content-authoring.md。
  */
 const CANONICAL_CATEGORIES = new Set(['学习笔记', '技术教程', '随笔杂谈', '技术思考']);
+/** 旧写法 → 规范写法；新增替换项时同步 docs/content-authoring.md 的「标签命名」。 */
+const DEPRECATED_TAGS = new Map([
+	['Vscode', 'VS Code'],
+	['Vuejs', 'Vue.js'],
+	['Webdav', 'WebDAV'],
+	['Xpath', 'XPath'],
+	['adb', 'ADB'],
+	['office', 'Office'],
+	['IEEE754', 'IEEE 754'],
+	['OrangePi', 'Orange Pi'],
+	['Win10', 'Windows 10'],
+	['宝塔', '宝塔面板'],
+	['Golang', 'Go'],
+	['CSS布局', 'CSS'],
+	['链表', '数据结构与算法'],
+	['实践经验', 'AI 编程'],
+	['编码', '二维码编码'],
+]);
 const INVISIBLE_CHARS = /[\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/;
 
 const offVocabCategories = [];
 const invisibleFilenames = [];
 const emptyPublishedPosts = [];
 const chaptersWithTaxonomy = [];
+const deprecatedTags = [];
 
 /**
  * 解析 frontmatter 里的列表字段，兼容三种实际存在的写法：
@@ -561,6 +584,11 @@ function parseFrontmatterList(frontmatter, key) {
 			if (!CANONICAL_CATEGORIES.has(category)) offVocabCategories.push(`${name} → ${category}`);
 		}
 
+		for (const tag of parseFrontmatterList(frontmatter, 'tags')) {
+			const replacement = DEPRECATED_TAGS.get(tag);
+			if (replacement) deprecatedTags.push(`${name} → ${tag}（应为 ${replacement}）`);
+		}
+
 		if (!/^draft:\s*true\b/m.test(frontmatter) && body.trim() === '') {
 			emptyPublishedPosts.push(name);
 		}
@@ -582,6 +610,10 @@ function parseFrontmatterList(frontmatter, key) {
 		if (!match) continue;
 		for (const category of parseFrontmatterList(match[1], 'categories')) {
 			if (!CANONICAL_CATEGORIES.has(category)) offVocabCategories.push(`columns/${name} → ${category}`);
+		}
+		for (const tag of parseFrontmatterList(match[1], 'tags')) {
+			const replacement = DEPRECATED_TAGS.get(tag);
+			if (replacement) deprecatedTags.push(`columns/${name} → ${tag}（应为 ${replacement}）`);
 		}
 	}
 }
@@ -607,6 +639,12 @@ if (chaptersWithTaxonomy.length) {
 		`专栏章节自带 tags / categories ${chaptersWithTaxonomy.length} 处（应登记在专栏上，章节归属由目录推导）:`,
 	);
 	for (const item of chaptersWithTaxonomy.slice(0, 10)) failures.push(`    ${item}`);
+}
+if (deprecatedTags.length) {
+	failures.push(
+		`标签沿用已废弃写法 ${deprecatedTags.length} 处（同一主题只留一种写法，见 docs/content-authoring.md）:`,
+	);
+	for (const item of deprecatedTags.slice(0, 10)) failures.push(`    ${item}`);
 }
 
 /* ---------- 9. 模板泄漏断言 ---------- */

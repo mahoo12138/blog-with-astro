@@ -33,6 +33,24 @@ src/content/
 
 词表唯一真源是 `scripts/audit-dist.mjs` 的 `CANONICAL_CATEGORIES`，`pnpm verify` 会逐篇校验。新增分类前先确认有足够的同类文章撑起分类页；章节不写 `categories`，体裁由专栏入口统一表达。
 
+## 标签命名
+
+`tags` 表达主题 / 技术名，不设封闭词表，但**同一主题只能有一种写法**：标签页按
+`slugifySegment(tag)` 归并，写法不同就会被拆成两个页面，内容也随之分散（`Golang` 与
+`Go` 曾各占一页）。约定：
+
+- 用官方写法：`VS Code`、`Vue.js`、`WebDAV`、`XPath`、`ADB`、`Office`、`IEEE 754`、
+  `Orange Pi`、`Windows 10`、`宝塔面板`；不要写 `Vscode`、`Vuejs`、`Webdav`、`Xpath`、
+  `adb`、`office`、`IEEE754`、`OrangePi`、`Win10`、`宝塔`。
+- 子主题先并入上位标签，除非已攒够单独成页的内容：`CSS布局` → `CSS`、
+  `链表` → `数据结构与算法`；语言统一写 `Go`（不写 `Golang`）。
+- 避免过泛或有歧义的词：`实践经验`、`编码` 换成能指向具体主题的 `AI 编程`、`二维码编码`。
+- 章节不写 `tags`，主题统一登记在专栏入口的 `index.md`（见「分类词表」）。
+- 已废弃写法由 `scripts/audit-dist.mjs` 的 `DEPRECATED_TAGS` 拦截，`pnpm audit:dist` 会报错。
+
+改标签名会改变 `/tags/<slug>/` 地址（空格与点会被折叠成连字符）。本项目**不为标签页
+保留旧地址重定向**，改名是会被外部链接感知的操作，动手前先确认影响面。
+
 ## 新建专栏
 
 创建 `src/content/columns/my-series/index.md`：
