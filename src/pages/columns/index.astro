@@ -10,10 +10,17 @@ import { buildColumnBuckets, sortBlogPosts } from '../../utils/content';
 const posts = sortBlogPosts(await getCollection('posts'));
 const columns = await getCollection('columns');
 const buckets = buildColumnBuckets(posts, columns);
-const totalChapters = buckets.reduce((total, column) => total + column.posts.length, 0);
+// 目录页按「创建日期」由新到旧：createdAt 取自专栏 frontmatter（第一篇章节发布时间）。
+// 只在这里重排，不改 buildColumnBuckets 的全局顺序 —— 侧栏、分类页、章节导航仍按 order 保持稳定的阅读序列。
+const orderedBuckets = [...buckets].sort(
+	(a, b) => (b.createdAt?.valueOf() ?? 0) - (a.createdAt?.valueOf() ?? 0)
+		|| a.order - b.order
+		|| a.title.localeCompare(b.title, 'zh-Hans-CN'),
+);
+const totalChapters = orderedBuckets.reduce((total, column) => total + column.posts.length, 0);
 ---
 
-<StellarShell title={`专栏 · ${SITE_TITLE}`} description={`专栏索引：按主题整理的 ${buckets.length} 个系列笔记与教程，共 ${totalChapters} 篇章节。`} mainClass={styles.pageMain} siteTree="index_topic">
+<StellarShell title={`专栏 · ${SITE_TITLE}`} description={`专栏索引：按主题整理的 ${orderedBuckets.length} 个系列笔记与教程，共 ${totalChapters} 篇章节。`} mainClass={styles.pageMain} siteTree="index_topic" contentWidth="wide">
 	<div class={styles.navigation}>
 		<StellarNavTabs active="columns" />
 	</div>
@@ -24,14 +31,14 @@ const totalChapters = buckets.reduce((total, column) => total + column.posts.len
 				<p class={styles.description}>按主题整理的系列笔记与教程，沿着一个主题读下去。</p>
 			</div>
 			<p class={styles.summary}>
-				<span><strong>{buckets.length}</strong> 个专栏</span>
+				<span><strong>{orderedBuckets.length}</strong> 个专栏</span>
 				<span><strong>{totalChapters}</strong> 篇文章</span>
 			</p>
 		</header>
 		{
-			buckets.length ? (
+			orderedBuckets.length ? (
 				<ol class={styles.grid} aria-label="专栏目录">
-					{buckets.map((column, index) => (
+					{orderedBuckets.map((column, index) => (
 						<li class={styles.item}>
 							<ColumnCard column={column} variant="catalog" index={index + 1} />
 						</li>

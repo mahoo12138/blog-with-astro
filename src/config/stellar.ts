@@ -151,7 +151,8 @@ export const stellarConfig = {
 		// 专栏简介卡片已下线：其信息（标题/篇数/简介）在专栏导读页正文头部已完整呈现，
 		// 侧栏再复述一遍是冗余；只保留专栏目录。
 		'column-posts': { id: 'column-posts', layout: 'column-posts', title: '专栏目录' },
-		// 专栏维度的最近更新：按末章发布时间倒序列**专栏**，与 recent（文章）语义不同
+		// 专栏维度的最近更新：按末章发布时间倒序列**专栏**，与 recent（文章）语义不同。
+		// 现在挂在专栏目录页左栏，右栏清空以让内容区铺满（三列卡片）。
 		'recent-columns': { id: 'recent-columns', layout: 'recent-columns', title: '最近更新', limit: 6 },
 		'travel-stats': { id: 'travel-stats', layout: 'travel-stats', title: '足迹统计' },
 		'travel-recent': { id: 'travel-recent', layout: 'travel-recent', title: '最近点亮', limit: 6 },
@@ -164,9 +165,10 @@ export const stellarConfig = {
 	siteTree: {
 		home: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: ['heatmap', 'site-info'] },
 		index_blog: { menuId: 'post', leftbar: ['welcome', 'recent'], rightbar: null },
-		// 专栏目录页：右栏是「最近更新」的**专栏**（按末章时间倒序），
-		// 与左栏 recent（最近更新的独立文章）刻意不同名同页并存。
-		index_topic: { menuId: 'columns', leftbar: ['welcome', 'recent'], rightbar: ['recent-columns'] },
+		// 专栏目录页：左栏只留「最近更新」的**专栏**（按末章时间倒序），
+		// 文章版 recent 与 welcome 一并下线；右栏清空后 contentWidth="wide" 才会生效，
+		// 让内容区吃掉原先右栏的宽度，卡片得以排成三列。
+		index_topic: { menuId: 'columns', leftbar: ['recent-columns'], rightbar: null },
 		explore: { menuId: 'explore', leftbar: ['welcome', 'recent'], rightbar: null },
 		gallery: { menuId: 'explore', leftbar: ['gallery-info', 'gallery-albums'], rightbar: null },
 		post: { menuId: 'post', leftbar: ['related', 'recent'], rightbar: ['ghrepo', 'toc'] },
