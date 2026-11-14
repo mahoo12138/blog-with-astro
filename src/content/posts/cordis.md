@@ -5,7 +5,7 @@ author: Mahoo12138
 cover: https://cdn.jsdelivr.net/gh/mahoo12138/js-css-cdn/hexo-images/cover/phone.png
 tags: 
 - Ubuntu
-- OrangePi
+- Orange Pi
 categories:
 - 技术教程
 ---

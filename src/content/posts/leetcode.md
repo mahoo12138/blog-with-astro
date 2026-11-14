@@ -5,7 +5,6 @@ mathjax: true
 cover: https://cdn.jsdelivr.net/gh/mahoo12138/js-css-cdn//hexo-images/leecode.png
 tags: 
 - 数据结构与算法
-- 链表
 categories: 
 - 学习笔记
 ---

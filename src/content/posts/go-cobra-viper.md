@@ -3,7 +3,7 @@ title: Golang 每日一库之 Cobra & Viper
 date: 2023-03-04 11:28:23
 author: Mahoo12138
 tags: 
-- Golang
+- Go
 categories:
 - 技术教程
 ---

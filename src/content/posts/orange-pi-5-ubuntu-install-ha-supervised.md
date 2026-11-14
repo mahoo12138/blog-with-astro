@@ -6,7 +6,7 @@ cover: https://cdn.jsdelivr.net/gh/mahoo12138/js-css-cdn/hexo-images/cover/phone
 tags: 
 - Ubuntu
 - Home Assistant
-- OrangePi
+- Orange Pi
 categories:
 - 技术教程
 ---

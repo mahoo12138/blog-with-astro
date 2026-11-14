@@ -1,7 +1,7 @@
 ---
 title: 一道前端面试题：如何判断 0.1 + 0.2 与 0.3 相等？
 date: 2025-06-28 23:12:32
-tags: ["JavaScript", "IEEE754"]
+tags: ["JavaScript", "IEEE 754"]
 categories:
 - 学习笔记
 ---

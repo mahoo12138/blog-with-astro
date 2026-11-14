@@ -5,7 +5,7 @@ categories:
 - 技术教程
 tags:
 - Ubuntu
-- Win10
+- Windows 10
 date: 2019-11-06 22:48:43
 ---
 

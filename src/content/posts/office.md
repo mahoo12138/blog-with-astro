@@ -5,7 +5,7 @@ cover: https://cdn.jsdelivr.net/gh/mahoo12138/js-css-cdn/hexo-images/cover/offic
 categories: 
 - 技术教程
 tags:
-- office
+- Office
 ---
 
 最近在期末复习，会经常性做一些电子笔记。难免会用到微软的office全家桶，对于一个没有系统性学过这些软件的我来说，遇到很多问题全靠百度过活，百度最有用的功能就是百度经验了，其次就是百度文库，PPT白嫖就是爽！
