@@ -46,7 +46,9 @@ export const avatar = style({
   height: "48px",
   marginRight: "1rem",
   padding: "2px",
-  borderRadius: "48px",
+  // 身份头像走「方圆」：矩形带一档圆角，与站点卡片/控件共用圆角 token；
+  // 原先用 48px 全圆，在那个尺寸下会读成星球或徽章，而不是站点标识。
+  borderRadius: vars.radius.lg,
   // background: 'rgba(255, 255, 255, 0.35)',
   border: "2px solid rgba(255, 255, 255, 0.35)",
   boxShadow: "none",
