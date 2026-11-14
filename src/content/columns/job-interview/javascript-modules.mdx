@@ -1,0 +1,1018 @@
+---
+title: 'JavaScript 模块化演进：10 道面试题，从 IIFE 到 ESM'
+description: '从全局脚本、IIFE、AMD/CMD、CommonJS 到 ES Module：10 道面试题说清模块化到底在解决什么，以及 CommonJS 与 ESM 在加载时机、导出绑定、循环依赖、Node 互操作和模块解析上的真正差异。'
+date: 2025-08-15
+order: 5
+---
+
+<Intro>
+	<strong>模块化面试的分水岭，不是能不能写出 import / export，而是能不能说清三个问题：模块在什么时候被解析、依赖在什么时候被确定、导出的是值还是绑定。</strong>
+	CommonJS 与 ESM 的几乎所有差异——值拷贝与实时绑定、循环依赖的不同表现、能不能 tree shaking、require 与 import 怎么互操作——都从这三个问题长出来。
+	把这条演进链讲顺，零散的 API 才会变成一张能自我解释的地图。
+</Intro>
+
+这篇文章用 10 道面试题走完 JavaScript 模块化的演进。前 3 题是历史与 CommonJS 的运行时机制，Q4 到 Q6 拆 ESM 的静态结构、绑定语义与循环依赖，Q7、Q8 落到 Node 互操作与工程化，最后两题补齐重导出和模块解析。每题仍然先给面试现场能说出口的结论，再展开规范、取舍与易错点。
+
+## 先把地图画出来：一条演进链，三个核心问题
+
+模块化不是某一个 API，而是一组约束：**作用域要隔离、依赖要声明、加载顺序要可预测、导出要能被静态分析**。每一代方案都在补上一代的洞。
+
+<Diagram
+	label="JavaScript 模块化的五个阶段"
+	width={800}
+	height={150}
+	nodes={[
+		{ id: 'global', x: 0, y: 0, w: 140, h: 54, role: 'neutral', title: '全局脚本', sub: 'script 拼接 · 命名冲突' },
+		{ id: 'iife', x: 165, y: 0, w: 140, h: 54, role: 'neutral', title: 'IIFE / 命名空间', sub: '隔离作用域 · 手工依赖' },
+		{ id: 'amd', x: 330, y: 0, w: 140, h: 54, role: 'neutral', title: 'AMD / CMD', sub: '浏览器异步 · 依赖声明' },
+		{ id: 'cjs', x: 495, y: 0, w: 140, h: 54, role: 'instr', title: 'CommonJS / UMD', sub: 'Node 同步 · 运行时导出' },
+		{ id: 'esm', x: 660, y: 0, w: 140, h: 54, role: 'target', title: 'ES Module', sub: '语言标准 · 静态图 + 实时绑定' },
+	]}
+	arrows={[
+		{ from: 'global', to: 'iife', dir: 'right' },
+		{ from: 'iife', to: 'amd', dir: 'right' },
+		{ from: 'amd', to: 'cjs', dir: 'right' },
+		{ from: 'cjs', to: 'esm', dir: 'right' },
+	]}
+	notes={[
+		{ at: 'canvas', y: 82, h: 22, text: '每个阶段都在补前一个阶段的洞：作用域 → 依赖声明 → 加载时机 → 静态分析。' },
+		{ at: 'canvas', y: 110, h: 22, text: 'AMD / CMD 的异步思想没有消失，而是变成了 ESM 的 import() 与打包器的代码分割。' },
+	]}
+/>
+
+<Caption>
+	CommonJS 和 ESM 不是「同一种模块的两种写法」，而是两套加载模型：前者把模块当运行时函数调用，后者把模块当语言层面的静态单元。
+</Caption>
+
+把各代方案摊开，它们各自解决的问题和留下的坑就很清楚了：
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:17%" /><col style="width:15%" /><col style="width:20%" /><col /><col /></colgroup>
+<thead><tr><th>阶段</th><th>代表</th><th>依赖声明</th><th>加载与执行</th><th>解决的问题与遗留问题</th></tr></thead>
+<tbody>
+<tr><td>全局脚本</td><td>多个 script 拼接</td><td>隐式，靠加载顺序</td><td>按 script 顺序执行</td><td>简单直接；但污染全局、顺序脆弱、无法表达依赖。</td></tr>
+<tr><td>IIFE / 命名空间</td><td>jQuery 插件时代</td><td>手工挂到命名空间</td><td>立即执行，返回内部对象</td><td>隔离了作用域；依赖仍是口头约定，加载顺序要靠人保证。</td></tr>
+<tr><td>AMD</td><td>RequireJS</td><td>define 数组前置声明</td><td>浏览器异步预加载，依赖先行</td><td>解决了浏览器异步加载；语法非标准、配置重、回调嵌套。</td></tr>
+<tr><td>CMD</td><td>SeaJS</td><td>工厂内就近 require</td><td>静态分析预加载，执行到 require 时取用</td><td>写法更接近 CommonJS；同样依赖 loader，不是语言标准。</td></tr>
+<tr><td>CommonJS / UMD</td><td>Node、npm 库</td><td>require 函数调用</td><td>同步加载，运行时导出</td><td>Node 生态统一；浏览器不能直接跑，UMD 样板代码多。</td></tr>
+<tr><td>ES Module</td><td>语言标准</td><td>import / export 声明</td><td>先建图链接，再求值；浏览器异步加载</td><td>静态分析、实时绑定、可 tree shaking；互操作与工具链有迁移成本。</td></tr>
+</tbody>
+</table>
+</Table>
+
+## Q1 · IIFE、AMD、CMD、UMD 各自解决了什么问题，为什么最后是 ESM
+
+> **面试官：** 你了解 JavaScript 模块化的发展吗？AMD 和 CMD 有什么区别？为什么现在都用 ESM 了？
+
+**面试官在考什么：** 你知不知道每代方案的设计动机，而不是只背「AMD 是依赖前置、CMD 是依赖就近」这两句结论。
+
+**先给结论。** 这条演进链解决的是四个逐层递进的问题：**作用域隔离**（IIFE）、**依赖声明**（AMD / CMD）、**跨环境复用**（UMD）、**语言级静态模块**（ESM）。AMD 和 CMD 的差异在依赖书写位置与执行时机：AMD 依赖前置、依赖先执行；CMD 依赖就近、执行到 require 时才取用。ESM 赢在它是语言标准，且静态结构让打包器能在运行前分析依赖。
+
+**IIFE：用函数作用域换隔离。**
+
+```js
+(function (global) {
+  var count = 0;
+
+  function increment() {
+    count++;
+  }
+
+  global.counter = { increment: increment };
+})(window);
+```
+
+IIFE 把变量关进函数作用域，只把需要暴露的接口挂到全局或命名空间上。它解决了全局污染，但没有解决依赖管理：谁先加载、谁依赖谁，仍然靠 script 标签的顺序和人的记忆。
+
+**AMD：依赖前置，先加载再执行。**
+
+```js
+define(['./math', './logger'], function (math, logger) {
+  return {
+    add: function (a, b) {
+      logger.log('add');
+      return math.add(a, b);
+    },
+  };
+});
+```
+
+RequireJS 会先解析依赖数组，把依赖加载并执行完，再执行当前工厂函数。优点是浏览器里可以异步加载、依赖关系显式；缺点是依赖必须提前列全，配置和回调样板多。
+
+**CMD：依赖就近，延迟取用。**
+
+```js
+define(function (require, exports, module) {
+  var math = require('./math');
+  var logger = require('./logger');
+
+  module.exports = {
+    add: function (a, b) {
+      logger.log('add');
+      return math.add(a, b);
+    },
+  };
+});
+```
+
+SeaJS 会先静态分析 require 调用，把可能用到的模块预加载下来；但工厂执行到某一行 require 时，才真正取用那个模块。它更接近 Node 的书写习惯，依赖顺序也更贴近代码顺序。
+
+**UMD：一份代码同时兼容 AMD、CommonJS 和全局变量。**
+
+```js
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    define(['./dep'], factory);
+  } else if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('./dep'));
+  } else {
+    root.MyLib = factory(root.Dep);
+  }
+})(this, function (dep) {
+  return { version: '1.0.0' };
+});
+```
+
+UMD 不是新规范，而是一段运行时的环境嗅探。它让 npm 库既能被 Node require，也能被 RequireJS 加载，还能直接用 script 引入。代价是每个库都要背一段样板代码。
+
+**为什么最后是 ESM。** AMD / CMD 需要 loader，CommonJS 是 Node 的运行时约定，它们都不是语言标准。ESM 把模块写进语法：依赖是静态声明，导出名在解析期就能确定，浏览器和 Node 都能原生执行。AMD / CMD 的异步加载思想并没有消失，而是变成了 ESM 的 `import()` 和打包器的代码分割。
+
+**追问：浏览器为什么不能直接跑 CommonJS？** 因为 `require` 是同步函数调用，而浏览器取模块要走网络；如果 `require` 阻塞等待下载，主线程就被卡住了。CommonJS 的模型假设模块在本地文件系统里、读取足够快，这个假设在浏览器不成立。
+
+## Q2 · CommonJS 的 require 到底发生了什么，为什么说它是运行时、值拷贝
+
+> **面试官：** require 是怎么工作的？为什么说 CommonJS 是运行时加载？同一个模块 require 两次会执行两次吗？
+
+**面试官在考什么：** 你知不知道 `require` 只是一个普通函数，以及模块缓存、包装函数和导出快照这三件事。
+
+**先给结论。** `require` 是 Node 注入的普通函数，调用时才同步解析路径、查缓存、包装并执行模块代码，最后返回 `module.exports`。它不是语言语法，所以可以写在 if 里、可以拼动态路径；导出的值是**那一刻的 `module.exports`**，原始值是拷贝，对象是引用共享，不是实时绑定。
+
+**一次 require 的完整链路：**
+
+<Flow>
+<FlowStep title="① 解析路径">把请求解析成绝对路径：核心模块、相对路径、node_modules 包。</FlowStep>
+<FlowStep title="② 查缓存">命中 require.cache 就直接返回缓存的 module.exports，不再执行模块体。</FlowStep>
+<FlowStep title="③ 包装函数">把模块代码包进函数，注入 exports、require、module、__filename、__dirname。</FlowStep>
+<FlowStep title="④ 执行模块">同步执行模块体，填充 module.exports；执行期间模块已放进缓存，所以循环依赖能看到半成品。</FlowStep>
+<FlowStep title="⑤ 返回导出">返回 module.exports；如果执行抛错，缓存条目会被删除。</FlowStep>
+</Flow>
+
+Node 实际包装出来的函数大致是这样：
+
+```js
+(function (exports, require, module, __filename, __dirname) {
+  // 你的模块代码
+  const fs = require('node:fs');
+  module.exports = { fs };
+});
+```
+
+这也解释了两个常被问到的现象：
+
+```js
+// 顶层 this 就是 module.exports
+console.log(this === module.exports); // true
+
+// 同一个模块被缓存，拿到的是同一个对象
+const a = require('./config.cjs');
+const b = require('./config.cjs');
+a === b; // true
+```
+
+想重新执行模块，必须删掉缓存；这通常只应该出现在测试或热更新里：
+
+```js
+delete require.cache[require.resolve('./config.cjs')];
+const fresh = require('./config.cjs');
+```
+
+**「值拷贝」到底拷贝了什么。** `require` 返回的是 `module.exports` 这个值。如果它是原始值，导入方拿到的是拷贝；如果它是对象，导入方拿到的是同一个对象的引用。但无论如何，都不是对模块内部变量的实时绑定。
+
+```js
+// counter.cjs
+let count = 0;
+
+exports.count = count; // 把当时的 0 拷贝到 exports 上
+exports.increment = function () {
+  count++; // 只改了模块内部的 count
+};
+```
+
+```js
+const counter = require('./counter.cjs');
+
+counter.count; // 0
+counter.increment();
+counter.count; // 仍然是 0：exports.count 从未跟着内部 count 变化
+```
+
+如果想让外部看到变化，要么把状态放进对象里共享引用，要么导出读取函数：
+
+```js
+// state.cjs
+const state = { count: 0 };
+
+exports.state = state;
+exports.increment = function () {
+  state.count++;
+};
+```
+
+```js
+const { state, increment } = require('./state.cjs');
+increment();
+state.count; // 1：对象是引用共享
+```
+
+**易错点：**
+
+- `require` 是同步的，会阻塞当前线程；在 Node 启动阶段读本地文件没问题，在浏览器里直接跑就会卡住主线程。
+- 缓存键是解析后的绝对路径，不是字符串 `'./config'`；不同相对路径指向同一文件时仍然命中同一份缓存。
+- 模块执行失败不会留下缓存，下次 require 会重新执行。
+- `require` 可以出现在函数体内，所以依赖关系是运行时才确定的，静态分析很难做全。
+
+**追问：CommonJS 的模块是单例吗？** 在同一个进程、同一份缓存下是。所有 require 同一个文件的代码共享同一个 `module.exports` 对象；这也是很多库用模块级变量做全局状态的原因，也是测试时要清缓存的原因。
+
+## Q3 · module.exports 和 exports 有什么区别，为什么 exports 重新赋值就失效
+
+> **面试官：** `exports` 和 `module.exports` 是同一个东西吗？为什么 `exports = { a: 1 }` 导不出去？什么时候用哪一个？
+
+**先给结论。** `exports` 只是模块包装函数的一个参数，初始指向 `module.exports`；`require` 返回的永远是 `module.exports`。给 `exports` 重新赋值只会让这个局部变量指向新对象，切断它和 `module.exports` 的联系，所以导不出去。
+
+```js
+// 有效：给同一个对象加属性
+exports.a = 1;
+
+// 有效：直接替换 module.exports
+module.exports = { b: 2 };
+
+// 无效：exports 被重新赋值，module.exports 没有变
+exports = { c: 3 };
+```
+
+可以用几行代码模拟 Node 的行为：
+
+```js
+const module = { exports: {} };
+let exports = module.exports;
+
+// 模块代码在这里执行
+exports = { c: 3 }; // 只改了局部变量
+
+module.exports; // {}，require 返回的仍然是它
+```
+
+**三种常见写法：**
+
+```js
+// 1. 逐个挂属性，适合导出多个命名成员
+exports.readFile = readFile;
+exports.writeFile = writeFile;
+
+// 2. 整体替换，适合默认导出一个函数或类
+module.exports = createApp;
+
+// 3. 既要有默认导出，又要挂附属属性
+module.exports = createApp;
+module.exports.version = '1.0.0';
+```
+
+**为什么很多人写 `exports = module.exports = {}`。** 赋值从右往左执行：先把 `module.exports` 指向新对象，再让 `exports` 也指向它。这样后面的 `exports.x = ...` 才有效。但这种写法容易掩盖问题，更推荐统一用 `module.exports`，或者统一用 `exports.x`，不要混着改引用。
+
+**追问：`module.exports` 能导出原始值吗？** 能。`module.exports = 42` 之后，`require` 返回的就是 42；但原始值上挂不了属性，也无法再通过 `exports.x` 扩展。ESM 导入这种模块时，`default` 通常就是 42。
+
+**追问：为什么不能在模块顶层直接写 `exports = module.exports = ...` 之外的花活？** 因为 `exports` 只是参数，不是关键字。函数参数被重新赋值后，包装函数外部持有的 `module.exports` 不会跟着变，这一点和普通 JavaScript 参数传递完全一致。
+
+## Q4 · ESM 的 import / export 为什么必须写在顶层，静态结构意味着什么
+
+> **面试官：** ESM 和 CommonJS 最大的区别是什么？为什么 import 不能写在 if 里？import 会被提升吗？
+
+**面试官在考什么：** 你能不能说清「静态结构」不是一句口号，而是指依赖图在代码执行前就已经确定。
+
+**先给结论。** `import` / `export` 是模块语法的一部分，只能出现在模块顶层；引擎在求值之前就会扫描它们、建立依赖图并链接绑定。依赖先于当前模块执行，import 声明会被提升，所以写在第几行不影响结果。需要条件加载或运行时拼路径时，用 `import()`。
+
+```js
+console.log('entry body');
+
+import { answer } from './answer.mjs';
+
+console.log(answer);
+```
+
+虽然 import 写在中间，执行顺序仍然是：先执行 `answer.mjs` 的模块体，再回到当前模块，从第一行开始执行。**import 声明提升的是依赖关系，不是把绑定提前到可以越过 TDZ 使用。**
+
+**静态结构带来三件事：**
+
+1. **依赖图提前确定。** 打包器不用执行代码就知道模块之间谁依赖谁，因此可以做代码分割、预加载和 tree shaking。
+2. **导出名可以提前校验。** 导入了不存在的命名导出，会在链接阶段报错，而不是等运行到那一行才暴露。
+3. **循环依赖可以用绑定处理。** 不需要像 CommonJS 那样把半成品 `module.exports` 递来递去，具体在 Q6 展开。
+
+**静态不等于「有个单独的编译步骤」。** 对引擎来说，这是解析与链接阶段；对打包器来说，才是构建期分析。面试里说「编译时确定」可以，但要补一句：真正的代码求值仍然在运行时，`import()` 也是运行时行为。
+
+**ESM 的模块求值顺序：**
+
+<Flow>
+<FlowStep title="① 解析">扫描 import / export，记录依赖列表和导出名，不执行模块代码。</FlowStep>
+<FlowStep title="② 链接">递归加载依赖，检查导出是否存在，建立跨模块绑定。</FlowStep>
+<FlowStep title="③ 初始化">创建绑定；函数声明此时已可用，let / const 进入暂时性死区。</FlowStep>
+<FlowStep title="④ 求值">依赖先于入口执行；遇到顶层 await 就挂起，等待它的模块继续排队。</FlowStep>
+</Flow>
+
+**导入的绑定是只读视图：**
+
+```js
+import { count } from './counter.mjs';
+
+count = 1; // TypeError: Assignment to constant variable
+```
+
+导入方不能给绑定赋值，但导出方可以改；导入方看到的是导出方绑定的实时值（Q5 详述）。
+
+**顶层 await 是 ESM 独有的能力：**
+
+```js
+const response = await fetch('/api/config');
+export const config = await response.json();
+```
+
+它会让当前模块变成异步模块：导入它的模块会等待它完成。代价是 `require()` 不能加载含顶层 await 的 ESM，浏览器和打包器也需要目标环境支持。
+
+**浏览器里的 ESM 还有几条硬约束：**
+
+- 必须用 `<script type="module">` 加载；模块脚本默认 defer，且自动严格模式，顶层 `this` 是 `undefined`。
+- 相对路径必须写 `./` 或 `../`；裸包名 `lodash` 浏览器不认识，需要 import map 或打包器。
+- 服务器必须返回 JavaScript MIME 类型；跨域模块请求要满足 CORS。
+- 每个模块只会执行一次，重复导入共享同一份模块实例。
+
+**追问：import 能写在函数里吗？** 不能，静态 `import` 只能出现在模块顶层。函数内、if 内、事件回调里要用 `import()`，它返回 Promise，可以条件执行，也可以拼路径。
+
+## Q5 · ESM 的实时绑定和 CommonJS 的值拷贝，差在哪
+
+> **面试官：** 为什么 ESM 导入的变量能跟着导出方变化，CommonJS 却不行？`export default` 也是实时的吗？
+
+**先给结论。** ESM 导出的是**绑定**，导入方拿到的是一个只读的实时视图：导出方重新赋值，导入方读到新值。CommonJS 导出的是**值**：`require` 那一刻把 `module.exports` 交出去，原始值被拷贝，对象只是共享引用，模块内部变量之后怎么变，导入方不会自动感知。
+
+**同一个计数器，两种写法：**
+
+```js
+// counter.mjs
+export let count = 0;
+
+export function increment() {
+  count++;
+}
+```
+
+```js
+// main.mjs
+import { count, increment } from './counter.mjs';
+
+increment();
+console.log(count); // 1，实时绑定
+```
+
+CommonJS 版本：
+
+```js
+// counter.cjs
+let count = 0;
+
+exports.count = count;
+exports.increment = function () {
+  count++;
+};
+```
+
+```js
+// main.cjs
+const { count, increment } = require('./counter.cjs');
+
+increment();
+console.log(count); // 0，require / 解构时拷贝的就是 0
+```
+
+差异不在「语法好不好看」，而在**导出的是变量的容器还是变量的值**。ESM 的导入绑定指向导出模块里的那个变量本身；CommonJS 的 `exports.count` 只是导出对象上的一个属性，模块内部的 `count` 和它早就没有关系了。
+
+**`export default` 有一个容易踩的例外。** 下面两种写法看起来一样，实时性不同：
+
+```js
+// a.mjs：导出的是求值那一刻的值，不是到 count 的实时绑定
+let count = 0;
+export default count;
+count++;
+```
+
+```js
+// b.mjs：导出的是 count 这个绑定，后续变化可被看到
+let count = 0;
+export { count as default };
+count++;
+```
+
+第一种写法导入方看到 0；第二种写法导入方看到 1。`export default 表达式` 创建的是一个名为 `default` 的新绑定，初始化一次；`export { x as default }` 才是把已有绑定挂到 `default` 上。
+
+**Babel / TypeScript 怎么在 CommonJS 里模拟实时绑定。** 它们不会真的改变 CJS 的值语义，而是用 getter 把导出属性代理回模块内部变量：
+
+```js
+Object.defineProperty(exports, 'count', {
+  enumerable: true,
+  get: function () {
+    return count;
+  },
+});
+
+exports.__esModule = true;
+```
+
+这也是 `__esModule` 的来历：它是转译器之间的约定，用来标记「这个 CommonJS 对象其实是从 ESM 转过来的」，方便默认导入的互操作。它不是 ECMAScript 规范的一部分，Node 原生 ESM 导入 CJS 时也不靠它判断。
+
+**易错点：**
+
+- `import { count }` 不是解构赋值，`count` 是实时绑定；但 `const { count } = await import('./counter.mjs')` 是解构，拿到的是当时的值。
+- 导入方不能直接改绑定；要改只能调用导出方暴露的函数。
+- `export default foo` 不会跟着 `foo` 后续重新赋值而变化；需要实时性就用命名导出或 `export { foo as default }`。
+- 打包器把 ESM 转成 CJS 后，实时绑定通常靠 getter 模拟，调试时看到的 `exports.count` 可能不是你写的那个变量。
+
+**追问：ESM 的实时绑定会不会让内存泄漏？** 绑定本身只是对模块变量的引用，模块实例又会被缓存，所以只要模块还在，导出方和导入方就共享同一份状态。真正需要注意的是模块级可变状态本身——它会让测试之间互相污染，和绑定机制无关。
+
+## Q6 · 循环依赖：为什么 CommonJS 可能拿到 undefined，ESM 却可能报 TDZ
+
+> **面试官：** 两个模块互相 require / import 会发生什么？为什么 CommonJS 有时能跑，ESM 有时直接报错？
+
+**先给结论。** CommonJS 在循环中返回的是**已经执行到那一行为止的 `module.exports`**，所以可能拿到 `undefined` 或半成品对象，但不一定报错。ESM 先链接后求值，导入的是实时绑定：函数声明在初始化阶段就可用，`let` / `const` 在求值前访问会进入暂时性死区（TDZ）并抛 `ReferenceError`。
+
+**CommonJS 的经典循环：**
+
+```js
+// a.cjs
+exports.done = false;
+
+const b = require('./b.cjs');
+console.log('a 看到 b.done =', b.done);
+
+exports.done = true;
+console.log('a 执行完毕');
+```
+
+```js
+// b.cjs
+exports.done = false;
+
+const a = require('./a.cjs');
+console.log('b 看到 a.done =', a.done); // false
+
+exports.done = true;
+console.log('b 执行完毕');
+```
+
+执行 `node a.cjs` 时，顺序是：
+
+1. `a.cjs` 开始执行，先把 `exports.done` 设为 `false`。
+2. `a.cjs` require `b.cjs`，`b.cjs` 开始执行。
+3. `b.cjs` require `a.cjs`，命中缓存，拿到 `a.cjs` 当前的 `module.exports`——此时 `done` 还是 `false`。
+4. `b.cjs` 执行完，`a.cjs` 拿到 `b` 的完整导出，继续把 `done` 改成 `true`。
+
+所以 `b` 看到的是 `a` 的半成品。如果 `b` 在循环发生时解构了 `a` 的原始值，之后 `a` 再改也不会同步：
+
+```js
+// b.cjs
+const { done } = require('./a.cjs');
+exports.readDone = () => done; // 永远是 false
+```
+
+如果保留的是对象引用，并且在 `a` 执行完之后再读属性，就能看到最终值：
+
+```js
+// b.cjs
+const a = require('./a.cjs');
+exports.readDone = () => a.done; // a 执行完后是 true
+```
+
+**ESM 的同一个循环：**
+
+```js
+// a.mjs
+import { b } from './b.mjs';
+
+export const a = 'a';
+console.log('a 看到 b =', b);
+```
+
+```js
+// b.mjs
+import { a } from './a.mjs';
+
+export const b = 'b';
+console.log('b 看到 a =', a); // ReferenceError: Cannot access 'a' before initialization
+```
+
+ESM 不会把 `a.mjs` 的半成品对象交给 `b.mjs`。链接阶段已经建立了 `b` 对 `a` 的绑定，但 `a` 的 `const` 还没求值，处在 TDZ；`b` 在顶层立刻读取，就抛错。
+
+把读取推迟到函数里，通常就能跑：
+
+```js
+// b.mjs
+import { a } from './a.mjs';
+
+export const b = 'b';
+export function readA() {
+  return a; // 调用时 a 已经初始化
+}
+```
+
+函数声明在初始化阶段就已经可用，所以在循环里通常比 `const` 更安全：
+
+```js
+// a.mjs
+import { hello } from './b.mjs';
+
+export function greet() {
+  return 'hello from a';
+}
+
+console.log(hello()); // 可以执行，greet 在初始化阶段已可用
+```
+
+```js
+// b.mjs
+import { greet } from './a.mjs';
+
+export function hello() {
+  return greet();
+}
+```
+
+**两种模型的对照：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:20%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>CommonJS</th><th>ES Module</th></tr></thead>
+<tbody>
+<tr><td>循环时拿到什么</td><td>已经执行的 module.exports 快照</td><td>已建立的实时绑定，未初始化的 let / const 在 TDZ</td></tr>
+<tr><td>是否报错</td><td>通常不报错，可能拿到 undefined</td><td>访问 TDZ 绑定会抛 ReferenceError</td></tr>
+<tr><td>函数声明</td><td>取决于模块执行到哪一步</td><td>初始化阶段已可用，循环中通常能调用</td></tr>
+<tr><td>典型修复</td><td>延迟 require、在函数内 require、拆分模块</td><td>延迟访问、把读取放进函数、拆分模块</td></tr>
+</tbody>
+</table>
+</Table>
+
+**面试里的正确态度：** 能说清两种模型的行为，但不要把循环依赖当成可用技巧。它让初始化顺序变得难以推理，最好的修复通常是抽出一个不依赖双方的第三个模块，或者把共享状态下沉。
+
+## Q7 · Node 里 CommonJS 和 ESM 怎么互操作，type、exports、default 各管什么
+
+> **面试官：** Node 怎么判断一个文件是 CJS 还是 ESM？ESM 能 import CommonJS 吗？CommonJS 能 require ESM 吗？双包问题是什么？
+
+**先给结论。** Node 用**文件扩展名 + 最近的 package.json `type` 字段**判断模块类型：`.mjs` 永远是 ESM，`.cjs` 永远是 CJS，`.js` 看 `type` 是 `module` 还是 `commonjs`。ESM 导入 CJS 时，`default` 就是 `module.exports`，命名导出依赖静态分析；CJS `require()` ESM 在 Node 20.19+ / 22.12+ 已默认支持，但含顶层 await 的模块不行。双包危险指的是同一个包被 CJS 和 ESM 两条路径各加载一次，模块级状态出现两份。
+
+**文件与包类型的判定规则：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:22%" /><col /></colgroup>
+<thead><tr><th>写法</th><th>判定结果</th></tr></thead>
+<tbody>
+<tr><td><code>.mjs</code></td><td>总是 ES Module，和 package.json 无关。</td></tr>
+<tr><td><code>.cjs</code></td><td>总是 CommonJS，和 package.json 无关。</td></tr>
+<tr><td><code>.js</code></td><td>看最近的 package.json：<code>"type": "module"</code> 是 ESM，缺省或 <code>"commonjs"</code> 是 CJS。</td></tr>
+<tr><td><code>package.json</code> 的 <code>exports</code></td><td>控制包对外暴露的入口和条件分支，<code>import</code> / <code>require</code> 可以指向不同文件。</td></tr>
+</tbody>
+</table>
+</Table>
+
+一个同时提供两种格式的包通常会这样写：
+
+```json
+{
+  "name": "my-lib",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    }
+  }
+}
+```
+
+条件按对象顺序匹配，所以 `import` / `require` 要放在 `default` 前面；`default` 是兜底。老的 `main` 字段仍然被保留用于不支持 `exports` 的旧工具，但新包应该以 `exports` 为准。
+
+**ESM 导入 CommonJS：**
+
+```js
+// cjs-lib.cjs
+module.exports = {
+  name: 'cjs-lib',
+  readFile: function () {},
+};
+```
+
+```js
+import pkg from 'cjs-lib'; // default 就是 module.exports
+import { readFile } from 'cjs-lib'; // 命名导出靠静态分析
+
+console.log(pkg.name); // 'cjs-lib'
+```
+
+`default` 的映射是稳定的：CJS 没有 `default` 导出，Node 就把整个 `module.exports` 当作默认导出。命名导出则依赖 cjs-module-lexer 对源码做模式匹配，像 `module.exports.foo = ...`、`exports.foo = ...` 这种静态写法能识别；运行时动态拼出来的属性识别不了，只能走默认导出。
+
+**CommonJS require ESM：**
+
+```js
+// esm-module.mjs
+export const named = 'named';
+export default 'default';
+```
+
+```js
+// main.cjs
+const esm = require('./esm-module.mjs'); // Node 20.19+ / 22.12+
+
+console.log(esm.named); // 'named'
+console.log(esm.default); // 'default'
+```
+
+返回的是模块命名空间对象，不是 `module.exports`。两个限制要记住：
+
+- 模块图里只要有顶层 await，require 就会抛 `ERR_REQUIRE_ASYNC_MODULE`；这种情况只能用 `import()` 或改成 ESM。
+- 这是较新版本 Node 的能力；老版本需要 `--experimental-require-module`。
+
+**`__dirname`、`__filename` 在 ESM 里没有。** 因为 ESM 面向浏览器和 URL，不假设文件系统路径。替代写法：
+
+```js
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 新版 Node 可以直接用
+console.log(import.meta.dirname);
+```
+
+**双包危险（dual package hazard）。** 假设同一个包同时提供 `dist/index.js`（ESM）和 `dist/index.cjs`（CJS）。应用里一部分代码用 `import`，另一部分用 `require`，Node 会把两个文件当成两个独立模块执行：
+
+```js
+// 两份模块级状态，互不相通
+let cache = new Map();
+```
+
+如果这个包本身是无状态的工具函数，问题不大；如果它有单例、连接池、全局配置或缓存，就会出现「我在这边设置的值，那边读不到」。常见解法有三种：
+
+1. **只发 ESM**：新项目优先，简单直接，但会排除老 CJS 使用者。
+2. **CJS 核心 + ESM 包装**：ESM 入口只是 `import` 并重导出 CJS 核心，保证只有一份实现和一份状态。
+3. **避免模块级可变状态**：把状态交给调用方注入，让双实例在语义上无差别。
+
+**追问：`__esModule` 到底谁在用？** Babel、TypeScript 和不少打包器在把 ESM 转成 CJS 时会加 `__esModule: true`，用来告诉互操作层「这个对象的 `default` 是转译出来的，不要当成整个 `module.exports`」。Node 原生 ESM 导入 CJS 不依赖这个标记；所以同一段代码在 Node 和打包器里的 `default` 行为偶尔会不一样，跨环境库要特别注意。
+
+## Q8 · tree shaking、动态 import 与工程选型：ESM 为什么更容易被优化
+
+> **面试官：** 为什么 ESM 能做 tree shaking，CommonJS 很难？动态 import 和静态 import 有什么区别？新项目应该选哪种模块格式？
+
+**先给结论。** tree shaking 的前提是**打包器能在不执行代码的情况下确定依赖和导出使用情况**。ESM 的 import / export 是静态声明，导出名固定，所以可以安全地删除未使用导出；CommonJS 的 `require` 是函数调用，路径可以动态拼，`module.exports` 可以被运行时改写，打包器只能保守处理。动态 `import()` 返回 Promise，适合按需加载和代码分割，静态 `import` 则在加载阶段就确定依赖。
+
+**ESM 为什么可 tree shaking：**
+
+```js
+// utils.js
+export function used() {
+  return 'used';
+}
+
+export function unused() {
+  return 'unused';
+}
+```
+
+```js
+// main.js
+import { used } from './utils.js';
+
+console.log(used());
+```
+
+打包器看到 `unused` 没有被任何模块导入，且模块没有副作用，就可以把它删掉。Rollup、webpack、esbuild、Vite 都建立在这套静态分析上。
+
+**CommonJS 为什么难：**
+
+```js
+const name = process.env.UTIL;
+const util = require('./utils/' + name); // 路径运行时才确定
+module.exports = util[process.env.KEY]; // 导出内容运行时才确定
+```
+
+`require` 可以出现在任意表达式里，参数可以是变量，`module.exports` 可以被重新赋值，导出属性也可以在运行时增删。打包器无法在不执行代码的情况下确定哪些导出会被用到，只能把整个模块或整个包保留下来。
+
+**ESM 也不是自动就能摇干净。** 还需要满足这些条件：
+
+- 使用 ESM 语法，而不是被 Babel 转成 CJS 后再交给打包器。
+- 模块没有顶层副作用，或者包在 `package.json` 里正确声明了 `sideEffects`。
+- 导出确实没有被使用；`import * as ns` 之后如果只做静态属性访问，通常还能分析，`ns[key]` 这种动态访问就不行。
+- 构建处于生产模式，压缩器会做 dead code elimination。
+
+```json
+{
+  "sideEffects": false
+}
+```
+
+`sideEffects: false` 是在告诉打包器「这个包的所有模块都可以安全删除未使用部分」。如果包里有注册全局变量、注入 CSS、修改原型等副作用，应该用数组精确列出有副作用的文件，而不是一刀切写 `false`。
+
+**动态 import 的定位：**
+
+```js
+button.addEventListener('click', async () => {
+  const { openDialog } = await import('./dialog.js');
+  openDialog();
+});
+```
+
+它和静态 import 的差别：
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:20%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>静态 import</th><th>动态 import()</th></tr></thead>
+<tbody>
+<tr><td>位置</td><td>模块顶层</td><td>任意表达式位置</td></tr>
+<tr><td>时机</td><td>加载阶段确定依赖，求值前链接</td><td>运行到这一行才加载</td></tr>
+<tr><td>返回值</td><td>绑定，不是 Promise</td><td>Promise，解析为模块命名空间</td></tr>
+<tr><td>打包结果</td><td>通常进入当前 chunk</td><td>通常拆成独立 chunk，按需请求</td></tr>
+<tr><td>典型用途</td><td>核心依赖、首屏必需代码</td><td>弹窗、编辑器、语言包、低优先级功能</td></tr>
+</tbody>
+</table>
+</Table>
+
+动态 import 在 CommonJS 里也能用，因为它是表达式而不是声明：
+
+```js
+async function loadPlugin(name) {
+  const plugin = await import(`./plugins/${name}.js`);
+  return plugin.default;
+}
+```
+
+注意路径拼接会让打包器无法精确知道要加载哪些文件，通常会生成一个上下文模块，把匹配到的文件都打进来；如果可能，尽量用有限的静态映射表。
+
+**工程选型可以这样回答：**
+
+- **新项目、新库**：优先 ESM，`package.json` 写 `"type": "module"`，Node 和浏览器都用同一套语法。
+- **需要兼容老 Node / 老构建链的库**：可以双格式发布，但要处理双包状态问题；更稳的是 CJS 核心加 ESM 包装。
+- **存量 CommonJS 项目**：不必为了「先进」整体重写；可以先从新文件、新包开始用 ESM，逐步迁移，必要时用 `require(esm)` 过渡。
+- **浏览器原生 ESM**：适合现代浏览器和简单站点；裸包名、兼容旧浏览器、生产优化仍然需要打包器或 import map。
+- **性能优化**：先确认构建产物真的用了 ESM 且开启了 tree shaking，再谈删代码；只改语法不配置 `sideEffects`，经常摇不掉多少。
+
+## Q9 · export *、re-export 和 namespace import：哪些写法会踩坑
+
+> **面试官：** `export * from './a.js'` 和 `export { x } from './a.js'` 有什么区别？两个模块有同名导出会怎样？default 和命名导出应该怎么选？
+
+**面试官在考什么：** 你不仅会写 import / export，还知道模块的「导出表」是怎么组合出来的，以及为什么很多团队偏爱命名导出。
+
+**先给结论。** `export *` 会把目标模块的**命名导出**全部转发出去，但**不会转发 default**；`export { x } from` 是显式挑选，也可以把 default 改名后转发。多个 `export *` 出现同名导出时，这个名字会变成歧义，导入方在链接阶段报错，而不是随便选一个。工程上优先命名导出：名字稳定、可搜索、可静态分析；default 适合「一个模块只有一个主导出」的场景，但要接受导入方可以随意改名。
+
+**四种再导出写法：**
+
+```js
+// 全部命名导出，但不包括 default
+export * from './utils.js';
+
+// 显式挑选，可以重命名
+export { readFile, writeFile as write } from './fs.js';
+
+// 把 default 转成命名导出，或者保持 default
+export { default as Modal } from './modal.js';
+export { default } from './modal.js';
+
+// 把整个模块挂成一个命名空间
+export * as utils from './utils.js';
+```
+
+`export *` 不转发 default 是规范行为，不是打包器偷懒。需要 default 时，必须显式写 `export { default } from ...` 或 `export { default as X } from ...`。
+
+**同名冲突会怎样。** 假设两个模块都导出 `parse`：
+
+```js
+export * from './json-parser.js'; // 有 parse
+export * from './yaml-parser.js'; // 也有 parse
+```
+
+这两个 `parse` 不会后者覆盖前者，而是让 `parse` 在当前模块的导出表里变成**歧义名称**；导入方写 `import { parse } from './parsers.js'` 时，链接阶段会直接报错。如果当前模块自己显式导出了 `parse`，显式导出优先，歧义只发生在多个星号导出之间。解决冲突的方式是显式重命名：
+
+```js
+export { parse as parseJSON } from './json-parser.js';
+export { parse as parseYAML } from './yaml-parser.js';
+```
+
+**namespace import 是只读的实时视图，不是普通对象：**
+
+```js
+import * as ns from './counter.mjs';
+
+ns.count; // 实时值
+ns.count = 1; // TypeError，只读
+```
+
+但它和解构不一样：`const { count } = ns` 会把当前值拷贝到局部变量，之后不再跟着导出方变化；要保留实时性，就用 `ns.count` 或命名导入。
+
+**default 还是命名导出。** 两者的取舍：
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:18%" /><col style="width:38%" /><col /></colgroup>
+<thead><tr><th>维度</th><th>default 导出</th><th>命名导出</th></tr></thead>
+<tbody>
+<tr><td>导入写法</td><td>导入方可以任意命名</td><td>名字由导出方固定，可搜索、可重构</td></tr>
+<tr><td>静态分析</td><td>名字不固定，重导出和 tree shaking 更容易变模糊</td><td>导出名固定，打包器分析更精确</td></tr>
+<tr><td>再导出</td><td>需要显式转成命名或再次 default</td><td>可以直接 export * 或逐个转发</td></tr>
+<tr><td>适用场景</td><td>一个模块只有一个主导出，如组件、类</td><td>工具库、多成员模块、公共 API</td></tr>
+</tbody>
+</table>
+</Table>
+
+**barrel 文件的代价。** 很多项目用 `index.js` 做统一出口：
+
+```js
+// components/index.js
+export { Button } from './Button.js';
+export { Modal } from './Modal.js';
+export * from './utils.js';
+```
+
+好处是导入路径短；代价是依赖图变大、循环依赖更容易出现、tree shaking 可能变差。现代打包器能处理大部分情况，但如果发现某个 barrel 把整个组件库拖进首屏，优先检查它是否被 `export *` 和副作用放大。
+
+**追问：`export { x } from './a.js'` 会在当前模块创建局部变量 x 吗？** 不会。它只做转发，当前模块里没有 `x` 这个局部绑定；要用 `x` 必须先 import。`export * from` 同理，不会把名字带进当前作用域。
+
+**追问：`export default` 后面可以跟匿名函数吗？** 可以，但函数名会变成 `default`，堆栈和调试信息更差；给函数或类起个名字更好。`export default function foo() {}` 会同时创建局部绑定 `foo` 和默认导出。
+
+## Q10 · 模块解析：为什么 ESM 不能省略扩展名，exports 和 import map 各管什么
+
+> **面试官：** 为什么 Node 的 ESM 必须写 `.js`？为什么不能导入目录？`package.json` 的 `exports` 和浏览器的 import map 分别解决什么问题？
+
+**面试官在考什么：** 你知道模块说明符（specifier）是怎么变成真实文件的，以及 CommonJS、Node ESM、浏览器、打包器四套解析规则的差异。
+
+**先给结论。** CommonJS 的 `require` 是一套运行时解析算法：补扩展名、找目录 index、沿 node_modules 向上找；Node 的 ESM 向 URL 语义靠拢，相对路径必须写全扩展名，目录导入不支持，包入口由 `exports` 字段决定。浏览器只认 URL 和 import map，裸包名必须映射；打包器则实现自己的解析规则，通常比原生更宽松。
+
+**CommonJS 的解析步骤：**
+
+```js
+require('./foo');
+// 依次尝试 ./foo.js、./foo.json、./foo.node
+// 再尝试 ./foo/package.json 的 main
+// 再尝试 ./foo/index.js、index.json、index.node
+```
+
+`require('lodash')` 则从当前目录开始逐级向上找 `node_modules/lodash`。这套规则很灵活，但每一步都发生在运行时，打包器只能模拟，无法完全静态确定。
+
+**Node ESM 的解析规则：**
+
+```js
+import './foo.js'; // 必须写扩展名
+import './foo';    // 报 ERR_MODULE_NOT_FOUND
+import './dir';    // 目录导入不支持
+import 'lodash';   // 包名，走 node_modules + exports
+```
+
+ESM 不猜扩展名、不补目录 index，原因和浏览器一致：一个 specifier 应该对应一个明确的 URL。少一层隐式规则，跨环境行为就更可预测。代价是从 CJS 迁移时，所有省略扩展名的相对导入都要补全。
+
+**package.json 的 exports 是包的公共 API：**
+
+```json
+{
+  "name": "my-lib",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./utils": "./dist/utils.js",
+    "./features/*": "./dist/features/*.js"
+  }
+}
+```
+
+它既是入口映射，也是封装边界：没有列在 `exports` 里的子路径，外部不能通过包名导入。以前 `require('pkg/dist/internal.js')` 能直接摸到内部文件，有了 `exports` 之后这种写法会被拒绝。`exports` 同时支持条件分支（`import` / `require` / `node` / `default`），这也是双格式包的标准做法。
+
+**浏览器只认 URL 和 import map：**
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "lodash": "/vendor/lodash-es/lodash.js",
+    "app/": "/src/"
+  }
+}
+</script>
+```
+
+```js
+import { debounce } from 'lodash'; // 通过 import map 映射到 URL
+import { init } from 'app/main.js';
+```
+
+浏览器不会去 node_modules 里找包，也不会自动补扩展名；import map 负责把裸包名或前缀映射到实际 URL。它必须在任何模块脚本之前声明，否则映射不生效。
+
+**四套解析规则对照：**
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:16%" /><col style="width:26%" /><col style="width:22%" /><col /></colgroup>
+<thead><tr><th>环境</th><th>相对路径</th><th>裸包名</th><th>入口与封装</th></tr></thead>
+<tbody>
+<tr><td>CommonJS</td><td>自动补 .js / .json / .node，支持目录 index</td><td>沿 node_modules 向上查找</td><td>package.json 的 main；没有封装边界</td></tr>
+<tr><td>Node ESM</td><td>必须写完整扩展名，不支持目录导入</td><td>node_modules + exports</td><td>exports 决定入口和可见子路径</td></tr>
+<tr><td>浏览器 ESM</td><td>必须是 URL，不补扩展名</td><td>必须经 import map 映射</td><td>没有 package.json 概念</td></tr>
+<tr><td>打包器</td><td>通常允许省略扩展名、配置别名</td><td>node_modules + 自身解析规则</td><td>优先 exports，兼容 main / module / browser</td></tr>
+</tbody>
+</table>
+</Table>
+
+**为什么打包器里可以省略扩展名。** Vite、Rollup、webpack 都有自己的 resolve 配置和扩展名列表，在构建期把 specifier 解析成文件；这不代表原生 ESM 也支持。把代码从打包器迁到原生 Node ESM 或浏览器时，隐式解析会立刻暴露。TypeScript 的 `moduleResolution` 也要和运行时对齐：`bundler` 适合打包器，`node16` / `nodenext` 更接近 Node 的真实行为。
+
+**`import.meta.resolve` 和 `require.resolve`：**
+
+```js
+require.resolve('./foo'); // CJS：返回绝对路径
+import.meta.resolve('./foo.js'); // Node ESM：返回 URL 字符串
+```
+
+**追问：package.json 的 `module` 字段是什么？** 它是打包器约定，不是 Node 标准。webpack、Rollup 等会用它选择 ESM 入口；`main` 是更老的 CJS 入口；`exports` 是现代标准，存在时优先级高于 `main`。
+
+**追问：`exports` 里没列出的文件真的完全访问不到吗？** 通过包名解析时访问不到，这是封装的目的；但用绝对路径直接 require 文件仍然可以绕过。`exports` 约束的是包名到子路径的映射，不是文件系统权限。
+
+## 一页速查
+
+<Table>
+<table style="table-layout:fixed">
+<colgroup><col style="width:34%" /><col /></colgroup>
+<thead><tr><th>问题</th><th>一句话结论</th></tr></thead>
+<tbody>
+<tr><td>模块化解决什么</td><td>作用域隔离、依赖声明、加载顺序、可静态分析的导出。</td></tr>
+<tr><td>IIFE 的贡献</td><td>用函数作用域隔离变量，但依赖仍靠人工约定。</td></tr>
+<tr><td>AMD 与 CMD</td><td>AMD 依赖前置、先执行；CMD 依赖就近、用到时取。</td></tr>
+<tr><td>UMD</td><td>运行时嗅探环境，同时兼容 AMD、CJS 和全局变量。</td></tr>
+<tr><td>require 是什么</td><td>Node 注入的普通函数，同步执行，返回 module.exports。</td></tr>
+<tr><td>exports 与 module.exports</td><td>exports 初始指向 module.exports；重新赋值 exports 会断开链接。</td></tr>
+<tr><td>CommonJS 导出</td><td>值拷贝或对象引用，不是实时绑定。</td></tr>
+<tr><td>ESM import / export</td><td>顶层静态声明，先链接后求值，导入是只读实时绑定。</td></tr>
+<tr><td>循环依赖</td><td>CJS 可能拿到半成品；ESM 可能撞上 TDZ，函数声明通常可用。</td></tr>
+<tr><td>Node 模块判定</td><td>.mjs 恒 ESM，.cjs 恒 CJS，.js 看最近 package.json 的 type。</td></tr>
+<tr><td>ESM 导入 CJS</td><td>default 是 module.exports，命名导出靠静态分析。</td></tr>
+<tr><td>CJS require ESM</td><td>Node 20.19+ / 22.12+ 支持；含顶层 await 会报错。</td></tr>
+<tr><td>tree shaking</td><td>依赖 ESM 静态结构、无副作用声明和生产模式压缩。</td></tr>
+<tr><td>动态 import</td><td>返回 Promise，可条件加载，通常拆成独立 chunk。</td></tr>
+<tr><td>export *</td><td>只转发命名导出，不转发 default；多个星号同名会歧义。</td></tr>
+<tr><td>模块解析</td><td>CJS 补扩展名和目录；Node ESM 与浏览器要求显式路径，包入口看 exports / import map。</td></tr>
+</tbody>
+</table>
+</Table>
+
+**30 秒版本的口头回答：**
+
+> JavaScript 模块化从全局脚本、IIFE、AMD / CMD 一路演进到 ESM，核心是在解决作用域、依赖声明和加载顺序。CommonJS 的 require 是运行时同步函数调用，导出的是 module.exports 的值，原始值拷贝、对象共享引用，所以不是实时绑定；ESM 的 import / export 是顶层静态声明，先建立依赖图和绑定，再求值，导入方拿到的是只读实时绑定。循环依赖里 CJS 可能拿到半成品，ESM 可能因为 TDZ 报错。Node 用扩展名和 package.json 的 type 判断模块类型；ESM 导入 CJS 时 default 是 module.exports，CJS require ESM 在新版本 Node 可用但受顶层 await 限制。再导出时 export * 不转发 default；模块解析上 CJS 会补扩展名和目录，Node ESM 与浏览器要求显式路径，包入口分别看 exports 和 import map。工程上 ESM 的静态结构更适合 tree shaking 和代码分割。
+
+## 面试官可能继续追问
+
+<Disclosure title="为什么 CommonJS 的 require 是同步的，浏览器却不能用？">
+	CommonJS 假设模块在本地文件系统里，同步读取足够快；浏览器的模块要走网络，同步等待会阻塞主线程和渲染。浏览器原生的模块方案因此选择异步加载加静态依赖图，CommonJS 代码则需要打包器提前合并成浏览器能执行的形式。
+</Disclosure>
+
+<Disclosure title="ESM 的 import 是异步的吗？">
+	加载和链接阶段可以异步，但模块体的求值默认是同步的；只有遇到顶层 await 时，当前模块才会挂起，依赖它的模块等待。不要把「ESM 异步」理解成每个 import 都返回 Promise，静态 import 本身没有返回值。
+</Disclosure>
+
+<Disclosure title="为什么 ESM 导入的变量不能重新赋值？">
+	导入的是导出方绑定的只读视图，所有权在导出方。允许导入方赋值会让「同一个绑定」出现两个写入者，破坏模块边界；需要修改时，应由导出方提供函数，导入方调用函数。
+</Disclosure>
+
+<Disclosure title="CommonJS 里 require 同一个模块两次，会执行两次吗？">
+	不会。第一次执行后 module.exports 被缓存，后续 require 直接返回缓存；缓存键是解析后的绝对路径。模块执行抛错时缓存会被删除，下次 require 会重新执行。测试里要重新加载模块，可以删掉 require.cache 中对应的条目。
+</Disclosure>
+
+<Disclosure title="ESM 里怎么实现条件加载？">
+	静态 import 不能写在条件里，可以用顶层 await 加动态 import：在模块顶层根据条件 await import(...)，再把结果导出。更常见的做法是把条件逻辑放进函数，调用时再 import()，避免让整个模块变成异步模块。
+</Disclosure>
+
+<Disclosure title="为什么 Babel 编译后的代码里会有 __esModule？">
+	它是 Babel / TypeScript 等转译器的互操作约定，用来标记「这个 CommonJS 对象的 default 是从 ESM 默认导出转来的」，避免默认导入被错误地当成整个 module.exports。它不是 ECMAScript 规范的一部分，Node 原生 ESM 导入 CJS 时也不依赖它。
+</Disclosure>
+
+<Disclosure title="tree shaking 对 CommonJS 完全无效吗？">
+	不是完全无效，但很有限。webpack 等工具能分析一部分静态的 require 和 exports 写法，但遇到动态路径、运行时改写 module.exports、条件 require 时只能保守保留。ESM 的静态声明可以让分析在打包阶段可靠完成，所以 tree shaking 效果通常好得多。
+</Disclosure>
+
+<Disclosure title="import map 能替代打包器吗？">
+	不能。import map 只解决「裸包名映射到哪个 URL」，不负责打包、转译、压缩、tree shaking，也不能把 CommonJS 依赖变成浏览器可执行的 ESM。它适合少量依赖的原生 ESM 站点；依赖复杂或需要兼容旧浏览器时，仍然需要打包器。
+</Disclosure>
+
+## 参考
+
+- [MDN：JavaScript 模块](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Modules)
+- [MDN：import](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/import)
+- [MDN：export](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/export)
+- [MDN：import map](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/script/type/importmap)
+- [Node.js：ECMAScript modules](https://nodejs.org/api/esm.html)
+- [Node.js：CommonJS modules](https://nodejs.org/api/modules.html)
+- [Node.js：Packages / exports](https://nodejs.org/api/packages.html)
+- [TC39：ECMAScript Modules](https://tc39.es/ecma262/multipage/ecmascript-language-scripts-and-modules.html)
+- [webpack：Tree Shaking](https://webpack.js.org/guides/tree-shaking/)
