@@ -575,7 +575,7 @@ function parseFrontmatterList(frontmatter, key) {
 		if (INVISIBLE_CHARS.test(name)) invisibleFilenames.push(name);
 
 		const source = await readFile(entry.file, 'utf8');
-		// 容忍 frontmatter 后没有换行（实测 front-end-2.md / fronted-interview.md 就是这样）
+		// 容忍 frontmatter 后没有换行（实测部分 Hexo 遗留老文章就是这样）
 		const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(source);
 		if (!match) continue;
 		const [, frontmatter, body] = match;
