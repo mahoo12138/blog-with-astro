@@ -168,6 +168,11 @@ export const prose = style({
 	margin: 0,
 	padding: '1.75rem 1rem 2.5rem',
 	color: textP1,
+	// 正文基准字号必须与下方 `${prose} p` 的 1rem 一致：
+	// 不设的话容器继承 body 的 18px，只有 <p> 被重置成 16px，列表项、引用、
+	// MDX 组件以及直接挂在容器下的裸链接仍按 18px 继承 —— 链接看起来比正文大 2px，
+	// 行内 code / button 的 em 相对字号也会随上下文跳变。一处定基准，全篇才一致。
+	fontSize: '1rem',
 	lineHeight: 1.9,
 	wordBreak: 'normal',
 	overflowWrap: 'anywhere',
@@ -203,9 +208,11 @@ globalStyle(`${prose} h1, ${prose} h2, ${prose} h3, ${prose} h4, ${prose} h5, ${
 globalStyle(`${prose} h1`, { fontSize: '1.75rem', fontWeight: 700, marginTop: '1.5em' });
 globalStyle(`${prose} h2`, { fontSize: '1.65rem', fontWeight: 700, marginTop: '1.5em' });
 globalStyle(`${prose} h3`, { fontSize: '1.35rem', fontWeight: 700, marginTop: '1.25em' });
-globalStyle(`${prose} h4`, { fontSize: '1.18rem', fontWeight: 700 });
-globalStyle(`${prose} h5`, { fontSize: '1.05rem', fontWeight: 700 });
-globalStyle(`${prose} h6`, { fontSize: '1rem', fontWeight: 700, color: textP2 });
+// h1–h3 有 marginTop，h4–h6 之前只有全局 `margin: 0 0 md`，导致四级以下标题
+// 紧贴上文、彼此之间也挤在一起；这里按层级递减补齐上间距。
+globalStyle(`${prose} h4`, { fontSize: '1.18rem', fontWeight: 700, marginTop: '1.25em' });
+globalStyle(`${prose} h5`, { fontSize: '1.05rem', fontWeight: 700, marginTop: '1.15em' });
+globalStyle(`${prose} h6`, { fontSize: '1rem', fontWeight: 700, marginTop: '1em', color: textP2 });
 
 globalStyle(`${prose} a:not([class])`, {
 	position: 'relative',
@@ -230,6 +237,11 @@ globalStyle(`${prose} blockquote`, {
 });
 
 globalStyle(`${prose} blockquote p`, { fontSize: '0.95rem', lineHeight: 1.5 });
+
+// 引用块自带 0.75rem 内边距，里面 <p> 的 1.15em 上下外边距会再叠一层，
+// 单行引用被撑成一大块；首末子元素的外边距归零，留白只由 blockquote 自己控制。
+globalStyle(`${prose} blockquote > :first-child`, { marginTop: 0 });
+globalStyle(`${prose} blockquote > :last-child`, { marginBottom: 0 });
 
 globalStyle(`${prose} img`, {
 	display: 'block',
@@ -271,10 +283,12 @@ globalStyle(`${prose} pre > code`, {
 	lineHeight: 1.65,
 });
 
+// 不要给 table 加 `display: block`：那会让 width: 100% 对内部的匿名表格失效，
+// 窄表列宽缩成内容宽度、右侧留一大片空白，边框线也只画到内容宽度。
+// 正文继承了 overflow-wrap: anywhere，超长单元格会自行折行（见桌面/移动端实测），
+// 不存在需要横向滚动的场景；保留正常 table 布局才能让列铺满阅读列并上下对齐。
 globalStyle(`${prose} table`, {
-	display: 'block',
 	width: '100%',
-	overflowX: 'auto',
 	borderCollapse: 'collapse',
 	fontSize: '0.9rem',
 });
