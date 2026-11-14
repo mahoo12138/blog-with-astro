@@ -4,7 +4,7 @@ date: 2022-03-16 19:48:43
 author: Mahoo12138
 cover: https://cdn.jsdelivr.net/gh/mahoo12138/js-css-cdn/hexo-images/cover/phone.png
 tags: 
-- 宝塔
+- 宝塔面板
 - Linux
 categories:
 - 技术教程

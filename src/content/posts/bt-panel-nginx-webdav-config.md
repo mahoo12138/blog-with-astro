@@ -3,8 +3,8 @@ title: 宝塔 nginx 配置 webdav 服务器
 date: 2023-03-01 08:18:22
 author: Mahoo12138
 tags: 
-- 宝塔
-- Webdav
+- 宝塔面板
+- WebDAV
 categories:
 - 技术教程
 ---

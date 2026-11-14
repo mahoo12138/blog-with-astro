@@ -5,7 +5,7 @@ categories:
 - 技术教程
 tags:
 - WSL
-- Vscode
+- VS Code
 ---
 
 在子系统安装完成并配置好 ssh 后，使用 Vscode Remote 连接安装 Vscode Server 时报错，报错信息如下：

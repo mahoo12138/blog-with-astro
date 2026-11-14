@@ -8,6 +8,6 @@ categories:
 tags:
 - 前端
 - ES5
-- CSS布局
-- Vuejs
+- CSS
+- Vue.js
 ---

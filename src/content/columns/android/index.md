@@ -13,6 +13,6 @@ tags:
 - Kotlin
 - Java
 - Material Design
-- adb
+- ADB
 - Gradle
 ---
