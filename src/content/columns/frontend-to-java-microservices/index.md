@@ -1,6 +1,7 @@
 ---
 title: 前端转 Java 微服务实战笔记：从零到独当一面
 description: 写给有 Web 前端经验、准备转向 Java 微服务开发与维护的读者：从系统地图、Spring 容器、网关与认证，到数据访问、Dubbo、多租户、排障、上线与性能调优的 15 篇实战笔记。
+createdAt: 2026-05-10
 order: 15
 categories:
 - 技术教程

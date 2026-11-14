@@ -1,6 +1,7 @@
 ---
 title: 'Tynel：把 TypeScript 编译成原生二进制'
 description: '一个用 TypeScript 语法书写、编译为 Go 运行时原生二进制的编译器项目：从动机与六阶段规划，到第一个能被反汇编验证的加法程序。'
+createdAt: 2026-10-23
 order: 13
 accent: '#7dd3fc'
 categories:

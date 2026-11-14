@@ -36,6 +36,8 @@ export interface ColumnBucket {
 	entry?: ColumnEntry;
 	/** 章节数，等价于 posts.length，供侧栏上下文使用 */
 	count: number;
+	/** 专栏创建日期（frontmatter createdAt，缺省时回退首章发布时间） */
+	createdAt?: Date;
 	/** 首章发布时间 */
 	startedAt?: Date;
 	/** 末章发布时间，用于在归档页表达系列的时间跨度 */
@@ -310,6 +312,9 @@ export function buildColumnBuckets(posts: BlogPost[], columns: ColumnEntry[]) {
 				posts: chapters,
 				count: chapters.length,
 				entry: column,
+				// 创建日期以 frontmatter 为准；老专栏没写时退回首章发布时间，
+				// 这样「按创建日期排序」不会因漏填一个字段就把专栏甩到最后。
+				createdAt: column.data.createdAt ?? (dates.length ? new Date(dates[0]) : undefined),
 				startedAt: dates.length ? new Date(dates[0]) : undefined,
 				updatedAt: dates.length ? new Date(dates[dates.length - 1]) : undefined,
 			};

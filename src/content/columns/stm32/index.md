@@ -1,6 +1,7 @@
 ---
 title: 'STM32 系列'
 description: 'STM32 系列学习笔记与实验合集，包含 GPIO、定时器、ADC、FSMC、DS18B20 等示例与解析。'
+createdAt: 2019-05-31
 order: 3
 accent: '#7dd3fc'
 # 原先这里有一行 icon 指向 cdn-x/placeholder@1.0.12/image/1160.png，
