@@ -25,10 +25,15 @@ export const summary = style({
 	'@container': { 'columns (max-width: 480px)': { flexDirection: 'row', alignItems: 'baseline', gap: '20px', paddingLeft: 0, borderLeft: 0 } },
 });
 globalStyle(`${summary} strong`, { marginRight: '3px', fontFamily: vars.font.mono, fontSize: '0.875rem', fontWeight: 600, color: vars.color.textStrong });
+// 三列只在宽内容区（无右栏）铺得开：容器约 992px 时每列 ~317px。
+// 进入 2 列壳（≤1180px 视口）容器降到 ~704px，回到两列；窄屏再收成一列。
 export const grid = style({
-	display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '20px',
+	display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px',
 	listStyle: 'none', margin: 0, padding: 0,
-	'@container': { 'columns (max-width: 580px)': { gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' } },
+	'@container': {
+		'columns (max-width: 900px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+		'columns (max-width: 580px)': { gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' },
+	},
 });
 export const item = style({ minWidth: 0, display: 'flex', margin: 0 });
 
