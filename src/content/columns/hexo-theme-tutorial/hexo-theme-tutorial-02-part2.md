@@ -1,24 +1,25 @@
 ---
 title: Hexo 主题开发系列教程（二）：扩展系统详解（下篇）
+description: 深入解析 Hexo 扩展系统在视图与内容层的实现。重点剖析 Generator 路由生成机制、Helper 模板辅助函数、Injector 切面注入以及 Processor、Renderer 和 Tag 扩展规范。
 date: 2025-11-22 20:52:43
 author: Mahoo12138
 order: 3
 cover: https://cdn.jsdelivr.net/gh/mahoo12138/js-css-cdn/hexo-images/cover/hexo.png
 ---
 
-
 ## 前言
 
-在[上篇教程](./hexo-theme-tutorial-02-part1.md)中，我们学习了 Console、Deployer 和 Filter 三个扩展组件。本篇将继续介绍剩余的七个扩展组件，它们更加深入地涉及页面生成、模板渲染和文件处理。
+在[上篇教程](./hexo-theme-tutorial-02-part1.md)中，我们拆解了控制流与数据加工的三大核心支柱：Console、Deployer 与 Filter。本篇（下篇）将视线移向更为关键的**页面呈现与模板渲染层**，探讨剩余的七个扩展组件。
 
-本篇内容：
-- **Generator（生成器）** - 自定义页面生成逻辑
-- **Helper（辅助函数）** - 模板工具函数
-- **Injector（注入器）** - 动态注入代码片段
-- **Migrator（迁移器）** - 数据迁移工具
-- **Processor（处理器）** - 文件处理逻辑
-- **Renderer（渲染引擎）** - 自定义渲染器
-- **Tag（标签）** - 创建自定义模板标签
+这七个扩展组件构成了 Hexo 视图组装与内容编译的完整链路：
+
+- **Generator（生成器）**：接管路由生成与页面调度，决定整站输出哪些静态路径与数据上下文；
+- **Helper（辅助函数）**：向模板环境暴露纯函数与上下文方法，解决视图层代码复用；
+- **Injector（代码注入器）**：在不破坏模板完整性的前提下，实现静态代码片段的切面注入；
+- **Migrator（迁移器）**：负责跨平台、跨博客系统的数据导入与契约格式化；
+- **Processor（处理器）**：定制物理文件的扫描过滤与前置预处理；
+- **Renderer（渲染引擎）**：向 Hexo 注册新文件类型的编译管道（如 Sass、Pug 等）；
+- **Tag（模板标签）**：在 Markdown 解析管线中扩充专属短代码（Shortcode）与自定义组件。
 
 ---
 
@@ -473,8 +474,8 @@ hexo.extend.helper.register('reading_progress', function(content) {
 ```ejs
 <% const progress = reading_progress(page.content) %>
 <div class="reading-info">
-  <span>📖 <%= progress.total_words %> 字</span>
-  <span>⏱️ 约 <%= progress.format_time() %></span>
+  <span class="word-count"><%= progress.total_words %> 字</span>
+  <span class="reading-time">约 <%= progress.format_time() %></span>
 </div>
 ```
 
@@ -741,13 +742,13 @@ hexo.extend.helper.register('share_buttons', function(options = {}) {
     whatsapp: `https://api.whatsapp.com/send?text=${title}%20${url}`
   };
   
-  const icons = {
-    twitter: '🐦',
-    facebook: '📘',
-    linkedin: '💼',
-    weibo: '🎐',
-    telegram: '✈️',
-    whatsapp: '💬'
+  const iconClasses = {
+    twitter: 'icon-twitter',
+    facebook: 'icon-facebook',
+    linkedin: 'icon-linkedin',
+    weibo: 'icon-weibo',
+    telegram: 'icon-telegram',
+    whatsapp: 'icon-whatsapp'
   };
   
   let html = '<div class="share-buttons">';
@@ -762,7 +763,7 @@ hexo.extend.helper.register('share_buttons', function(options = {}) {
           rel="noopener noreferrer"
           title="分享到 ${platform}"
         >
-          <span class="icon">${icons[platform]}</span>
+          <i class="icon ${iconClasses[platform]}" aria-hidden="true"></i>
           <span class="name">${platform}</span>
         </a>
       `;
@@ -953,8 +954,8 @@ hexo.extend.injector.register('body_end', function() {
   
   return `
     <button id="theme-toggle" aria-label="切换主题">
-      <span class="icon-sun">☀️</span>
-      <span class="icon-moon">🌙</span>
+      <i class="icon icon-sun" aria-hidden="true"></i>
+      <i class="icon icon-moon" aria-hidden="true"></i>
     </button>
     <script>
       const toggle = document.getElementById('theme-toggle');
@@ -1393,16 +1394,16 @@ hexo.extend.tag.register('note', function(args, content) {
   const type = args[0] || 'default';
   const title = args.slice(1).join(' ');
   
-  const icons = {
-    default: 'ℹ️',
-    success: '✅',
-    warning: '⚠️',
-    danger: '❌',
-    info: 'ℹ️'
+  const iconClasses = {
+    default: 'note-icon-default',
+    success: 'note-icon-success',
+    warning: 'note-icon-warning',
+    danger: 'note-icon-danger',
+    info: 'note-icon-info'
   };
   
-  const icon = icons[type] || icons.default;
-  const titleHtml = title ? `<div class="note-title">${icon} ${title}</div>` : '';
+  const iconClass = iconClasses[type] || iconClasses.default;
+  const titleHtml = title ? `<div class="note-title"><i class="note-icon ${iconClass}"></i><span>${title}</span></div>` : '';
   
   return `
     <div class="note note-${type}">
