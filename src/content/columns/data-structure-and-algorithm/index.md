@@ -3,6 +3,7 @@ title: 数据结构与算法学习专栏
 description: 覆盖基础数据结构与算法概念、实现与分析的系列笔记，适合学习与复习。
 pubDate: 2019-10-15
 layout: column
+createdAt: 2019-10-15
 order: 1
 categories:
 - 学习笔记

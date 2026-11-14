@@ -1,6 +1,7 @@
 ---
 title: 'React 学习'
 description: '从 JSX、组件、事件与状态管理到项目实战的 React 学习系列笔记。'
+createdAt: 2020-09-10
 order: 10
 # 标签取章节并集：CSS / Redux 是其中两章各自带过的子主题。
 categories:

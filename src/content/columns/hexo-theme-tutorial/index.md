@@ -3,6 +3,7 @@ title: Hexo 主题开发系列教程
 description: 以实战为导向的 Hexo 主题开发系列，包含主题核心、扩展系统、布局与模板、高级优化以及插件生态等内容。
 pubDate: 2025-11-20
 layout: column
+createdAt: 2025-11-20
 order: 2
 categories:
 - 技术教程

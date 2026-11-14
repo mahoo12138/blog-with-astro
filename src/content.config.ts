@@ -67,6 +67,9 @@ const columns = defineCollection({
       title: z.string(),
       description: z.string().default(""),
       pubDate: z.coerce.date().optional(),
+      // 专栏创建日期：取该专栏第一篇章节的发布时间，用于专栏目录由新到旧排序。
+      // 与 pubDate（Hexo 遗留的发布日）语义不同，不要合并；空专栏可以缺省。
+      createdAt: z.coerce.date().optional(),
       columnId: z.string().optional(), // Loader-derived; never authored in frontmatter.
       order: z.number().int().default(0),
       icon: z.string().optional(),

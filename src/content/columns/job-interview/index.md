@@ -1,6 +1,7 @@
 ---
 title: '求职面试'
 description: '把面试题当成知识地图而不是题库：屏幕适配、浏览器渲染、工程化与性能，每题先给能落地的结论，再拆到规范与实现。'
+createdAt: 2025-05-24
 order: 14
 accent: '#5f7d9c'
 categories:
