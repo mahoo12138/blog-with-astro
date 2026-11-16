@@ -1,0 +1,265 @@
+---
+/**
+ * 字数统计工具。
+ *
+ * 纯前端本地运行：输入文本只在浏览器里统计，不发任何网络请求。
+ * 脚本遵循站内 ClientRouter 约定 —— 模块自执行一次 + astro:page-load 重挂，
+ * 同一 DOM 不重复绑定，离开页面时清掉计时器。
+ */
+import * as styles from '../../styles/tools.css';
+
+const generalStats = [
+	{ key: 'characters', label: '字符数', unit: '字符' },
+	{ key: 'textChars', label: '文字数（不含标点符号）', unit: '个字' },
+	{ key: 'charactersNoBreaks', label: '字符数（不含换行）', unit: '字符' },
+	{ key: 'charactersNoSpacesAndBreaks', label: '字符数（不含空格和换行）', unit: '字符' },
+	{ key: 'lines', label: '行数', unit: '行' },
+	{ key: 'nonEmptyLines', label: '非空行数', unit: '行' },
+	{ key: 'utf8Bytes', label: '字节数（UTF-8）', unit: '字节' },
+	{ key: 'utf16Bytes', label: '字节数（UTF-16）', unit: '字节' },
+];
+
+const englishStats = [
+	{ key: 'words', label: '单词数', unit: '单词' },
+	{ key: 'sentences', label: '句子数', unit: '句子' },
+	{ key: 'lines', label: '行数', unit: '行' },
+	{ key: 'characters', label: '字符数', unit: '字符' },
+	{ key: 'charactersNoBreaks', label: '字符数（不含换行）', unit: '字符' },
+	{ key: 'charactersNoSpacesAndBreaks', label: '字符数（不含空格和换行）', unit: '字符' },
+];
+---
+
+<section class={styles.tool} data-word-count-tool aria-labelledby="tool-word-count-title">
+	<header class={styles.toolHeader}>
+		<h2 class={styles.toolTitle} id="tool-word-count-title" tabindex="-1" data-tool-title>字数统计</h2>
+		<p class={styles.toolDesc}>
+			输入或粘贴一段文本，字符、文字、行数与字节数会随输入实时更新；切到「英语特定统计」还能查看单词数与句子数。所有统计都在浏览器本地完成。
+		</p>
+		<p class={styles.toolMeta}>
+			<span>文本工具</span>
+			<span>更新于 2026.11.18</span>
+			<span>本地实时统计</span>
+		</p>
+	</header>
+
+	<div class={styles.card}>
+		<h3 class={styles.cardTitle}>输入文本</h3>
+		<label class={styles.fieldLabel} for="wc-input">在这里输入或粘贴需要统计的文本</label>
+		<textarea
+			class={styles.textarea}
+			id="wc-input"
+			rows="8"
+			placeholder="例如：Hello world. 你好，世界！"
+			data-wc-input
+		></textarea>
+		<div class={styles.inputMeta}>
+			<p class={styles.summary} role="status" aria-live="polite" data-wc-summary>等待输入 · 0 个字符 · 1 行</p>
+			<button class={styles.ghostButton} type="button" data-wc-clear>清空文本</button>
+		</div>
+	</div>
+
+	<div class={styles.card}>
+		<div class={styles.resultsHead}>
+			<h3 class={styles.cardTitle}>统计结果</h3>
+			<div class={styles.tabs} role="tablist" aria-label="统计范围">
+				<button
+					class={styles.tab}
+					type="button"
+					id="wc-tab-general"
+					role="tab"
+					aria-selected="true"
+					aria-controls="wc-panel-general"
+					tabindex="0"
+					data-wc-tab="general"
+				>一般统计</button>
+				<button
+					class={styles.tab}
+					type="button"
+					id="wc-tab-english"
+					role="tab"
+					aria-selected="false"
+					aria-controls="wc-panel-english"
+					tabindex="-1"
+					data-wc-tab="english"
+				>英语特定统计</button>
+			</div>
+		</div>
+
+		<div
+			class={styles.statPanel}
+			id="wc-panel-general"
+			role="tabpanel"
+			aria-labelledby="wc-tab-general"
+			data-wc-panel="general"
+		>
+			<div class={styles.statsGrid}>
+				{generalStats.map((stat) => (
+					<div class={styles.statItem}>
+						<span class={styles.statLabel}>{stat.label}</span>
+						<span class={styles.statValueRow}>
+							<strong class={styles.statValue} data-wc-stat={stat.key}>0</strong>
+							<span class={styles.statUnit}>{stat.unit}</span>
+						</span>
+					</div>
+				))}
+			</div>
+		</div>
+
+		<div
+			class={styles.statPanel}
+			id="wc-panel-english"
+			role="tabpanel"
+			aria-labelledby="wc-tab-english"
+			data-wc-panel="english"
+			hidden
+		>
+			<div class={styles.statsGrid}>
+				{englishStats.map((stat) => (
+					<div class={styles.statItem}>
+						<span class={styles.statLabel}>{stat.label}</span>
+						<span class={styles.statValueRow}>
+							<strong class={styles.statValue} data-wc-stat={stat.key}>0</strong>
+							<span class={styles.statUnit}>{stat.unit}</span>
+						</span>
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+
+	<p class={styles.sourceNote}>
+		统计口径：字符按 Unicode 码点计；「文字数」按字母与数字字符计，不含标点、空白和表情；行数把空文本算作 1 行；UTF-16 字节数按码元 × 2 计。单词与句子按英文常见写法粗略识别，仅作参考。
+	</p>
+</section>
+
+<script>
+	// ClientRouter 会替换 body；同一 DOM 只绑定一次，离开页面时停掉汇总计时器。
+	let cleanup: (() => void) | undefined;
+	let initializedRoot: HTMLElement | null = null;
+
+	type StatKey =
+		| 'characters'
+		| 'textChars'
+		| 'charactersNoBreaks'
+		| 'charactersNoSpacesAndBreaks'
+		| 'lines'
+		| 'nonEmptyLines'
+		| 'utf8Bytes'
+		| 'utf16Bytes'
+		| 'words'
+		| 'sentences';
+	type TabName = 'general' | 'english';
+	type Stats = Record<StatKey, number>;
+
+	const TEXT_CHAR = /[\p{L}\p{N}]/u;
+	const WORD = /[A-Za-z0-9]+(?:['’\-][A-Za-z0-9]+)*/g;
+	const SENTENCE_END = /[.!?。！？]+/g;
+	const LINE_BREAK = /\r\n|\r|\n/g;
+
+	function countStats(text: string): Stats {
+		const codePoints = Array.from(text);
+		const lines = text.split(LINE_BREAK);
+		return {
+			characters: codePoints.length,
+			textChars: codePoints.filter((char) => TEXT_CHAR.test(char)).length,
+			charactersNoBreaks: Array.from(text.replace(LINE_BREAK, '')).length,
+			charactersNoSpacesAndBreaks: Array.from(text.replace(/\s/g, '')).length,
+			lines: lines.length,
+			nonEmptyLines: lines.filter((line) => line.trim().length > 0).length,
+			utf8Bytes: new TextEncoder().encode(text).length,
+			utf16Bytes: text.length * 2,
+			words: text.match(WORD)?.length ?? 0,
+			sentences: text.match(SENTENCE_END)?.length ?? 0,
+		};
+	}
+
+	function initWordCountTool() {
+		const root = document.querySelector<HTMLElement>('[data-word-count-tool]');
+		if (root && root === initializedRoot) return;
+		cleanup?.();
+		if (!root) return;
+		initializedRoot = root;
+
+		const controller = new AbortController();
+		const { signal } = controller;
+		const formatNumber = new Intl.NumberFormat('zh-CN');
+
+		const input = root.querySelector<HTMLTextAreaElement>('[data-wc-input]');
+		const summary = root.querySelector<HTMLElement>('[data-wc-summary]');
+		const clearButton = root.querySelector<HTMLButtonElement>('[data-wc-clear]');
+		const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-wc-tab]'));
+		const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-wc-panel]'));
+
+		const statNodes = new Map<StatKey, HTMLElement[]>();
+		root.querySelectorAll<HTMLElement>('[data-wc-stat]').forEach((node) => {
+			const key = node.dataset.wcStat as StatKey;
+			const nodes = statNodes.get(key) ?? [];
+			nodes.push(node);
+			statNodes.set(key, nodes);
+		});
+
+		let summaryTimer = 0;
+
+		const render = () => {
+			if (!input) return;
+			const stats = countStats(input.value);
+			for (const [key, nodes] of statNodes) {
+				for (const node of nodes) node.textContent = formatNumber.format(stats[key]);
+			}
+			// 卡片即时更新；状态播报延后一点，避免逐字输入时读屏器反复打断。
+			window.clearTimeout(summaryTimer);
+			summaryTimer = window.setTimeout(() => {
+				if (summary) {
+					summary.textContent = `${formatNumber.format(stats.characters)} 个字符 · ${formatNumber.format(stats.lines)} 行`;
+				}
+			}, 300);
+		};
+
+		const activateTab = (name: TabName, moveFocus = false) => {
+			for (const tab of tabs) {
+				const active = tab.dataset.wcTab === name;
+				tab.setAttribute('aria-selected', String(active));
+				tab.tabIndex = active ? 0 : -1;
+				if (active && moveFocus) tab.focus();
+			}
+			for (const panel of panels) panel.hidden = panel.dataset.wcPanel !== name;
+		};
+
+		input?.addEventListener('input', render, { signal });
+		clearButton?.addEventListener('click', () => {
+			if (!input) return;
+			input.value = '';
+			render();
+			input.focus();
+		}, { signal });
+
+		tabs.forEach((tab, index) => {
+			tab.addEventListener('click', () => {
+				activateTab(tab.dataset.wcTab as TabName);
+			}, { signal });
+			tab.addEventListener('keydown', (event) => {
+				let nextIndex = -1;
+				if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+				else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+				else if (event.key === 'Home') nextIndex = 0;
+				else if (event.key === 'End') nextIndex = tabs.length - 1;
+				else return;
+				event.preventDefault();
+				const next = tabs[nextIndex];
+				if (next) activateTab(next.dataset.wcTab as TabName, true);
+			}, { signal });
+		});
+
+		render();
+
+		cleanup = () => {
+			window.clearTimeout(summaryTimer);
+			controller.abort();
+			if (initializedRoot === root) initializedRoot = null;
+		};
+	}
+
+	initWordCountTool();
+	document.addEventListener('astro:page-load', initWordCountTool);
+	document.addEventListener('astro:before-swap', () => { cleanup?.(); cleanup = undefined; });
+</script>

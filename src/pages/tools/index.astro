@@ -9,6 +9,7 @@
  */
 import StellarShell from '../../layouts/StellarShell.astro';
 import TimestampConverter from '../../components/tools/TimestampConverter.astro';
+import WordCounter from '../../components/tools/WordCounter.astro';
 import { SITE_TITLE } from '../../consts';
 import { toolEntries, toolsPageConfig } from '../../config/tools';
 import * as styles from '../../styles/tools.css';
@@ -16,6 +17,7 @@ import * as styles from '../../styles/tools.css';
 // 工具面板注册表：id → 组件。加新工具时在这里登记即可。
 const panels = {
 	timestamp: TimestampConverter,
+	'word-count': WordCounter,
 } as const;
 ---
 

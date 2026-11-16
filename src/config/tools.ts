@@ -37,12 +37,12 @@ export interface ToolEntry {
 
 export const toolsPageConfig = {
 	title: '工具箱',
-	description: '在线时间戳转换等开发小工具：开箱即用，全部在浏览器本地运行，不上传任何数据。',
+	description: '在线时间戳转换、字数统计等小工具：开箱即用，全部在浏览器本地运行，不上传任何数据。',
 };
 
 export const toolCategories: ToolCategory[] = [
 	{ id: 'dev', title: '开发工具', description: '写代码时顺手要用的东西。', status: 'active' },
-	{ id: 'text', title: '文本工具', description: '文本处理与格式化。', status: 'planned' },
+	{ id: 'text', title: '文本工具', description: '文本处理与格式化。', status: 'active' },
 	{ id: 'image', title: '图片工具', description: '图片压缩与格式转换。', status: 'planned' },
 ];
 
@@ -54,6 +54,14 @@ export const toolEntries: ToolEntry[] = [
 		description: 'Unix 时间戳与日期时间双向互转，自动识别秒与毫秒，支持 ISO 8601 与相对时间。',
 		tags: ['Unix', '时区', '互转'],
 		updatedAt: '2026-10-21',
+	},
+	{
+		id: 'word-count',
+		categoryId: 'text',
+		title: '字数统计',
+		description: '实时统计字符、文字、行数与 UTF-8 / UTF-16 字节数，另含英文单词与句子数。',
+		tags: ['文本', '统计', '实时'],
+		updatedAt: '2026-11-18',
 	},
 ];
 

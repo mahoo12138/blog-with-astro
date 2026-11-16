@@ -292,6 +292,12 @@ globalStyle('a:hover', {
  */
 export const fieldFocusWash = `color-mix(in srgb, ${vars.color.accent} 14%, transparent)`;
 
+/**
+ * 幽灵态控件的 hover 底衬：必须比 focus 淡，保持「常态 < hover < focus」的层级。
+ * 不要直接用 accentSoft —— 配色主题下它可能被映射成实心 --accent。
+ */
+export const fieldHoverWash = `color-mix(in srgb, ${vars.color.accent} 8%, transparent)`;
+
 globalStyle(':where(a, button, summary, [tabindex]):focus-visible', {
 	outline: `2px solid ${vars.color.accentStrong}`,
 	outlineOffset: '3px',

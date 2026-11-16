@@ -1,0 +1,28 @@
+---
+/**
+ * Glance 网站统计（自托管 / cookieless，详见 https://github.com/chrisgreg/glance）。
+ *
+ * 与 UmamiAnalytics 同构：由全站唯一的 <head> 入口 BaseHead 引入，配置集中在环境变量，
+ * 默认值已内置（用户给定站点 ID），无需改 .env 即可生效；GLANCE_DISABLED=1 可临时关闭。
+ *
+ * 脚本用 is:inline + defer 原样输出，不经 Astro 打包。glance.js 在首次加载时注册
+ * pushState / popstate 监听，因此本站 ClientRouter 的客户端导航也能被计入，
+ * 不必在每次视图切换时重新注入脚本。
+ *
+ * dev 默认不统计（本地调试不污染数据）；import.meta.env.DEV 在构建期被静态替换为
+ * false，因此生产产物照常注入。需要用真实站点 ID 联调时可设 GLANCE_DEV=1 临时打开。
+ */
+const scriptUrl = import.meta.env.GLANCE_SCRIPT_URL || 'https://data.mahoo12138.cn/glance.js';
+const site = import.meta.env.GLANCE_SITE || 'site_gdmzzlx326rd3bwn';
+const devEnabled = import.meta.env.GLANCE_DEV === '1';
+const enabled = (!import.meta.env.DEV || devEnabled) && import.meta.env.GLANCE_DISABLED !== '1' && Boolean(scriptUrl && site);
+---
+
+{enabled && (
+	<script
+		is:inline
+		defer
+		src={scriptUrl}
+		data-site={site}
+	></script>
+)}

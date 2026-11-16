@@ -12,6 +12,7 @@ import FallbackImage from '../assets/avatar.png';
 import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import { ClientRouter } from 'astro:transitions';
 import UmamiAnalytics from './UmamiAnalytics.astro';
+import GlanceAnalytics from './GlanceAnalytics.astro';
 import { siteFontConfig } from '../config/fonts';
 
 interface Props {
@@ -182,3 +183,4 @@ const safeStringify = (value: unknown) => JSON.stringify(value).replace(/</g, '\
 <script is:inline type="application/ld+json" set:html={safeStringify(websiteJsonLd)} />
 
 <UmamiAnalytics />
+<GlanceAnalytics />

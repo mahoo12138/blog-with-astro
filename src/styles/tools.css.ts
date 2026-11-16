@@ -1,12 +1,12 @@
 import { globalStyle, style } from '@vanilla-extract/css';
-import { breakpoints, fieldFocusWash, vars } from './theme.css';
+import { breakpoints, fieldFocusWash, fieldHoverWash, vars } from './theme.css';
 
 /**
  * 工具箱（/tools）页面样式。
  *
  * 审美约定（与全站一致）：
  *   - 区块之间用留白分隔，不画分割线；
- *   - 控件走幽灵态 —— 常态零装饰，hover / 聚焦时浮现 accentSoft 圆角淡晕；
+ *   - 控件走幽灵态 —— 常态零装饰，hover / 聚焦时浮现主题淡晕；
  *   - 动效统一 vars.motion.ease（cubic-bezier(0.16, 1, 0.3, 1)），150~240ms，不弹跳。
  */
 
@@ -146,7 +146,7 @@ export const clockItem = style({
 	borderRadius: vars.radius.md,
 	background: vars.color.backgroundElevated,
 	transition: `background 150ms ${EASE}`,
-	selectors: { '&:hover': { background: vars.color.accentSoft } },
+	selectors: { '&:hover': { background: fieldHoverWash } },
 });
 /** 标签行：标签居左、复制按钮居右，数值才能独占整行不折行 */
 export const clockHead = style({
@@ -191,7 +191,7 @@ export const convertGrid = style({
 	'@media': { [`screen and (max-width: ${breakpoints.laptop})`]: { gridTemplateColumns: 'minmax(0, 1fr)' } },
 });
 
-/* 输入行：幽灵态输入框（无边框），hover/聚焦浮现 accentSoft 淡晕 */
+/* 输入行：幽灵态输入框（无边框），hover/聚焦浮现主题淡晕 */
 export const fieldLabel = style({
 	display: 'block',
 	margin: '0 0 8px',
@@ -223,9 +223,11 @@ export const input = style({
 	transition: `background 150ms ${EASE}, box-shadow 150ms ${EASE}`,
 	selectors: {
 		'&::placeholder': { color: vars.color.textMeta, fontFamily: vars.font.body },
-		'&:hover': { background: vars.color.accentSoft },
+		'&:hover': { background: fieldHoverWash },
 		// 全站标准：焦点用底衬表达，不画外框（与 comments / 搜索页同一语言）。
 		'&:focus': { background: fieldFocusWash },
+		// VE 的 :hover / :focus 同特异性且排序不定，鼠标悬停时点进来要显式保证 focus 更强。
+		'&:hover:focus': { background: fieldFocusWash },
 	},
 });
 
@@ -248,9 +250,9 @@ export const copyButton = style({
 	cursor: 'pointer',
 	transition: `background 150ms ${EASE}, color 150ms ${EASE}, transform 150ms ${EASE}`,
 	selectors: {
-		'&:hover': { background: vars.color.accentSoft, color: vars.color.accentStrong },
+		'&:hover': { background: fieldHoverWash, color: vars.color.accentStrong },
 		'&:active': { transform: 'scale(0.96)' },
-		'&[data-copied="true"]': { background: vars.color.accentSoft, color: vars.color.accentStrong },
+		'&[data-copied="true"]': { background: fieldFocusWash, color: vars.color.accentStrong },
 	},
 });
 globalStyle(`${copyButton} svg`, { width: '13px', height: '13px', flexShrink: 0 });
@@ -276,7 +278,7 @@ export const actionButton = style({
 	cursor: 'pointer',
 	transition: `background 150ms ${EASE}, transform 150ms ${EASE}`,
 	selectors: {
-		'&:hover': { background: 'rgba(71, 107, 146, 0.14)' },
+		'&:hover': { background: fieldFocusWash },
 		'&:active': { transform: 'scale(0.97)' },
 	},
 });
@@ -316,7 +318,7 @@ export const resultRow = style({
 	borderRadius: vars.radius.sm,
 	transition: `background 150ms ${EASE}`,
 	selectors: {
-		'&:hover': { background: vars.color.accentSoft },
+		'&:hover': { background: fieldHoverWash },
 	},
 });
 export const resultLabel = style({
@@ -359,4 +361,153 @@ export const sourceNote = style({
 	lineHeight: 1.9,
 	color: vars.color.textMeta,
 	textWrap: 'pretty',
+});
+
+/* ── 字数统计 ── */
+export const textarea = style({
+	display: 'block',
+	width: '100%',
+	minHeight: '180px',
+	padding: '12px 14px',
+	border: 0,
+	borderRadius: vars.radius.md,
+	appearance: 'none',
+	resize: 'vertical',
+	background: vars.color.backgroundElevated,
+	color: vars.color.textStrong,
+	fontFamily: vars.font.body,
+	fontSize: '0.875rem',
+	lineHeight: 1.75,
+	transition: `background 150ms ${EASE}, box-shadow 150ms ${EASE}`,
+	selectors: {
+		'&::placeholder': { color: vars.color.textMeta },
+		'&:hover': { background: fieldHoverWash },
+		'&:focus': { background: fieldFocusWash },
+		'&:hover:focus': { background: fieldFocusWash },
+	},
+});
+
+export const inputMeta = style({
+	display: 'flex',
+	alignItems: 'center',
+	justifyContent: 'space-between',
+	flexWrap: 'wrap',
+	gap: '6px 16px',
+	marginTop: '10px',
+});
+export const summary = style({
+	margin: 0,
+	fontSize: '0.75rem',
+	lineHeight: 1.8,
+	color: vars.color.textMeta,
+	fontVariantNumeric: 'tabular-nums',
+});
+export const ghostButton = style({
+	flexShrink: 0,
+	minHeight: '32px',
+	padding: '2px 10px',
+	border: 0,
+	borderRadius: vars.radius.pill,
+	background: 'transparent',
+	color: vars.color.textMeta,
+	fontFamily: vars.font.body,
+	fontSize: '0.75rem',
+	lineHeight: 1.6,
+	cursor: 'pointer',
+	transition: `background 150ms ${EASE}, color 150ms ${EASE}`,
+	selectors: {
+		'&:hover': { background: fieldHoverWash, color: vars.color.accentStrong },
+	},
+});
+
+export const resultsHead = style({
+	display: 'flex',
+	alignItems: 'center',
+	justifyContent: 'space-between',
+	flexWrap: 'wrap',
+	gap: '10px 16px',
+	marginBottom: '16px',
+});
+globalStyle(`${resultsHead} h3`, { margin: 0 });
+
+export const tabs = style({
+	display: 'inline-flex',
+	alignItems: 'center',
+	gap: '2px',
+	flexShrink: 0,
+	padding: '4px',
+	borderRadius: vars.radius.pill,
+	background: vars.color.backgroundElevated,
+});
+export const tab = style({
+	minHeight: '32px',
+	padding: '2px 14px',
+	border: 0,
+	borderRadius: vars.radius.pill,
+	background: 'transparent',
+	color: vars.color.textMuted,
+	fontFamily: vars.font.body,
+	fontSize: '0.75rem',
+	lineHeight: 1.6,
+	whiteSpace: 'nowrap',
+	cursor: 'pointer',
+	transition: `background 150ms ${EASE}, color 150ms ${EASE}, box-shadow 150ms ${EASE}`,
+	selectors: {
+		'&:hover': { background: fieldHoverWash, color: vars.color.accentStrong },
+		'&[aria-selected="true"]': {
+			background: vars.color.surfaceStrong,
+			color: vars.color.accentStrong,
+			boxShadow: vars.shadow.card,
+		},
+	},
+});
+
+export const statPanel = style({ minWidth: 0 });
+// display:grid 的容器同样会压过 [hidden] 的 UA display:none。
+globalStyle(`${statPanel}[hidden]`, { display: 'none' });
+
+export const statsGrid = style({
+	display: 'grid',
+	gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+	gap: '12px',
+	'@media': {
+		[`screen and (max-width: ${breakpoints.tablet})`]: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+		[`screen and (max-width: ${breakpoints.mobile})`]: { gridTemplateColumns: 'minmax(0, 1fr)' },
+	},
+});
+export const statItem = style({
+	display: 'flex',
+	flexDirection: 'column',
+	gap: '6px',
+	minWidth: 0,
+	padding: '14px 16px',
+	borderRadius: vars.radius.md,
+	background: vars.color.backgroundElevated,
+	transition: `background 150ms ${EASE}`,
+	selectors: { '&:hover': { background: fieldHoverWash } },
+});
+export const statLabel = style({
+	fontSize: '0.75rem',
+	lineHeight: 1.6,
+	color: vars.color.textMeta,
+});
+export const statValueRow = style({
+	display: 'flex',
+	alignItems: 'baseline',
+	flexWrap: 'wrap',
+	gap: '2px 8px',
+	minWidth: 0,
+});
+export const statValue = style({
+	fontFamily: vars.font.mono,
+	fontSize: '1.375rem',
+	fontWeight: 600,
+	lineHeight: 1.3,
+	color: vars.color.accentStrong,
+	fontVariantNumeric: 'tabular-nums',
+});
+export const statUnit = style({
+	fontSize: '0.75rem',
+	lineHeight: 1.6,
+	color: vars.color.textMeta,
 });
